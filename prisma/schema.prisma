@@ -115,7 +115,7 @@ enum MemberRole {
 model Team {
   id             String   @id @default(cuid())
   name           String
-  description    String?  @db.Text
+  description    String?  
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
