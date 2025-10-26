@@ -1,0 +1,288 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// UTILISATEURS & AUTHENTIFICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hash du mot de passe
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  memberships   OrganizationMember[]
+  decisions     Decision[]           @relation("DecisionCreator")
+  votes         Vote[]
+  comments      Comment[]
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+// Pour NextAuth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ============================================
+// ORGANISATIONS
+// ============================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members   OrganizationMember[]
+  teams     Team[]
+  decisions Decision[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  role           MemberRole       @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+  userId         String
+  organizationId String
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teamMembers  TeamMember[]
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================
+// ÉQUIPES
+// ============================================
+
+model Team {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?  @db.Text
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+  decisions    Decision[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id                   String             @id @default(cuid())
+  organizationMemberId String
+  teamId               String
+  joinedAt             DateTime           @default(now())
+
+  // Relations
+  organizationMember OrganizationMember @relation(fields: [organizationMemberId], references: [id], onDelete: Cascade)
+  team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationMemberId, teamId])
+  @@map("team_members")
+}
+
+// ============================================
+// DÉCISIONS
+// ============================================
+
+model Decision {
+  id             String         @id @default(cuid())
+  title          String
+  description    String         @db.Text
+  context        String?        @db.Text
+  decisionType   DecisionType
+  status         DecisionStatus @default(DRAFT)
+
+  // Résultat de la décision
+  result         DecisionResult?
+  resultDetails  String?        @db.Text
+
+  // Dates
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  startDate      DateTime?
+  endDate        DateTime?
+  decidedAt      DateTime?
+
+  // Relations
+  creatorId      String
+  organizationId String
+  teamId         String?
+
+  creator      User         @relation("DecisionCreator", fields: [creatorId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  votes        Vote[]
+  comments     Comment[]
+  tags         DecisionTag[]
+
+  @@map("decisions")
+}
+
+enum DecisionType {
+  CONSENSUS       // Unanimité requise
+  CONSENT         // Pas d'objection majeure
+  MAJORITY        // Vote majoritaire simple
+  SUPERMAJORITY   // Vote qualifié (2/3, 3/4...)
+  WEIGHTED_VOTE   // Vote nuancé avec échelle
+  ADVISORY        // Consultatif
+}
+
+enum DecisionStatus {
+  DRAFT       // Brouillon
+  OPEN        // En cours de vote
+  CLOSED      // Vote terminé
+  IMPLEMENTED // Décision mise en œuvre
+  ARCHIVED    // Archivée
+}
+
+enum DecisionResult {
+  APPROVED    // Approuvée
+  REJECTED    // Rejetée
+  BLOCKED     // Bloquée (objection en consentement)
+  WITHDRAWN   // Retirée
+}
+
+// ============================================
+// VOTES
+// ============================================
+
+model Vote {
+  id         String     @id @default(cuid())
+  value      VoteValue
+  weight     Int        @default(1) // Pour votes nuancés: -3 à +3 par exemple
+  comment    String?    @db.Text
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relations
+  userId     String
+  decisionId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, decisionId])
+  @@map("votes")
+}
+
+enum VoteValue {
+  STRONG_SUPPORT    // ++  (ou +3)
+  SUPPORT           // +   (ou +2)
+  WEAK_SUPPORT      // ~+  (ou +1)
+  ABSTAIN           // 0
+  WEAK_OPPOSE       // ~-  (ou -1)
+  OPPOSE            // -   (ou -2)
+  STRONG_OPPOSE     // --  (ou -3)
+  BLOCK             // Veto (pour consentement)
+}
+
+// ============================================
+// COMMENTAIRES & DISCUSSIONS
+// ============================================
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  userId     String
+  decisionId String
+  parentId   String?  // Pour les réponses
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+// ============================================
+// TAGS / CATÉGORIES
+// ============================================
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now())
+
+  decisions DecisionTag[]
+
+  @@map("tags")
+}
+
+model DecisionTag {
+  decisionId String
+  tagId      String
+
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([decisionId, tagId])
+  @@map("decision_tags")
+}
