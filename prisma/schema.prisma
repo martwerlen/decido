@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -42,12 +42,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -73,7 +73,7 @@ model Session {
 model Organization {
   id          String   @id @default(cuid())
   name        String
-  description String?  @db.Text
+  description String?
   slug        String   @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -149,14 +149,14 @@ model TeamMember {
 model Decision {
   id             String         @id @default(cuid())
   title          String
-  description    String         @db.Text
-  context        String?        @db.Text
+  description    String
+  context        String?
   decisionType   DecisionType
   status         DecisionStatus @default(DRAFT)
 
   // Résultat de la décision
   result         DecisionResult?
-  resultDetails  String?        @db.Text
+  resultDetails  String?
 
   // Dates
   createdAt      DateTime       @default(now())
@@ -212,7 +212,7 @@ model Vote {
   id         String     @id @default(cuid())
   value      VoteValue
   weight     Int        @default(1) // Pour votes nuancés: -3 à +3 par exemple
-  comment    String?    @db.Text
+  comment    String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -244,7 +244,7 @@ enum VoteValue {
 
 model Comment {
   id         String   @id @default(cuid())
-  content    String   @db.Text
+  content    String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
