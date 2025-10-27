@@ -10,9 +10,13 @@ const createOrganizationSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    console.log('[API Organizations POST] Début de la requête');
+
     const session = await auth();
+    console.log('[API Organizations POST] Session:', session?.user?.id);
 
     if (!session?.user?.id) {
+      console.log('[API Organizations POST] Non authentifié');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -20,9 +24,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+    console.log('[API Organizations POST] Body:', body);
+
     const validationResult = createOrganizationSchema.safeParse(body);
 
     if (!validationResult.success) {
+      console.log('[API Organizations POST] Validation échouée:', validationResult.error);
       return NextResponse.json(
         { error: validationResult.error.errors[0].message },
         { status: 400 }
@@ -30,6 +37,7 @@ export async function POST(req: Request) {
     }
 
     const { name, description } = validationResult.data;
+    console.log('[API Organizations POST] Nom:', name, 'Description:', description);
 
     // Générer un slug unique basé sur le nom
     const baseSlug = name
@@ -42,12 +50,16 @@ export async function POST(req: Request) {
     // Vérifier si le slug existe déjà et ajouter un suffixe si nécessaire
     let slug = baseSlug;
     let counter = 1;
+    console.log('[API Organizations POST] Slug de base:', baseSlug);
+
     while (await prisma.organization.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
+    console.log('[API Organizations POST] Slug final:', slug);
 
     // Créer l'organisation et ajouter le créateur comme OWNER
+    console.log('[API Organizations POST] Création de l\'organisation...');
     const organization = await prisma.organization.create({
       data: {
         name,
@@ -75,9 +87,11 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log('[API Organizations POST] Organisation créée:', organization.id);
     return NextResponse.json(organization, { status: 201 });
   } catch (error) {
-    console.error('Error creating organization:', error);
+    console.error('[API Organizations POST] ERREUR:', error);
+    console.error('[API Organizations POST] Stack trace:', error instanceof Error ? error.stack : 'N/A');
     return NextResponse.json(
       { error: 'Erreur lors de la création de l\'organisation' },
       { status: 500 }
