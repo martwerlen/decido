@@ -1,7 +1,80 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.FROM_EMAIL || 'noreply@decido.app';
+let transporter: Transporter | null = null;
+
+// Créer le transporteur email
+async function getTransporter() {
+  if (transporter) {
+    return transporter;
+  }
+
+  const emailProvider = process.env.EMAIL_PROVIDER || 'console';
+
+  switch (emailProvider) {
+    case 'gmail':
+      // Configuration pour Gmail
+      // Nécessite un "App Password" si 2FA est activé
+      // Guide: https://support.google.com/accounts/answer/185833
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+      console.log('📧 Email configured with Gmail');
+      break;
+
+    case 'smtp':
+      // Configuration SMTP personnalisée
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true', // true pour port 465, false pour autres ports
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
+      console.log(`📧 Email configured with SMTP: ${process.env.SMTP_HOST}`);
+      break;
+
+    case 'ethereal':
+      // Ethereal Email - Service de test gratuit
+      // Les emails ne sont pas vraiment envoyés mais peuvent être visualisés en ligne
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      console.log('📧 Email configured with Ethereal (test mode)');
+      console.log(`   View emails at: https://ethereal.email/messages`);
+      console.log(`   User: ${testAccount.user}`);
+      console.log(`   Pass: ${testAccount.pass}`);
+      break;
+
+    case 'console':
+    default:
+      // Mode console - Affiche juste les emails dans les logs
+      // Utile pour le développement
+      transporter = nodemailer.createTransport({
+        streamTransport: true,
+        newline: 'unix',
+        buffer: true,
+      });
+      console.log('📧 Email configured in CONSOLE mode (development)');
+      console.log('   Emails will be logged to console instead of being sent');
+      break;
+  }
+
+  return transporter;
+}
 
 interface SendInvitationEmailParams {
   to: string;
@@ -21,6 +94,8 @@ export async function sendInvitationEmail({
   invitationToken,
 }: SendInvitationEmailParams) {
   const invitationUrl = `${process.env.NEXTAUTH_URL}/invitations/accept?token=${invitationToken}`;
+  const fromEmail = process.env.FROM_EMAIL || 'noreply@decido.app';
+  const fromName = process.env.FROM_NAME || 'Decido';
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -85,15 +160,33 @@ Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
   `.trim();
 
   try {
-    const data = await resend.emails.send({
-      from: fromEmail,
-      to: [to],
+    const transport = await getTransporter();
+    const info = await transport.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
       subject: `Invitation à rejoindre ${organizationName} sur Decido`,
-      html: htmlContent,
       text: textContent,
+      html: htmlContent,
     });
 
-    return { success: true, data };
+    // En mode console, afficher l'email
+    if (process.env.EMAIL_PROVIDER === 'console' || !process.env.EMAIL_PROVIDER) {
+      console.log('\n📧 ===== EMAIL SENT (CONSOLE MODE) =====');
+      console.log(`To: ${to}`);
+      console.log(`Subject: Invitation à rejoindre ${organizationName} sur Decido`);
+      console.log(`\nInvitation URL: ${invitationUrl}\n`);
+      console.log('========================================\n');
+    }
+
+    // En mode Ethereal, afficher l'URL de preview
+    if (process.env.EMAIL_PROVIDER === 'ethereal') {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log('\n📧 ===== EMAIL SENT (ETHEREAL TEST) =====');
+      console.log(`Preview URL: ${previewUrl}`);
+      console.log('=========================================\n');
+    }
+
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending invitation email:', error);
     throw error;
@@ -112,6 +205,8 @@ export async function sendWelcomeEmail({
   organizationName,
 }: SendWelcomeEmailParams) {
   const loginUrl = `${process.env.NEXTAUTH_URL}/auth/signin`;
+  const fromEmail = process.env.FROM_EMAIL || 'noreply@decido.app';
+  const fromName = process.env.FROM_NAME || 'Decido';
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -165,15 +260,33 @@ Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   `.trim();
 
   try {
-    const data = await resend.emails.send({
-      from: fromEmail,
-      to: [to],
-      subject: `Bienvenue sur Decido`,
-      html: htmlContent,
+    const transport = await getTransporter();
+    const info = await transport.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
+      subject: 'Bienvenue sur Decido',
       text: textContent,
+      html: htmlContent,
     });
 
-    return { success: true, data };
+    // En mode console, afficher l'email
+    if (process.env.EMAIL_PROVIDER === 'console' || !process.env.EMAIL_PROVIDER) {
+      console.log('\n📧 ===== EMAIL SENT (CONSOLE MODE) =====');
+      console.log(`To: ${to}`);
+      console.log(`Subject: Bienvenue sur Decido`);
+      console.log(`\nLogin URL: ${loginUrl}\n`);
+      console.log('========================================\n');
+    }
+
+    // En mode Ethereal, afficher l'URL de preview
+    if (process.env.EMAIL_PROVIDER === 'ethereal') {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log('\n📧 ===== EMAIL SENT (ETHEREAL TEST) =====');
+      console.log(`Preview URL: ${previewUrl}`);
+      console.log('=========================================\n');
+    }
+
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending welcome email:', error);
     throw error;

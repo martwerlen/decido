@@ -188,22 +188,69 @@ enum InvitationStatus {
 
 ## Configuration
 
-### Variables d'environnement
+### Configuration de l'envoi d'emails
 
-Ajoutez ces variables à votre fichier `.env` :
+Decido utilise **Nodemailer** qui supporte plusieurs méthodes d'envoi d'emails, sans nécessiter de créer un compte sur un service externe.
+
+Pour un guide complet, consultez [EMAIL_SETUP.md](EMAIL_SETUP.md).
+
+#### Mode Console (par défaut - Développement)
+
+**Aucune configuration requise !** Les emails s'affichent dans la console.
 
 ```env
-# Email (Resend)
-RESEND_API_KEY="your-resend-api-key"
-FROM_EMAIL="noreply@yourdomain.com"
+# Rien à ajouter, c'est le mode par défaut
+EMAIL_PROVIDER="console"
 ```
 
-### Obtenir une clé API Resend
+#### Mode Ethereal (Test)
 
-1. Créez un compte sur [resend.com](https://resend.com)
-2. Vérifiez votre domaine (ou utilisez le domaine de test)
-3. Créez une clé API dans le dashboard
-4. Ajoutez-la dans votre `.env`
+**Aucune configuration requise !** Les emails sont visibles en ligne avec rendu HTML.
+
+```env
+EMAIL_PROVIDER="ethereal"
+```
+
+Les identifiants et URLs de preview s'affichent automatiquement dans la console.
+
+#### Mode Gmail (Production Simple)
+
+Utilisez votre compte Gmail existant :
+
+```env
+EMAIL_PROVIDER="gmail"
+EMAIL_USER="votre.email@gmail.com"
+EMAIL_PASSWORD="votre-app-password"
+FROM_EMAIL="votre.email@gmail.com"
+FROM_NAME="Decido"
+```
+
+**Pour obtenir un App Password Gmail :**
+1. Allez sur [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Activez la validation en 2 étapes
+3. Créez un "App Password" pour Mail
+4. Utilisez ce mot de passe dans `EMAIL_PASSWORD`
+
+#### Mode SMTP (Production Avancée)
+
+Utilisez n'importe quel serveur SMTP :
+
+```env
+EMAIL_PROVIDER="smtp"
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="your-username"
+SMTP_PASSWORD="your-password"
+FROM_EMAIL="noreply@votredomaine.com"
+FROM_NAME="Decido"
+```
+
+### Recommandations
+
+- **Développement** : `EMAIL_PROVIDER="console"` (par défaut)
+- **Tests** : `EMAIL_PROVIDER="ethereal"`
+- **Production** : `EMAIL_PROVIDER="gmail"` ou `EMAIL_PROVIDER="smtp"`
 
 ## Sécurité
 
