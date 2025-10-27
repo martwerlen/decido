@@ -25,12 +25,13 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  memberships   OrganizationMember[]
-  decisions     Decision[]           @relation("DecisionCreator")
-  votes         Vote[]
-  comments      Comment[]
-  accounts      Account[]
-  sessions      Session[]
+  memberships      OrganizationMember[]
+  invitationsSent  Invitation[]
+  decisions        Decision[]           @relation("DecisionCreator")
+  votes            Vote[]
+  comments         Comment[]
+  accounts         Account[]
+  sessions         Session[]
 
   @@map("users")
 }
@@ -79,9 +80,11 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  members   OrganizationMember[]
-  teams     Team[]
-  decisions Decision[]
+  members        OrganizationMember[]
+  nonUserMembers NonUserMember[]
+  invitations    Invitation[]
+  teams          Team[]
+  decisions      Decision[]
 
   @@map("organizations")
 }
@@ -106,6 +109,52 @@ enum MemberRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+// Membres sans compte utilisateur (ajoutés manuellement)
+model NonUserMember {
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  position       String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("non_user_members")
+}
+
+// Invitations pour rejoindre une organisation
+model Invitation {
+  id             String           @id @default(cuid())
+  email          String
+  token          String           @unique
+  firstName      String
+  lastName       String
+  position       String?
+  role           MemberRole       @default(MEMBER)
+  status         InvitationStatus @default(PENDING)
+  organizationId String
+  invitedById    String
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }
 
 // ============================================
