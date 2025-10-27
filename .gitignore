@@ -36,3 +36,7 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+
+# Database SQLite locale
+dev.db
+dev.db-journal
