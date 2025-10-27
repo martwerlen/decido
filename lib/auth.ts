@@ -1,12 +1,13 @@
+import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 import { compare } from "bcryptjs"
 
-export const authOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "jwt" as const,
+    strategy: "jwt",
   },
   pages: {
     signIn: "/auth/signin",
@@ -20,14 +21,14 @@ export const authOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials: any) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email et mot de passe requis")
         }
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email,
+            email: credentials.email as string,
           },
         })
 
@@ -36,7 +37,7 @@ export const authOptions = {
         }
 
         const isPasswordValid = await compare(
-          credentials.password,
+          credentials.password as string,
           user.password
         )
 
@@ -54,17 +55,17 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
       }
       return token
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
       }
       return session
     },
   },
-}
+})
