@@ -20,8 +20,8 @@ import {
 import {
   People as PeopleIcon,
   Business as BusinessIcon,
-  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
+import Sidebar from '@/components/dashboard/Sidebar';
 
 interface Organization {
   id: string;
@@ -33,7 +33,7 @@ interface Organization {
 export default function OrganizationSettingsPage() {
   const params = useParams();
   const router = useRouter();
-  const organizationId = params.id as string;
+  const organizationSlug = params.slug as string;
 
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ export default function OrganizationSettingsPage() {
 
   const fetchOrganization = useCallback(async () => {
     try {
-      const response = await fetch(`/api/organizations/${organizationId}`);
+      const response = await fetch(`/api/organizations/${organizationSlug}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -68,7 +68,7 @@ export default function OrganizationSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationSlug]);
 
   useEffect(() => {
     fetchOrganization();
@@ -80,7 +80,7 @@ export default function OrganizationSettingsPage() {
     setFormLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationId}`, {
+      const response = await fetch(`/api/organizations/${organizationSlug}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -96,6 +96,12 @@ export default function OrganizationSettingsPage() {
 
       setFormSuccess('Organisation mise à jour avec succès');
       setOrganization(result);
+
+      // Si le slug a changé, rediriger vers la nouvelle URL
+      if (result.slug !== organizationSlug) {
+        router.push(`/organizations/${result.slug}/settings`);
+      }
+
       setTimeout(() => setFormSuccess(''), 3000);
     } catch (err: any) {
       setFormError(err.message);
@@ -121,27 +127,22 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, p: 3 }}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => router.push('/')}
-        sx={{ mb: 3 }}
-      >
-        Retour au tableau de bord
-      </Button>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar currentOrgSlug={organizationSlug} />
 
-      <Typography variant="h4" component="h1" gutterBottom>
-        Paramètres de {organization?.name}
-      </Typography>
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Paramètres de {organization?.name}
+        </Typography>
 
-      <Box sx={{ display: 'flex', gap: 3, mt: 4 }}>
+        <Box sx={{ display: 'flex', gap: 3, mt: 4 }}>
         {/* Menu latéral */}
         <Paper elevation={3} sx={{ width: 280, height: 'fit-content' }}>
           <List>
             <ListItem disablePadding>
               <ListItemButton
                 selected={activeSection === 'members'}
-                onClick={() => router.push(`/organizations/${organizationId}/members`)}
+                onClick={() => router.push(`/organizations/${organizationSlug}/members`)}
               >
                 <ListItemIcon>
                   <PeopleIcon />
@@ -254,6 +255,7 @@ export default function OrganizationSettingsPage() {
             </Box>
           )}
         </Paper>
+      </Box>
       </Box>
     </Box>
   );

@@ -35,6 +35,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import Sidebar from '@/components/dashboard/Sidebar';
 
 interface Member {
   id: string;
@@ -77,7 +78,7 @@ interface MembersData {
 
 export default function OrganizationMembersPage() {
   const params = useParams();
-  const organizationId = params.id as string;
+  const organizationSlug = params.slug as string;
 
   const [data, setData] = useState<MembersData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +115,7 @@ export default function OrganizationMembersPage() {
 
   const fetchMembers = useCallback(async () => {
     try {
-      const response = await fetch(`/api/organizations/${organizationId}/members`);
+      const response = await fetch(`/api/organizations/${organizationSlug}/members`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -127,7 +128,7 @@ export default function OrganizationMembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationSlug]);
 
   useEffect(() => {
     fetchMembers();
@@ -138,7 +139,7 @@ export default function OrganizationMembersPage() {
     setFormLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationId}/members`, {
+      const response = await fetch(`/api/organizations/${organizationSlug}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export default function OrganizationMembersPage() {
     setEditLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationId}/members`, {
+      const response = await fetch(`/api/organizations/${organizationSlug}/members`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -232,11 +233,11 @@ export default function OrganizationMembersPage() {
     try {
       let url = '';
       if (deletingItem.type === 'member') {
-        url = `/api/organizations/${organizationId}/members?memberId=${deletingItem.id}`;
+        url = `/api/organizations/${organizationSlug}/members?memberId=${deletingItem.id}`;
       } else if (deletingItem.type === 'nonUserMember') {
-        url = `/api/organizations/${organizationId}/members?nonUserMemberId=${deletingItem.id}`;
+        url = `/api/organizations/${organizationSlug}/members?nonUserMemberId=${deletingItem.id}`;
       } else if (deletingItem.type === 'invitation') {
-        url = `/api/organizations/${organizationId}/invitations?invitationId=${deletingItem.id}`;
+        url = `/api/organizations/${organizationSlug}/invitations?invitationId=${deletingItem.id}`;
       }
 
       const response = await fetch(url, {
@@ -276,11 +277,14 @@ export default function OrganizationMembersPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1">
-          Gestion des membres
-        </Typography>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar currentOrgSlug={organizationSlug} />
+
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1">
+            Gestion des membres
+          </Typography>
         <Button
           variant="contained"
           color="primary"
@@ -647,6 +651,7 @@ export default function OrganizationMembersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      </Box>
     </Box>
   );
 }

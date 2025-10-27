@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendInvitationEmail } from '@/lib/email';
 import crypto from 'crypto';
+import { getOrganizationBySlug, checkUserPermission, checkUserIsMember } from '@/lib/organization';
 
 const addMemberSchema = z.object({
   firstName: z.string().min(1, 'Le prénom est requis'),
@@ -14,22 +15,9 @@ const addMemberSchema = z.object({
   sendInvitation: z.boolean().optional().default(true),
 });
 
-async function checkUserPermission(organizationId: string, userId: string) {
-  const member = await prisma.organizationMember.findUnique({
-    where: {
-      userId_organizationId: {
-        userId,
-        organizationId,
-      },
-    },
-  });
-
-  return member && (member.role === 'OWNER' || member.role === 'ADMIN');
-}
-
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -41,7 +29,17 @@ export async function POST(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur a les permissions
     const hasPermission = await checkUserPermission(organizationId, session.user.id);
@@ -63,18 +61,6 @@ export async function POST(
     }
 
     const { firstName, lastName, position, email, role, sendInvitation } = validationResult.data;
-
-    // Récupérer les infos de l'organisation
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
-
-    if (!organization) {
-      return NextResponse.json(
-        { error: 'Organisation non trouvée' },
-        { status: 404 }
-      );
-    }
 
     // Si un email est fourni et qu'on veut envoyer une invitation
     if (email && email.trim() !== '' && sendInvitation) {
@@ -212,7 +198,7 @@ export async function POST(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -224,7 +210,17 @@ export async function PATCH(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur a les permissions
     const hasPermission = await checkUserPermission(organizationId, session.user.id);
@@ -284,7 +280,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -296,7 +292,17 @@ export async function DELETE(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur a les permissions
     const hasPermission = await checkUserPermission(organizationId, session.user.id);
@@ -348,39 +354,34 @@ export async function DELETE(
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    console.log('[API Members GET] Début de la requête');
-
     const session = await auth();
-    console.log('[API Members GET] Session récupérée:', session?.user?.id);
 
     if (!session?.user?.id) {
-      console.log('[API Members GET] Erreur: Non authentifié');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
       );
     }
 
-    const { id: organizationId } = await params;
-    console.log('[API Members GET] Organization ID:', organizationId);
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur est membre de l'organisation
-    console.log('[API Members GET] Vérification du membre...');
-    const userMember = await prisma.organizationMember.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: session.user.id,
-          organizationId,
-        },
-      },
-    });
-    console.log('[API Members GET] Membre trouvé:', !!userMember);
+    const isMember = await checkUserIsMember(organizationId, session.user.id);
 
-    if (!userMember) {
-      console.log('[API Members GET] Erreur: Non membre');
+    if (!isMember) {
       return NextResponse.json(
         { error: 'Vous n\'êtes pas membre de cette organisation' },
         { status: 403 }
@@ -388,7 +389,6 @@ export async function GET(
     }
 
     // Récupérer tous les membres (utilisateurs avec compte)
-    console.log('[API Members GET] Récupération des membres...');
     const members = await prisma.organizationMember.findMany({
       where: {
         organizationId,
@@ -409,7 +409,6 @@ export async function GET(
     });
 
     // Récupérer les membres sans compte
-    console.log('[API Members GET] Récupération des membres sans compte...');
     const nonUserMembers = await prisma.nonUserMember.findMany({
       where: {
         organizationId,
@@ -418,10 +417,8 @@ export async function GET(
         createdAt: 'asc',
       },
     });
-    console.log('[API Members GET] Membres sans compte trouvés:', nonUserMembers.length);
 
     // Récupérer les invitations en attente
-    console.log('[API Members GET] Récupération des invitations...');
     const pendingInvitations = await prisma.invitation.findMany({
       where: {
         organizationId,
@@ -443,17 +440,14 @@ export async function GET(
         createdAt: 'desc',
       },
     });
-    console.log('[API Members GET] Invitations trouvées:', pendingInvitations.length);
 
-    console.log('[API Members GET] Retour de la réponse');
     return NextResponse.json({
       members,
       nonUserMembers,
       pendingInvitations,
     });
   } catch (error) {
-    console.error('[API Members GET] ERREUR:', error);
-    console.error('[API Members GET] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.error('Error fetching members:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des membres' },
       { status: 500 }

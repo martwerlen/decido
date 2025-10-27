@@ -2,28 +2,16 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { getOrganizationBySlug, checkUserIsOwner, checkUserIsMember } from '@/lib/organization';
 
 const updateOrganizationSchema = z.object({
   slug: z.string().min(1, 'Le slug est requis').optional(),
   description: z.string().optional(),
 });
 
-async function checkUserIsOwner(organizationId: string, userId: string) {
-  const member = await prisma.organizationMember.findUnique({
-    where: {
-      userId_organizationId: {
-        userId,
-        organizationId,
-      },
-    },
-  });
-
-  return member && member.role === 'OWNER';
-}
-
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -35,33 +23,23 @@ export async function GET(
       );
     }
 
-    const { id: organizationId } = await params;
-
-    // Vérifier que l'utilisateur est membre de l'organisation
-    const member = await prisma.organizationMember.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: session.user.id,
-          organizationId,
-        },
-      },
-    });
-
-    if (!member) {
-      return NextResponse.json(
-        { error: 'Vous n\'êtes pas membre de cette organisation' },
-        { status: 403 }
-      );
-    }
-
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
 
     if (!organization) {
       return NextResponse.json(
         { error: 'Organisation non trouvée' },
         { status: 404 }
+      );
+    }
+
+    // Vérifier que l'utilisateur est membre de l'organisation
+    const isMember = await checkUserIsMember(organization.id, session.user.id);
+
+    if (!isMember) {
+      return NextResponse.json(
+        { error: 'Vous n\'êtes pas membre de cette organisation' },
+        { status: 403 }
       );
     }
 
@@ -77,7 +55,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -89,7 +67,17 @@ export async function PATCH(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur est propriétaire
     const isOwner = await checkUserIsOwner(organizationId, session.user.id);
@@ -110,15 +98,15 @@ export async function PATCH(
       );
     }
 
-    const { slug, description } = validationResult.data;
+    const { slug: newSlug, description } = validationResult.data;
 
     // Si le slug change, vérifier qu'il n'est pas déjà utilisé
-    if (slug) {
+    if (newSlug && newSlug !== organization.slug) {
       const existingOrg = await prisma.organization.findUnique({
-        where: { slug },
+        where: { slug: newSlug },
       });
 
-      if (existingOrg && existingOrg.id !== organizationId) {
+      if (existingOrg) {
         return NextResponse.json(
           { error: 'Ce slug est déjà utilisé par une autre organisation' },
           { status: 400 }
@@ -130,7 +118,7 @@ export async function PATCH(
     const updatedOrganization = await prisma.organization.update({
       where: { id: organizationId },
       data: {
-        ...(slug && { slug }),
+        ...(newSlug && { slug: newSlug }),
         ...(description !== undefined && { description }),
       },
     });

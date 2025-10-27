@@ -1,23 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
-async function checkUserPermission(organizationId: string, userId: string) {
-  const member = await prisma.organizationMember.findUnique({
-    where: {
-      userId_organizationId: {
-        userId,
-        organizationId,
-      },
-    },
-  });
-
-  return member && (member.role === 'OWNER' || member.role === 'ADMIN');
-}
+import { getOrganizationBySlug, checkUserPermission } from '@/lib/organization';
 
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -29,7 +17,17 @@ export async function DELETE(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { slug } = await params;
+    const organization = await getOrganizationBySlug(slug);
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    const organizationId = organization.id;
 
     // Vérifier que l'utilisateur a les permissions
     const hasPermission = await checkUserPermission(organizationId, session.user.id);
