@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { sendWelcomeEmail } from '@/lib/email';
@@ -91,7 +90,7 @@ export async function POST(req: Request) {
       }
 
       // Ajouter l'utilisateur existant à l'organisation
-      const member = await prisma.$transaction(async (tx) => {
+      const member = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const newMember = await tx.organizationMember.create({
           data: {
             userId: existingUser.id,
@@ -119,7 +118,7 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const name = `${invitation.firstName} ${invitation.lastName}`;
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Créer l'utilisateur
       const user = await tx.user.create({
         data: {

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import {
   Box,
   Drawer,
@@ -16,6 +17,9 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  Button,
+  CircularProgress,
+  Alert,
 } from "@mui/material"
 import {
   ChevronLeft,
@@ -27,6 +31,8 @@ import {
   Search,
   Help,
   Logout,
+  Add,
+  People,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
 
@@ -35,6 +41,17 @@ const drawerWidth = 280
 interface Decision {
   id: number
   title: string
+}
+
+interface Organization {
+  id: string
+  name: string
+  description?: string
+  slug: string
+  _count?: {
+    members: number
+    decisions: number
+  }
 }
 
 // Données temporaires pour l'affichage
@@ -53,8 +70,38 @@ const completedDecisions: Decision[] = [
 ]
 
 export default function Dashboard() {
+  const router = useRouter()
   const [open, setOpen] = useState(true)
-  const [organization, setOrganization] = useState("org1")
+  const [organization, setOrganization] = useState("")
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  const fetchOrganizations = useCallback(async () => {
+    try {
+      const response = await fetch("/api/organizations")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors du chargement des organisations")
+      }
+
+      setOrganizations(data)
+
+      // Sélectionner la première organisation par défaut
+      if (data.length > 0 && !organization) {
+        setOrganization(data[0].id)
+      }
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [organization])
+
+  useEffect(() => {
+    fetchOrganizations()
+  }, [fetchOrganizations])
 
   const handleDrawerToggle = () => {
     setOpen(!open)
@@ -66,6 +113,16 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     signOut({ callbackUrl: "/" })
+  }
+
+  const handleCreateOrganization = () => {
+    router.push("/organizations/new")
+  }
+
+  const handleManageMembers = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}/members`)
+    }
   }
 
   return (
@@ -108,17 +165,58 @@ export default function Dashboard() {
           {/* Sélecteur d'organisation */}
           {open && (
             <Box sx={{ p: 2 }}>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={organization}
-                  onChange={handleOrganizationChange}
-                  startAdornment={<Business sx={{ mr: 1, color: "action.active" }} />}
-                >
-                  <MenuItem value="org1">Organisation 1</MenuItem>
-                  <MenuItem value="org2">Organisation 2</MenuItem>
-                  <MenuItem value="org3">Organisation 3</MenuItem>
-                </Select>
-              </FormControl>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              ) : organizations.length > 0 ? (
+                <>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={organization}
+                      onChange={handleOrganizationChange}
+                      startAdornment={<Business sx={{ mr: 1, color: "action.active" }} />}
+                    >
+                      {organizations.map((org) => (
+                        <MenuItem key={org.id} value={org.id}>
+                          {org.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<People />}
+                    onClick={handleManageMembers}
+                    disabled={!organization}
+                    sx={{ mt: 1 }}
+                  >
+                    Gérer les membres
+                  </Button>
+                </>
+              ) : (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Aucune organisation
+                </Alert>
+              )}
+
+              <Button
+                fullWidth
+                variant="contained"
+                size="small"
+                startIcon={<Add />}
+                onClick={handleCreateOrganization}
+                sx={{ mt: 1 }}
+              >
+                Nouvelle organisation
+              </Button>
             </Box>
           )}
 

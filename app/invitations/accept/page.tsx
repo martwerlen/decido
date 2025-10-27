@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
@@ -29,17 +29,13 @@ function AcceptInvitationContent() {
   const [acceptError, setAcceptError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
+  const fetchInvitation = useCallback(async () => {
     if (!token) {
       setError('Token d\'invitation manquant');
       setLoading(false);
       return;
     }
 
-    fetchInvitation();
-  }, [token]);
-
-  const fetchInvitation = async () => {
     try {
       const response = await fetch(`/api/invitations/accept?token=${token}`);
       const data = await response.json();
@@ -55,7 +51,11 @@ function AcceptInvitationContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchInvitation();
+  }, [fetchInvitation]);
 
   const handleAccept = async () => {
     setAcceptError('');
@@ -191,7 +191,7 @@ function AcceptInvitationContent() {
           <Box>
             <Alert severity="info" sx={{ mb: 3 }}>
               Un compte existe déjà avec cet email. En acceptant cette invitation, vous rejoindrez
-              l'organisation avec votre compte existant.
+              l&apos;organisation avec votre compte existant.
             </Alert>
 
             <Button
@@ -202,13 +202,13 @@ function AcceptInvitationContent() {
               onClick={handleAccept}
               disabled={acceptLoading}
             >
-              {acceptLoading ? 'Acceptation...' : 'Accepter l\'invitation'}
+              {acceptLoading ? 'Acceptation...' : 'Accepter l&apos;invitation'}
             </Button>
           </Box>
         ) : (
           <Box>
             <Typography variant="body1" gutterBottom>
-              Créez votre mot de passe pour rejoindre l'organisation :
+              Créez votre mot de passe pour rejoindre l&apos;organisation :
             </Typography>
 
             <TextField
