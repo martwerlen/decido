@@ -215,9 +215,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('[API Members GET] Début de la requête');
+
     const session = await auth();
+    console.log('[API Members GET] Session récupérée:', session?.user?.id);
 
     if (!session?.user?.id) {
+      console.log('[API Members GET] Erreur: Non authentifié');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -225,8 +229,10 @@ export async function GET(
     }
 
     const { id: organizationId } = await params;
+    console.log('[API Members GET] Organization ID:', organizationId);
 
     // Vérifier que l'utilisateur est membre de l'organisation
+    console.log('[API Members GET] Vérification du membre...');
     const userMember = await prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
@@ -235,8 +241,10 @@ export async function GET(
         },
       },
     });
+    console.log('[API Members GET] Membre trouvé:', !!userMember);
 
     if (!userMember) {
+      console.log('[API Members GET] Erreur: Non membre');
       return NextResponse.json(
         { error: 'Vous n\'êtes pas membre de cette organisation' },
         { status: 403 }
@@ -244,6 +252,7 @@ export async function GET(
     }
 
     // Récupérer tous les membres (utilisateurs avec compte)
+    console.log('[API Members GET] Récupération des membres...');
     const members = await prisma.organizationMember.findMany({
       where: {
         organizationId,
@@ -264,6 +273,7 @@ export async function GET(
     });
 
     // Récupérer les membres sans compte
+    console.log('[API Members GET] Récupération des membres sans compte...');
     const nonUserMembers = await prisma.nonUserMember.findMany({
       where: {
         organizationId,
@@ -272,8 +282,10 @@ export async function GET(
         createdAt: 'asc',
       },
     });
+    console.log('[API Members GET] Membres sans compte trouvés:', nonUserMembers.length);
 
     // Récupérer les invitations en attente
+    console.log('[API Members GET] Récupération des invitations...');
     const pendingInvitations = await prisma.invitation.findMany({
       where: {
         organizationId,
@@ -295,14 +307,17 @@ export async function GET(
         createdAt: 'desc',
       },
     });
+    console.log('[API Members GET] Invitations trouvées:', pendingInvitations.length);
 
+    console.log('[API Members GET] Retour de la réponse');
     return NextResponse.json({
       members,
       nonUserMembers,
       pendingInvitations,
     });
   } catch (error) {
-    console.error('Error fetching members:', error);
+    console.error('[API Members GET] ERREUR:', error);
+    console.error('[API Members GET] Stack trace:', error instanceof Error ? error.stack : 'N/A');
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des membres' },
       { status: 500 }
