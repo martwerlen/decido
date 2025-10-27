@@ -91,7 +91,7 @@ model Organization {
 
 model OrganizationMember {
   id             String           @id @default(cuid())
-  role           MemberRole       @default(MEMBER)
+  role           String           @default("MEMBER") // OWNER, ADMIN, MEMBER
   joinedAt       DateTime         @default(now())
   userId         String
   organizationId String
@@ -103,12 +103,6 @@ model OrganizationMember {
 
   @@unique([userId, organizationId])
   @@map("organization_members")
-}
-
-enum MemberRole {
-  OWNER
-  ADMIN
-  MEMBER
 }
 
 // Membres sans compte utilisateur (ajoutés manuellement)
@@ -135,8 +129,8 @@ model Invitation {
   firstName      String
   lastName       String
   position       String?
-  role           MemberRole       @default(MEMBER)
-  status         InvitationStatus @default(PENDING)
+  role           String           @default("MEMBER") // OWNER, ADMIN, MEMBER
+  status         String           @default("PENDING") // PENDING, ACCEPTED, EXPIRED, CANCELLED
   organizationId String
   invitedById    String
   expiresAt      DateTime
@@ -148,13 +142,6 @@ model Invitation {
   invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@map("invitations")
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  EXPIRED
-  CANCELLED
 }
 
 // ============================================
@@ -200,11 +187,11 @@ model Decision {
   title          String
   description    String
   context        String?
-  decisionType   DecisionType
-  status         DecisionStatus @default(DRAFT)
+  decisionType   String         // CONSENSUS, CONSENT, MAJORITY, SUPERMAJORITY, WEIGHTED_VOTE, ADVISORY
+  status         String         @default("DRAFT") // DRAFT, OPEN, CLOSED, IMPLEMENTED, ARCHIVED
 
   // Résultat de la décision
-  result         DecisionResult?
+  result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN
   resultDetails  String?
 
   // Dates
@@ -229,37 +216,13 @@ model Decision {
   @@map("decisions")
 }
 
-enum DecisionType {
-  CONSENSUS       // Unanimité requise
-  CONSENT         // Pas d'objection majeure
-  MAJORITY        // Vote majoritaire simple
-  SUPERMAJORITY   // Vote qualifié (2/3, 3/4...)
-  WEIGHTED_VOTE   // Vote nuancé avec échelle
-  ADVISORY        // Consultatif
-}
-
-enum DecisionStatus {
-  DRAFT       // Brouillon
-  OPEN        // En cours de vote
-  CLOSED      // Vote terminé
-  IMPLEMENTED // Décision mise en œuvre
-  ARCHIVED    // Archivée
-}
-
-enum DecisionResult {
-  APPROVED    // Approuvée
-  REJECTED    // Rejetée
-  BLOCKED     // Bloquée (objection en consentement)
-  WITHDRAWN   // Retirée
-}
-
 // ============================================
 // VOTES
 // ============================================
 
 model Vote {
   id         String     @id @default(cuid())
-  value      VoteValue
+  value      String     // STRONG_SUPPORT, SUPPORT, WEAK_SUPPORT, ABSTAIN, WEAK_OPPOSE, OPPOSE, STRONG_OPPOSE, BLOCK
   weight     Int        @default(1) // Pour votes nuancés: -3 à +3 par exemple
   comment    String?
   createdAt  DateTime   @default(now())
@@ -274,17 +237,6 @@ model Vote {
 
   @@unique([userId, decisionId])
   @@map("votes")
-}
-
-enum VoteValue {
-  STRONG_SUPPORT    // ++  (ou +3)
-  SUPPORT           // +   (ou +2)
-  WEAK_SUPPORT      // ~+  (ou +1)
-  ABSTAIN           // 0
-  WEAK_OPPOSE       // ~-  (ou -1)
-  OPPOSE            // -   (ou -2)
-  STRONG_OPPOSE     // --  (ou -3)
-  BLOCK             // Veto (pour consentement)
 }
 
 // ============================================
