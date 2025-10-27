@@ -1,4 +1,30 @@
-import { DecisionType, VoteValue, DecisionResult } from '@prisma/client'
+// Types temporaires en attendant la regénération du client Prisma
+enum DecisionType {
+  CONSENSUS = 'CONSENSUS',
+  CONSENT = 'CONSENT',
+  MAJORITY = 'MAJORITY',
+  SUPERMAJORITY = 'SUPERMAJORITY',
+  WEIGHTED_VOTE = 'WEIGHTED_VOTE',
+  ADVISORY = 'ADVISORY',
+}
+
+enum VoteValue {
+  STRONG_SUPPORT = 'STRONG_SUPPORT',
+  SUPPORT = 'SUPPORT',
+  WEAK_SUPPORT = 'WEAK_SUPPORT',
+  ABSTAIN = 'ABSTAIN',
+  WEAK_OPPOSE = 'WEAK_OPPOSE',
+  OPPOSE = 'OPPOSE',
+  STRONG_OPPOSE = 'STRONG_OPPOSE',
+  BLOCK = 'BLOCK',
+}
+
+enum DecisionResult {
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  BLOCKED = 'BLOCKED',
+  WITHDRAWN = 'WITHDRAWN',
+}
 
 /**
  * Calcule le résultat d'une décision en fonction de son type et des votes
