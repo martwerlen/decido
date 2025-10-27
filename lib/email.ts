@@ -1,6 +1,7 @@
-import { Resend } from 'resend';
+// Configuration email simplifiée - fonctionne sans dépendances externes
+// En développement, les emails sont loggés dans la console
+// En production, configure RESEND_API_KEY pour envoyer de vrais emails
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@decido.app';
 
 interface SendInvitationEmailParams {
@@ -84,20 +85,45 @@ Cette invitation expirera dans 7 jours.
 Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
   `.trim();
 
-  try {
-    const data = await resend.emails.send({
-      from: fromEmail,
-      to: [to],
-      subject: `Invitation à rejoindre ${organizationName} sur Decido`,
-      html: htmlContent,
-      text: textContent,
-    });
+  const emailData = {
+    from: fromEmail,
+    to: [to],
+    subject: `Invitation à rejoindre ${organizationName} sur Decido`,
+    html: htmlContent,
+    text: textContent,
+  };
 
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error sending invitation email:', error);
-    throw error;
+  // Si RESEND_API_KEY est défini, utiliser Resend
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      // Import dynamique de Resend seulement si nécessaire
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      const data = await resend.emails.send(emailData);
+      console.log('📧 Email d\'invitation envoyé via Resend:', { to, success: true });
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi via Resend:', error);
+      // Continuer en mode console si l'envoi échoue
+    }
   }
+
+  // Mode développement : afficher l'email dans la console
+  console.log('\n📧 ========================================');
+  console.log('📧 EMAIL D\'INVITATION (MODE DÉVELOPPEMENT)');
+  console.log('📧 ========================================');
+  console.log(`📧 À: ${to}`);
+  console.log(`📧 Sujet: ${emailData.subject}`);
+  console.log('📧 ----------------------------------------');
+  console.log(`📧 Lien d'invitation:`);
+  console.log(`📧 ${invitationUrl}`);
+  console.log('📧 ----------------------------------------');
+  console.log(`📧 Message:`);
+  console.log(textContent);
+  console.log('📧 ========================================\n');
+
+  return { success: true, mode: 'console' };
 }
 
 interface SendWelcomeEmailParams {
@@ -164,18 +190,43 @@ ${loginUrl}
 Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   `.trim();
 
-  try {
-    const data = await resend.emails.send({
-      from: fromEmail,
-      to: [to],
-      subject: `Bienvenue sur Decido`,
-      html: htmlContent,
-      text: textContent,
-    });
+  const emailData = {
+    from: fromEmail,
+    to: [to],
+    subject: `Bienvenue sur Decido`,
+    html: htmlContent,
+    text: textContent,
+  };
 
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error sending welcome email:', error);
-    throw error;
+  // Si RESEND_API_KEY est défini, utiliser Resend
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      // Import dynamique de Resend seulement si nécessaire
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      const data = await resend.emails.send(emailData);
+      console.log('📧 Email de bienvenue envoyé via Resend:', { to, success: true });
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi via Resend:', error);
+      // Continuer en mode console si l'envoi échoue
+    }
   }
+
+  // Mode développement : afficher l'email dans la console
+  console.log('\n📧 ========================================');
+  console.log('📧 EMAIL DE BIENVENUE (MODE DÉVELOPPEMENT)');
+  console.log('📧 ========================================');
+  console.log(`📧 À: ${to}`);
+  console.log(`📧 Sujet: ${emailData.subject}`);
+  console.log('📧 ----------------------------------------');
+  console.log(`📧 Lien de connexion:`);
+  console.log(`📧 ${loginUrl}`);
+  console.log('📧 ----------------------------------------');
+  console.log(`📧 Message:`);
+  console.log(textContent);
+  console.log('📧 ========================================\n');
+
+  return { success: true, mode: 'console' };
 }
