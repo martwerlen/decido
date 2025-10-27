@@ -210,6 +210,142 @@ export async function POST(
   }
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { id: organizationId } = await params;
+
+    // Vérifier que l'utilisateur a les permissions
+    const hasPermission = await checkUserPermission(organizationId, session.user.id);
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Vous n\'avez pas les permissions' },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json();
+    const { memberId, role } = body;
+
+    if (!memberId || !role) {
+      return NextResponse.json(
+        { error: 'memberId et role sont requis' },
+        { status: 400 }
+      );
+    }
+
+    if (!['MEMBER', 'ADMIN', 'OWNER'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Rôle invalide' },
+        { status: 400 }
+      );
+    }
+
+    // Mettre à jour le rôle du membre
+    const updatedMember = await prisma.organizationMember.update({
+      where: {
+        id: memberId,
+        organizationId,
+      },
+      data: {
+        role,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(updatedMember);
+  } catch (error) {
+    console.error('Error updating member role:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la mise à jour du rôle' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { id: organizationId } = await params;
+
+    // Vérifier que l'utilisateur a les permissions
+    const hasPermission = await checkUserPermission(organizationId, session.user.id);
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Vous n\'avez pas les permissions' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const memberId = searchParams.get('memberId');
+    const nonUserMemberId = searchParams.get('nonUserMemberId');
+
+    if (memberId) {
+      // Supprimer un membre avec compte
+      await prisma.organizationMember.delete({
+        where: {
+          id: memberId,
+          organizationId,
+        },
+      });
+
+      return NextResponse.json({ success: true, message: 'Membre supprimé' });
+    } else if (nonUserMemberId) {
+      // Supprimer un membre sans compte
+      await prisma.nonUserMember.delete({
+        where: {
+          id: nonUserMemberId,
+          organizationId,
+        },
+      });
+
+      return NextResponse.json({ success: true, message: 'Membre supprimé' });
+    } else {
+      return NextResponse.json(
+        { error: 'memberId ou nonUserMemberId est requis' },
+        { status: 400 }
+      );
+    }
+  } catch (error) {
+    console.error('Error deleting member:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la suppression du membre' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

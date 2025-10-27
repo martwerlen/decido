@@ -33,6 +33,7 @@ import {
   Logout,
   Add,
   People,
+  Settings,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
 
@@ -122,6 +123,12 @@ export default function Dashboard() {
   const handleManageMembers = () => {
     if (organization) {
       router.push(`/organizations/${organization}/members`)
+    }
+  }
+
+  const handleSettings = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}/settings`)
     }
   }
 
@@ -318,7 +325,7 @@ export default function Dashboard() {
 
           <Divider />
 
-          {/* Rechercher et Aide */}
+          {/* Rechercher, Paramètres et Aide */}
           <List>
             <ListItem disablePadding>
               <ListItemButton>
@@ -326,6 +333,14 @@ export default function Dashboard() {
                   <Search />
                 </ListItemIcon>
                 {open && <ListItemText primary="Rechercher" />}
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleSettings} disabled={!organization}>
+                <ListItemIcon>
+                  <Settings />
+                </ListItemIcon>
+                {open && <ListItemText primary="Paramètres" />}
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
