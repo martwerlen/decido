@@ -29,7 +29,7 @@ async function checkUserPermission(organizationId: string, userId: string) {
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -41,7 +41,7 @@ export async function POST(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { id: organizationId } = await context.params;
 
     // Vérifier que l'utilisateur a les permissions
     const hasPermission = await checkUserPermission(organizationId, session.user.id);
@@ -212,7 +212,7 @@ export async function POST(
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -224,7 +224,7 @@ export async function GET(
       );
     }
 
-    const { id: organizationId } = await params;
+    const { id: organizationId } = await context.params;
 
     // Vérifier que l'utilisateur est membre de l'organisation
     const userMember = await prisma.organizationMember.findUnique({
