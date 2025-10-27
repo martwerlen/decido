@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Box,
@@ -89,11 +89,7 @@ export default function OrganizationMembersPage() {
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
-  useEffect(() => {
-    fetchMembers();
-  }, [organizationId]);
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       const response = await fetch(`/api/organizations/${organizationId}/members`);
       const result = await response.json();
@@ -108,7 +104,11 @@ export default function OrganizationMembersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const handleAddMember = async () => {
     setFormError('');
