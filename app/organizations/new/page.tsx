@@ -16,7 +16,11 @@ export default function NewOrganizationPage() {
     setError('');
     setLoading(true);
 
+    console.log('[CLIENT] Début de la soumission du formulaire');
+    console.log('[CLIENT] Nom:', name, 'Description:', description);
+
     try {
+      console.log('[CLIENT] Envoi de la requête à /api/organizations');
       const response = await fetch('/api/organizations', {
         method: 'POST',
         headers: {
@@ -25,15 +29,20 @@ export default function NewOrganizationPage() {
         body: JSON.stringify({ name, description }),
       });
 
+      console.log('[CLIENT] Réponse reçue, status:', response.status);
       const data = await response.json();
+      console.log('[CLIENT] Données reçues:', data);
 
       if (!response.ok) {
+        console.error('[CLIENT] Erreur de réponse:', data.error);
         throw new Error(data.error || 'Erreur lors de la création de l\'organisation');
       }
 
+      console.log('[CLIENT] Redirection vers /organizations/' + data.id + '/members');
       // Rediriger vers la page de gestion des membres
       router.push(`/organizations/${data.id}/members`);
     } catch (err: any) {
+      console.error('[CLIENT] Exception attrapée:', err);
       setError(err.message);
     } finally {
       setLoading(false);
