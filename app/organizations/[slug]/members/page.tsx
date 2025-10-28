@@ -27,6 +27,8 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  OutlinedInput,
+  SelectChangeEvent,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -76,6 +78,11 @@ interface MembersData {
   pendingInvitations: Invitation[];
 }
 
+interface Team {
+  id: string;
+  name: string;
+}
+
 export default function OrganizationMembersPage() {
   const params = useParams();
   const organizationSlug = params.slug as string;
@@ -83,6 +90,10 @@ export default function OrganizationMembersPage() {
   const [data, setData] = useState<MembersData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // État pour les équipes
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,6 +103,7 @@ export default function OrganizationMembersPage() {
     email: '',
     role: 'MEMBER',
     sendInvitation: true,
+    teams: [] as string[], // IDs des équipes sélectionnées
   });
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
@@ -134,6 +146,30 @@ export default function OrganizationMembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  const fetchTeams = async () => {
+    setTeamsLoading(true);
+    try {
+      const response = await fetch(`/api/organizations/${organizationSlug}/teams`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors du chargement des équipes');
+      }
+
+      setTeams(result);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement des équipes:', err);
+      setTeams([]);
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setDialogOpen(true);
+    fetchTeams();
+  };
+
   const handleAddMember = async () => {
     setFormError('');
     setFormLoading(true);
@@ -161,6 +197,7 @@ export default function OrganizationMembersPage() {
         email: '',
         role: 'MEMBER',
         sendInvitation: true,
+        teams: [],
       });
       setDialogOpen(false);
 
@@ -289,7 +326,7 @@ export default function OrganizationMembersPage() {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
+          onClick={handleOpenDialog}
         >
           Ajouter un membre
         </Button>
@@ -607,6 +644,46 @@ export default function OrganizationMembersPage() {
             margin="normal"
             helperText="Si fourni, la personne recevra une invitation par email"
           />
+
+          {/* Sélection des équipes */}
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="teams-select-label">Équipes (optionnel)</InputLabel>
+            <Select
+              labelId="teams-select-label"
+              multiple
+              value={formData.teams}
+              onChange={(e: SelectChangeEvent<string[]>) =>
+                setFormData({ ...formData, teams: e.target.value as string[] })
+              }
+              input={<OutlinedInput label="Équipes (optionnel)" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {(selected as string[]).map((teamId) => {
+                    const team = teams.find(t => t.id === teamId);
+                    return team ? (
+                      <Chip key={teamId} label={team.name} size="small" />
+                    ) : null;
+                  })}
+                </Box>
+              )}
+              disabled={teamsLoading}
+            >
+              {teamsLoading ? (
+                <MenuItem disabled>
+                  <CircularProgress size={20} sx={{ mr: 1 }} />
+                  Chargement...
+                </MenuItem>
+              ) : teams.length === 0 ? (
+                <MenuItem disabled>Aucune équipe disponible</MenuItem>
+              ) : (
+                teams.map((team) => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
 
           {formData.email && (
             <>
