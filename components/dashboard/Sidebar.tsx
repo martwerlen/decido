@@ -39,8 +39,17 @@ import { signOut } from "next-auth/react"
 const drawerWidth = 280
 
 interface Decision {
-  id: number
+  id: string
   title: string
+  endDate?: Date | null
+  decidedAt?: Date | null
+  result?: string | null
+}
+
+interface SidebarDecisions {
+  awaitingParticipation: Decision[]
+  ongoingDecisions: Decision[]
+  completedDecisions: Decision[]
 }
 
 interface Organization {
@@ -54,21 +63,6 @@ interface Organization {
   }
 }
 
-// Données temporaires pour l'affichage
-const ongoingDecisions: Decision[] = [
-  { id: 1, title: "Budget annuel 2025" },
-  { id: 2, title: "Nouvelle politique télétravail" },
-  { id: 3, title: "Choix fournisseur IT" },
-  { id: 4, title: "Projet expansion Europe" },
-]
-
-const completedDecisions: Decision[] = [
-  { id: 5, title: "Embauche développeur senior" },
-  { id: 6, title: "Renouvellement locaux" },
-  { id: 7, title: "Plan formation 2024" },
-  { id: 8, title: "Partenariat stratégique" },
-]
-
 interface SidebarProps {
   currentOrgSlug?: string
 }
@@ -81,6 +75,12 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [decisions, setDecisions] = useState<SidebarDecisions>({
+    awaitingParticipation: [],
+    ongoingDecisions: [],
+    completedDecisions: [],
+  })
+  const [decisionsLoading, setDecisionsLoading] = useState(false)
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -106,9 +106,33 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }, [currentOrgSlug, organization])
 
+  const fetchDecisions = useCallback(async () => {
+    if (!organization) return
+
+    setDecisionsLoading(true)
+    try {
+      const response = await fetch(`/api/organizations/${organization}/decisions/sidebar`)
+      const data = await response.json()
+
+      if (response.ok) {
+        setDecisions(data)
+      }
+    } catch (err: any) {
+      console.error("Error fetching decisions:", err)
+    } finally {
+      setDecisionsLoading(false)
+    }
+  }, [organization])
+
   useEffect(() => {
     fetchOrganizations()
   }, [fetchOrganizations])
+
+  useEffect(() => {
+    if (organization) {
+      fetchDecisions()
+    }
+  }, [organization, fetchDecisions])
 
   const handleDrawerToggle = () => {
     setOpen(!open)
@@ -168,8 +192,52 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Header avec toggle */}
+        {/* Logo DECIDOO */}
         <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: open ? "space-between" : "center",
+            p: 2,
+            cursor: "pointer",
+            "&:hover": {
+              backgroundColor: "action.hover",
+            },
+          }}
+          onClick={() => organization && router.push(`/organizations/${organization}`)}
+        >
+          {open ? (
+            <>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                DECIDOO
+              </Typography>
+              <IconButton onClick={(e) => {
+                e.stopPropagation();
+                handleDrawerToggle();
+              }} size="small">
+                <ChevronLeft />
+              </IconButton>
+            </>
+          ) : (
+            <IconButton onClick={handleDrawerToggle} size="small">
+              <ChevronRight />
+            </IconButton>
+          )}
+        </Box>
+
+        <Divider />
+
+        {/* Header avec toggle - SUPPRIMÉ car maintenant dans le logo */}
+        {/* <Box
           sx={{
             display: "flex",
             alignItems: "center",
@@ -182,7 +250,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           </IconButton>
         </Box>
 
-        <Divider />
+        <Divider /> */}
 
         {/* Sélecteur d'organisation */}
         {open && (
@@ -250,41 +318,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
         <Divider />
 
-        {/* Actualités */}
-        {open && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Actualités
-            </Typography>
-            <List dense>
-              <ListItem disablePadding>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <Article fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Nouveau mode de décision"
-                    primaryTypographyProps={{ variant: "body2" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <Article fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Mise à jour v2.0"
-                    primaryTypographyProps={{ variant: "body2" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Box>
-        )}
-
-        <Divider />
-
         {/* Nouvelle décision */}
         {open && (
           <Box sx={{ p: 2, pb: 0 }}>
@@ -317,6 +350,68 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           </Box>
         )}
 
+        {/* Participation attendue */}
+        {open && (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Participation attendue
+              {decisions.awaitingParticipation.length > 0 && (
+                <Box component="span" sx={{
+                  backgroundColor: "error.main",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 20,
+                  height: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.75rem",
+                  fontWeight: "bold"
+                }}>
+                  {decisions.awaitingParticipation.length}
+                </Box>
+              )}
+            </Typography>
+            <List dense>
+              {decisionsLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : decisions.awaitingParticipation.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
+                  Aucune participation attendue
+                </Typography>
+              ) : (
+                decisions.awaitingParticipation.map((decision) => (
+                  <ListItem key={decision.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
+                      sx={{
+                        backgroundColor: "warning.light",
+                        mb: 0.5,
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: "warning.main",
+                        }
+                      }}
+                    >
+                      <ListItemIcon>
+                        <HowToVote fontSize="small" color="warning" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={decision.title}
+                        primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))
+              )}
+            </List>
+          </Box>
+        )}
+
+        <Divider />
+
         {/* Décisions en cours */}
         {open && (
           <Box sx={{ p: 2 }}>
@@ -324,19 +419,29 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
               Décisions en cours
             </Typography>
             <List dense>
-              {ongoingDecisions.map((decision) => (
-                <ListItem key={decision.id} disablePadding>
-                  <ListItemButton>
-                    <ListItemIcon>
-                      <HowToVote fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={decision.title}
-                      primaryTypographyProps={{ variant: "body2" }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
+              {decisionsLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : decisions.ongoingDecisions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
+                  Aucune décision en cours
+                </Typography>
+              ) : (
+                decisions.ongoingDecisions.map((decision) => (
+                  <ListItem key={decision.id} disablePadding>
+                    <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}>
+                      <ListItemIcon>
+                        <HowToVote fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={decision.title}
+                        primaryTypographyProps={{ variant: "body2" }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))
+              )}
             </List>
           </Box>
         )}
@@ -350,19 +455,29 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
               Décisions terminées
             </Typography>
             <List dense>
-              {completedDecisions.map((decision) => (
-                <ListItem key={decision.id} disablePadding>
-                  <ListItemButton>
-                    <ListItemIcon>
-                      <CheckCircle fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={decision.title}
-                      primaryTypographyProps={{ variant: "body2" }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
+              {decisionsLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : decisions.completedDecisions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
+                  Aucune décision terminée
+                </Typography>
+              ) : (
+                decisions.completedDecisions.map((decision) => (
+                  <ListItem key={decision.id} disablePadding>
+                    <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}>
+                      <ListItemIcon>
+                        <CheckCircle fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={decision.title}
+                        primaryTypographyProps={{ variant: "body2" }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))
+              )}
             </List>
           </Box>
         )}
