@@ -37,6 +37,17 @@ app/                      # Next.js App Router
 ├── api/                  # API routes (auth, organizations, invitations)
 ├── auth/                 # Auth pages (signin, signup)
 ├── organizations/        # Organization management pages
+│   ├── [slug]/          # Dynamic organization routes
+│   │   ├── decisions/   # Decision management
+│   │   │   ├── [decisionId]/
+│   │   │   │   ├── vote/     # Voting interface
+│   │   │   │   ├── results/  # Results display
+│   │   │   │   └── admin/    # Decision administration
+│   │   │   └── new/          # Create new decision
+│   │   ├── members/     # Member management
+│   │   ├── teams/       # Team management
+│   │   └── settings/    # Organization settings
+│   └── new/             # Create new organization
 └── invitations/          # Invitation acceptance pages
 
 lib/                      # Core business logic
@@ -59,6 +70,18 @@ prisma/
 └── schema.prisma        # Database schema
 ```
 
+### URL Routing Patterns
+
+The app uses dynamic routes extensively. Key patterns:
+
+- `/organizations/[slug]` - Organization by slug (e.g., `/organizations/acme-corp`)
+- `/organizations/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
+- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision
+- `/organizations/[slug]/decisions/[decisionId]/results` - View results
+- `/organizations/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
+
+API routes mirror this structure under `/api/organizations/[slug]/...`
+
 ## Critical Architecture Details
 
 ### Database Schema & Enums
@@ -67,21 +90,27 @@ prisma/
 
 Type-safe enums are defined in `types/enums.ts` with corresponding validation helpers:
 - `MemberRole`: 'OWNER' | 'ADMIN' | 'MEMBER'
+- `InvitationStatus`: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
 - `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'ADVISORY'
 - `DecisionStatus`: 'DRAFT' | 'OPEN' | 'CLOSED' | 'IMPLEMENTED' | 'ARCHIVED'
 - `DecisionResult`: 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN'
 - `VoteValue`: 'STRONG_SUPPORT' | 'SUPPORT' | 'WEAK_SUPPORT' | 'ABSTAIN' | 'WEAK_OPPOSE' | 'OPPOSE' | 'STRONG_OPPOSE' | 'BLOCK'
+- `VotingMode`: 'INVITED' | 'PUBLIC_LINK'
+- `ParticipantInvitedVia`: 'TEAM' | 'MANUAL' | 'EXTERNAL'
+- `ConsensusVoteValue`: 'AGREE' | 'DISAGREE'
 
 When working with these values:
 1. Import types from `types/enums.ts`, NOT from `@prisma/client`
 2. Use the validation helpers (e.g., `isValidDecisionType()`) when accepting user input
-3. Reference label/description mappings for UI display
+3. Reference label/description mappings for UI display (e.g., `DecisionTypeLabels`, `VoteValueWeights`)
 
 ### Core Business Logic: Decision Calculation
 
 The decision calculation logic in `lib/decision-logic.ts` is the heart of the application. Each decision type has unique calculation rules:
 
 **CONSENSUS**: Requires ALL votes to be "STRONG_SUPPORT" → APPROVED, otherwise REJECTED
+- Uses special vote values: 'AGREE' | 'DISAGREE' (see `ConsensusVoteValue` in types/enums.ts)
+- Supports proposal amendments: `initialProposal` and `amendedProposal` fields on Decision model
 
 **CONSENT**: Blocked by any "BLOCK" vote → BLOCKED; Rejected by "STRONG_OPPOSE" → REJECTED; Otherwise APPROVED
 
@@ -130,6 +159,29 @@ Users can belong to multiple organizations with different roles:
 
 Decisions can be organization-wide or team-specific (optional `teamId` field).
 
+### Decision Voting Modes
+
+Each decision has two possible voting modes (`votingMode` field):
+
+**INVITED**: Traditional invitation-based voting
+- Specific participants are invited through `DecisionParticipant` records
+- Participants can be added via team membership (`invitedVia: 'TEAM'`), manually (`'MANUAL'`), or as external users (`'EXTERNAL'`)
+- Only invited participants can vote
+
+**PUBLIC_LINK**: Open voting via shareable URL
+- Decision has a unique `publicToken` for URL access
+- Anyone with the link can vote (for anonymous/public decisions)
+- Used for broader consultations
+
+### Proposal System (for MAJORITY votes)
+
+When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
+1. Multiple `Proposal` records are created for the decision
+2. Each proposal has a title, description, and display order
+3. Users cast `ProposalVote` records (not regular `Vote` records)
+4. Each user can only vote for one proposal per decision
+5. The proposal with the most votes wins
+
 ### Invitation System
 
 Members are invited via email using Resend:
@@ -138,7 +190,11 @@ Members are invited via email using Resend:
 3. Recipient can accept invitation (creates account if needed)
 4. Upon acceptance, user becomes OrganizationMember
 
-**NonUserMembers** are members without accounts (added manually for record-keeping).
+**NonUserMembers** are members without user accounts:
+- Added manually by organization admins for record-keeping purposes
+- Have firstName, lastName, and position fields but no user account
+- Used for documenting attendance or participation of non-digital members
+- Cannot log in or vote, but can be referenced in meeting minutes or decision records
 
 ## Environment Configuration
 
@@ -174,6 +230,33 @@ return Response.json({ error: "Error message" }, { status: 400 })
 Always use the singleton Prisma client from `lib/prisma.ts`:
 ```typescript
 import { prisma } from "@/lib/prisma"
+```
+
+### Common Query Patterns
+
+**Fetching organization by slug with member check:**
+```typescript
+const org = await prisma.organization.findUnique({
+  where: { slug: params.slug },
+  include: {
+    members: {
+      where: { userId: session.user.id }
+    }
+  }
+})
+// Check: org.members.length > 0 to verify membership
+```
+
+**Fetching decision with participation check:**
+```typescript
+const decision = await prisma.decision.findUnique({
+  where: { id: decisionId, organizationId: org.id },
+  include: {
+    participants: { where: { userId: session.user.id } },
+    votes: { where: { userId: session.user.id } }
+  }
+})
+// Check participants for voting eligibility, votes for existing vote
 ```
 
 ## Known Issues & Workarounds
