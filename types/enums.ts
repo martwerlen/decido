@@ -177,3 +177,47 @@ export function isValidDecisionResult(result: string): result is DecisionResult 
 export function isValidVoteValue(value: string): value is VoteValue {
   return VOTE_VALUES.includes(value as VoteValue);
 }
+
+// Mode de vote
+export type VotingMode = 'INVITED' | 'PUBLIC_LINK';
+
+export const VOTING_MODES: VotingMode[] = ['INVITED', 'PUBLIC_LINK'];
+
+export const VotingModeLabels: Record<VotingMode, string> = {
+  INVITED: 'Sur invitation',
+  PUBLIC_LINK: 'Lien public',
+};
+
+// Source d'invitation pour les participants
+export type ParticipantInvitedVia = 'TEAM' | 'MANUAL' | 'EXTERNAL';
+
+export const PARTICIPANT_INVITED_VIA: ParticipantInvitedVia[] = ['TEAM', 'MANUAL', 'EXTERNAL'];
+
+export const ParticipantInvitedViaLabels: Record<ParticipantInvitedVia, string> = {
+  TEAM: 'Via équipe',
+  MANUAL: 'Ajouté manuellement',
+  EXTERNAL: 'Externe (email)',
+};
+
+// Valeurs de vote pour consensus
+export type ConsensusVoteValue = 'AGREE' | 'DISAGREE';
+
+export const CONSENSUS_VOTE_VALUES: ConsensusVoteValue[] = ['AGREE', 'DISAGREE'];
+
+export const ConsensusVoteValueLabels: Record<ConsensusVoteValue, string> = {
+  AGREE: 'D\'accord',
+  DISAGREE: 'Pas d\'accord',
+};
+
+// Helpers de validation
+export function isValidVotingMode(mode: string): mode is VotingMode {
+  return VOTING_MODES.includes(mode as VotingMode);
+}
+
+export function isValidParticipantInvitedVia(via: string): via is ParticipantInvitedVia {
+  return PARTICIPANT_INVITED_VIA.includes(via as ParticipantInvitedVia);
+}
+
+export function isValidConsensusVoteValue(value: string): value is ConsensusVoteValue {
+  return CONSENSUS_VOTE_VALUES.includes(value as ConsensusVoteValue);
+}

@@ -25,13 +25,15 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  memberships      OrganizationMember[]
-  invitationsSent  Invitation[]
-  decisions        Decision[]           @relation("DecisionCreator")
-  votes            Vote[]
-  comments         Comment[]
-  accounts         Account[]
-  sessions         Session[]
+  memberships           OrganizationMember[]
+  invitationsSent       Invitation[]
+  decisions             Decision[]              @relation("DecisionCreator")
+  votes                 Vote[]
+  proposalVotes         ProposalVote[]
+  comments              Comment[]
+  decisionParticipants  DecisionParticipant[]
+  accounts              Account[]
+  sessions              Session[]
 
   @@map("users")
 }
@@ -190,6 +192,14 @@ model Decision {
   decisionType   String         // CONSENSUS, CONSENT, MAJORITY, SUPERMAJORITY, WEIGHTED_VOTE, ADVISORY
   status         String         @default("DRAFT") // DRAFT, OPEN, CLOSED, IMPLEMENTED, ARCHIVED
 
+  // Mode de vote
+  votingMode     String         @default("INVITED") // INVITED (invitations) ou PUBLIC_LINK (lien URL)
+  publicToken    String?        @unique // Token pour accès public si votingMode = PUBLIC_LINK
+
+  // Pour le consensus
+  initialProposal  String?      // Proposition initiale
+  amendedProposal  String?      // Proposition amendée
+
   // Résultat de la décision
   result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN
   resultDetails  String?
@@ -206,23 +216,77 @@ model Decision {
   organizationId String
   teamId         String?
 
-  creator      User         @relation("DecisionCreator", fields: [creatorId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  votes        Vote[]
-  comments     Comment[]
-  tags         DecisionTag[]
+  creator       User                  @relation("DecisionCreator", fields: [creatorId], references: [id])
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team          Team?                 @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  votes         Vote[]
+  comments      Comment[]
+  tags          DecisionTag[]
+  proposals     Proposal[]            // Pour vote à la majorité
+  participants  DecisionParticipant[] // Qui peut voter
 
   @@map("decisions")
+}
+
+// ============================================
+// PROPOSITIONS (pour vote à la majorité)
+// ============================================
+
+model Proposal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      // Ordre d'affichage
+  decisionId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  decision      Decision       @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  proposalVotes ProposalVote[] // Votes pour cette proposition
+
+  @@map("proposals")
+}
+
+// ============================================
+// PARTICIPANTS À UNE DÉCISION
+// ============================================
+
+model DecisionParticipant {
+  id             String   @id @default(cuid())
+  decisionId     String
+
+  // Participant membre de l'organisation
+  userId         String?
+
+  // Participant externe (non membre)
+  externalEmail  String?
+  externalName   String?
+
+  // Comment a-t-il été invité
+  invitedVia     String   // TEAM (via équipe), MANUAL (ajouté manuellement), EXTERNAL (email externe)
+  teamId         String?  // Si invité via une équipe
+
+  // A-t-il voté ?
+  hasVoted       Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionId, userId])
+  @@unique([decisionId, externalEmail])
+  @@map("decision_participants")
 }
 
 // ============================================
 // VOTES
 // ============================================
 
+// Vote pour consensus/consent/etc (vote nuancé)
 model Vote {
   id         String     @id @default(cuid())
-  value      String     // STRONG_SUPPORT, SUPPORT, WEAK_SUPPORT, ABSTAIN, WEAK_OPPOSE, OPPOSE, STRONG_OPPOSE, BLOCK
+  value      String     // Pour consensus: AGREE/DISAGREE ; Pour autres: STRONG_SUPPORT, SUPPORT, etc.
   weight     Int        @default(1) // Pour votes nuancés: -3 à +3 par exemple
   comment    String?
   createdAt  DateTime   @default(now())
@@ -237,6 +301,22 @@ model Vote {
 
   @@unique([userId, decisionId])
   @@map("votes")
+}
+
+// Vote pour une proposition spécifique (vote à la majorité)
+model ProposalVote {
+  id         String   @id @default(cuid())
+  proposalId String
+  userId     String
+  decisionId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, decisionId]) // Un utilisateur ne peut voter qu'une fois par décision
+  @@map("proposal_votes")
 }
 
 // ============================================
