@@ -7,14 +7,14 @@ import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 export default async function OrganizationDashboard({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/auth/signin');
   }
 
-  const { slug } = params;
+  const { slug } = await params;
 
   // Récupérer l'organisation
   const organization = await prisma.organization.findUnique({

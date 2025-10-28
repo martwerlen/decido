@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // PATCH /api/organizations/[slug]/decisions/[decisionId]/comments/[commentId] - Met à jour un commentaire
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string; commentId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string; commentId: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,7 +13,7 @@ export async function PATCH(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId, commentId } = params;
+    const { slug, decisionId, commentId } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -101,7 +101,7 @@ export async function PATCH(
 // DELETE /api/organizations/[slug]/decisions/[decisionId]/comments/[commentId] - Supprime un commentaire
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string; commentId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string; commentId: string }> }
 ) {
   try {
     const session = await auth();
@@ -109,7 +109,7 @@ export async function DELETE(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId, commentId } = params;
+    const { slug, decisionId, commentId } = await params;
 
     // Récupérer le commentaire
     const comment = await prisma.comment.findFirst({

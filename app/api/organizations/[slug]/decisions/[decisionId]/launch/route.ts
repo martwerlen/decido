@@ -6,7 +6,7 @@ import { sendEmail } from '@/lib/email';
 // POST /api/organizations/[slug]/decisions/[decisionId]/launch - Lance une décision
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,7 +14,7 @@ export async function POST(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({

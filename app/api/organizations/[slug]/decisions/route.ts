@@ -6,7 +6,7 @@ import { isValidDecisionType } from '@/types/enums';
 // GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,7 +14,7 @@ export async function GET(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug } = params;
+    const { slug } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -84,7 +84,7 @@ export async function GET(
 // POST /api/organizations/[slug]/decisions - Crée une nouvelle décision
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -92,7 +92,7 @@ export async function POST(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug } = params;
+    const { slug } = await params;
     const body = await request.json();
 
     // Récupérer l'organisation par son slug

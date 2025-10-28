@@ -6,7 +6,7 @@ import { isValidDecisionType, isValidDecisionStatus } from '@/types/enums';
 // GET /api/organizations/[slug]/decisions/[decisionId] - Récupère une décision
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,7 +14,7 @@ export async function GET(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -168,7 +168,7 @@ export async function GET(
 // PATCH /api/organizations/[slug]/decisions/[decisionId] - Met à jour une décision
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -176,7 +176,7 @@ export async function PATCH(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
     const body = await request.json();
 
     // Récupérer la décision
@@ -272,7 +272,7 @@ export async function PATCH(
 // DELETE /api/organizations/[slug]/decisions/[decisionId] - Supprime une décision
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -280,7 +280,7 @@ export async function DELETE(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
 
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({

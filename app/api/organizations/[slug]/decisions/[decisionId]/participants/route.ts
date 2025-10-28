@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // POST /api/organizations/[slug]/decisions/[decisionId]/participants - Ajoute des participants
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,7 +13,7 @@ export async function POST(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -182,7 +182,7 @@ export async function POST(
 // DELETE /api/organizations/[slug]/decisions/[decisionId]/participants - Supprime un participant
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string }> }
 ) {
   try {
     const session = await auth();
@@ -190,7 +190,7 @@ export async function DELETE(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId } = params;
+    const { slug, decisionId } = await params;
     const { searchParams } = new URL(request.url);
     const participantId = searchParams.get('participantId');
 

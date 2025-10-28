@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // PATCH /api/organizations/[slug]/decisions/[decisionId]/proposals/[proposalId] - Met à jour une proposition
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string; proposalId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string; proposalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,7 +13,7 @@ export async function PATCH(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId, proposalId } = params;
+    const { slug, decisionId, proposalId } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -89,7 +89,7 @@ export async function PATCH(
 // DELETE /api/organizations/[slug]/decisions/[decisionId]/proposals/[proposalId] - Supprime une proposition
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string; decisionId: string; proposalId: string } }
+  { params }: { params: Promise<{ slug: string; decisionId: string; proposalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -97,7 +97,7 @@ export async function DELETE(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug, decisionId, proposalId } = params;
+    const { slug, decisionId, proposalId } = await params;
 
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({

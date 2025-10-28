@@ -42,7 +42,6 @@ import {
   HowToVote as DecisionIcon,
   People as PeopleIcon,
 } from '@mui/icons-material';
-import Sidebar from '@/components/dashboard/Sidebar';
 
 interface TeamMember {
   id: string;
@@ -335,9 +334,6 @@ export default function OrganizationTeamsPage() {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar currentOrgSlug={organizationSlug} />
-
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1">
@@ -629,6 +625,5 @@ export default function OrganizationTeamsPage() {
           </DialogActions>
         </Dialog>
       </Box>
-    </Box>
   );
 }

@@ -6,14 +6,14 @@ import ResultsPageClient from './ResultsPageClient';
 export default async function ResultsPage({
   params,
 }: {
-  params: { slug: string; decisionId: string };
+  params: Promise<{ slug: string; decisionId: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/auth/signin');
   }
 
-  const { slug, decisionId } = params;
+  const { slug } = await params;
 
   // Récupérer la décision
   const decision = await prisma.decision.findFirst({

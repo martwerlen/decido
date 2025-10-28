@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/organizations/[slug]/decisions/sidebar - Récupère les décisions pour le sidebar
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,7 +13,7 @@ export async function GET(
       return Response.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { slug } = params;
+    const { slug } = await params;
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({

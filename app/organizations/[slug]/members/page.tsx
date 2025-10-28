@@ -37,7 +37,6 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
-import Sidebar from '@/components/dashboard/Sidebar';
 
 interface Member {
   id: string;
@@ -314,9 +313,6 @@ export default function OrganizationMembersPage() {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar currentOrgSlug={organizationSlug} />
-
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1">
@@ -729,6 +725,5 @@ export default function OrganizationMembersPage() {
         </DialogActions>
       </Dialog>
       </Box>
-    </Box>
   );
 }

@@ -6,14 +6,14 @@ import VotePageClient from './VotePageClient';
 export default async function VotePage({
   params,
 }: {
-  params: { slug: string; decisionId: string };
+  params: Promise<{ slug: string; decisionId: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/auth/signin');
   }
 
-  const { slug, decisionId } = params;
+  const { slug } = await params;
 
   // Récupérer la décision avec toutes les données nécessaires
   const decision = await prisma.decision.findFirst({

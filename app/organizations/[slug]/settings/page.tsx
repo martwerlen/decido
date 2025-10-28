@@ -21,7 +21,6 @@ import {
   People as PeopleIcon,
   Business as BusinessIcon,
 } from '@mui/icons-material';
-import Sidebar from '@/components/dashboard/Sidebar';
 
 interface Organization {
   id: string;
@@ -127,9 +126,6 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar currentOrgSlug={organizationSlug} />
-
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Paramètres de {organization?.name}
@@ -257,6 +253,5 @@ export default function OrganizationSettingsPage() {
         </Paper>
       </Box>
       </Box>
-    </Box>
   );
 }

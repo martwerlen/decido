@@ -7,14 +7,14 @@ import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 export default async function DecisionsPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/auth/signin');
   }
 
-  const { slug } = params;
+  const { slug } = await params;
 
   // Vérifier que l'utilisateur est membre de l'organisation
   const membership = await prisma.organizationMember.findUnique({
