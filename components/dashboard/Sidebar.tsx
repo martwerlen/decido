@@ -32,6 +32,7 @@ import {
   Logout,
   Add,
   Settings,
+  AccountTree,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
 
@@ -141,6 +142,12 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }
 
+  const handleTeams = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}/teams`)
+    }
+  }
+
   return (
     <Drawer
       variant="permanent"
@@ -217,6 +224,27 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
         {!open && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
             <Business />
+          </Box>
+        )}
+
+        <Divider />
+
+        {/* Organigramme */}
+        {open && (
+          <Box sx={{ p: 2 }}>
+            <List dense>
+              <ListItem disablePadding>
+                <ListItemButton onClick={handleTeams} disabled={!organization}>
+                  <ListItemIcon>
+                    <AccountTree fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Organigramme"
+                    primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </List>
           </Box>
         )}
 
