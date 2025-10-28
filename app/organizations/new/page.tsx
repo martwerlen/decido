@@ -1,15 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+  CircularProgress,
+  Chip,
+  FormHelperText,
+} from '@mui/material';
+import { CheckCircle as CheckCircleIcon, Error as ErrorIcon } from '@mui/icons-material';
+import { generateSlug } from '@/lib/slug';
 
 export default function NewOrganizationPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // États pour la vérification du slug
+  const [checkingSlug, setCheckingSlug] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [slugSuggestions, setSlugSuggestions] = useState<string[]>([]);
+
+  // Générer automatiquement le slug à partir du nom
+  useEffect(() => {
+    if (!slugTouched && name) {
+      const generatedSlug = generateSlug(name);
+      setSlug(generatedSlug);
+    }
+  }, [name, slugTouched]);
+
+  // Vérifier la disponibilité du slug avec debounce
+  useEffect(() => {
+    if (!slug) {
+      setSlugAvailable(null);
+      setSlugSuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setCheckingSlug(true);
+      try {
+        const response = await fetch(`/api/organizations/check-slug?slug=${encodeURIComponent(slug)}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setSlugAvailable(data.available);
+          setSlugSuggestions(data.suggestions || []);
+        }
+      } catch (err) {
+        console.error('Error checking slug:', err);
+      } finally {
+        setCheckingSlug(false);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [slug]);
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlugTouched(true);
+    setSlug(generateSlug(e.target.value));
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSlugTouched(true);
+    setSlug(suggestion);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +87,7 @@ export default function NewOrganizationPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, slug }),
       });
 
       const data = await response.json();
@@ -31,14 +96,17 @@ export default function NewOrganizationPage() {
         throw new Error(data.error || 'Erreur lors de la création de l\'organisation');
       }
 
-      // Rediriger vers la page de gestion des membres
-      router.push(`/organizations/${data.id}/members`);
+      // Rediriger vers la page de gestion des membres en utilisant le slug
+      router.push(`/organizations/${data.slug}/members`);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const isSlugValid = slug && slugAvailable === true;
+  const canSubmit = name.trim() && slug && !checkingSlug && slugAvailable === true && !loading;
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto', mt: 8, p: 3 }}>
@@ -66,7 +134,61 @@ export default function NewOrganizationPage() {
             required
             sx={{ mb: 2 }}
             disabled={loading}
+            helperText="Le nom de votre organisation"
           />
+
+          <TextField
+            fullWidth
+            label="Slug (URL)"
+            value={slug}
+            onChange={handleSlugChange}
+            required
+            sx={{ mb: 1 }}
+            disabled={loading}
+            error={slugTouched && slug !== '' && slugAvailable === false}
+            InputProps={{
+              endAdornment: (
+                <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                  {checkingSlug && <CircularProgress size={20} />}
+                  {!checkingSlug && slug && slugAvailable === true && (
+                    <CheckCircleIcon color="success" />
+                  )}
+                  {!checkingSlug && slug && slugAvailable === false && (
+                    <ErrorIcon color="error" />
+                  )}
+                </Box>
+              ),
+            }}
+            helperText={
+              !slug
+                ? "L'URL de votre organisation (ex: mon-organisation)"
+                : checkingSlug
+                ? "Vérification..."
+                : slugAvailable === true
+                ? "✓ Ce slug est disponible"
+                : slugAvailable === false
+                ? "✗ Ce slug est déjà utilisé"
+                : "L'URL de votre organisation"
+            }
+          />
+
+          {slugSuggestions.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <FormHelperText>Suggestions disponibles :</FormHelperText>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                {slugSuggestions.map((suggestion) => (
+                  <Chip
+                    key={suggestion}
+                    label={suggestion}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    color="primary"
+                    variant="outlined"
+                    size="small"
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
 
           <TextField
             fullWidth
@@ -77,6 +199,7 @@ export default function NewOrganizationPage() {
             rows={4}
             sx={{ mb: 3 }}
             disabled={loading}
+            helperText="Une brève description de votre organisation"
           />
 
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -85,7 +208,7 @@ export default function NewOrganizationPage() {
               variant="contained"
               color="primary"
               fullWidth
-              disabled={loading || !name.trim()}
+              disabled={!canSubmit}
             >
               {loading ? 'Création...' : 'Créer l\'organisation'}
             </Button>

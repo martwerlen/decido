@@ -6,6 +6,7 @@ import { z } from 'zod';
 const createOrganizationSchema = z.object({
   name: z.string().min(1, 'Le nom de l\'organisation est requis'),
   description: z.string().optional(),
+  slug: z.string().min(1, 'Le slug est requis'),
 });
 
 export async function POST(req: Request) {
@@ -36,27 +37,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, description } = validationResult.data;
-    console.log('[API Organizations POST] Nom:', name, 'Description:', description);
+    const { name, description, slug } = validationResult.data;
+    console.log('[API Organizations POST] Nom:', name, 'Description:', description, 'Slug:', slug);
 
-    // Générer un slug unique basé sur le nom
-    const baseSlug = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    // Vérifier que le slug n'est pas déjà utilisé
+    const existingOrg = await prisma.organization.findUnique({
+      where: { slug },
+    });
 
-    // Vérifier si le slug existe déjà et ajouter un suffixe si nécessaire
-    let slug = baseSlug;
-    let counter = 1;
-    console.log('[API Organizations POST] Slug de base:', baseSlug);
-
-    while (await prisma.organization.findUnique({ where: { slug } })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
+    if (existingOrg) {
+      console.log('[API Organizations POST] Slug déjà utilisé:', slug);
+      return NextResponse.json(
+        { error: 'Ce slug est déjà utilisé par une autre organisation' },
+        { status: 400 }
+      );
     }
-    console.log('[API Organizations POST] Slug final:', slug);
+
+    console.log('[API Organizations POST] Slug disponible:', slug);
 
     // Créer l'organisation et ajouter le créateur comme OWNER
     console.log('[API Organizations POST] Création de l\'organisation...');
