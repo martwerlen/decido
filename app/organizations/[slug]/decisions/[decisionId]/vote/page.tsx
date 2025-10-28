@@ -13,7 +13,7 @@ export default async function VotePage({
     redirect('/auth/signin');
   }
 
-  const { slug } = await params;
+  const { slug, decisionId } = await params;
 
   // Récupérer la décision avec toutes les données nécessaires
   const decision = await prisma.decision.findFirst({

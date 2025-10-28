@@ -13,7 +13,7 @@ export default async function DecisionAdminPage({
     redirect('/auth/signin');
   }
 
-  const { slug } = await params;
+  const { slug, decisionId } = await params;
 
   // Récupérer la décision
   const decision = await prisma.decision.findFirst({
