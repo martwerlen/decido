@@ -174,7 +174,7 @@ export async function POST(
       }
     }
 
-    // Créer la décision
+    // Créer la décision avec le créateur comme participant par défaut
     const decision = await prisma.decision.create({
       data: {
         title,
@@ -187,6 +187,12 @@ export async function POST(
         endDate: endDate ? new Date(endDate) : null,
         initialProposal: body.initialProposal || null,
         votingMode: body.votingMode || 'INVITED',
+        participants: {
+          create: {
+            userId: session.user.id,
+            invitedVia: 'MANUAL',
+          },
+        },
       },
       include: {
         creator: {
@@ -197,6 +203,17 @@ export async function POST(
           },
         },
         team: true,
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 

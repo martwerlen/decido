@@ -48,8 +48,11 @@ interface Decision {
 
 interface SidebarDecisions {
   awaitingParticipation: Decision[]
+  awaitingParticipationTotal: number
   ongoingDecisions: Decision[]
+  ongoingDecisionsTotal: number
   completedDecisions: Decision[]
+  completedDecisionsTotal: number
 }
 
 interface Organization {
@@ -77,8 +80,11 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const [error, setError] = useState("")
   const [decisions, setDecisions] = useState<SidebarDecisions>({
     awaitingParticipation: [],
+    awaitingParticipationTotal: 0,
     ongoingDecisions: [],
+    ongoingDecisionsTotal: 0,
     completedDecisions: [],
+    completedDecisionsTotal: 0,
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
 
@@ -382,29 +388,44 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                   Aucune participation attendue
                 </Typography>
               ) : (
-                decisions.awaitingParticipation.map((decision) => (
-                  <ListItem key={decision.id} disablePadding>
-                    <ListItemButton
-                      onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
-                      sx={{
-                        backgroundColor: "warning.light",
-                        mb: 0.5,
-                        borderRadius: 1,
-                        "&:hover": {
-                          backgroundColor: "warning.main",
-                        }
-                      }}
-                    >
-                      <ListItemIcon>
-                        <HowToVote fontSize="small" color="warning" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={decision.title}
-                        primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))
+                <>
+                  {decisions.awaitingParticipation.map((decision) => (
+                    <ListItem key={decision.id} disablePadding>
+                      <ListItemButton
+                        onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
+                        sx={{
+                          backgroundColor: "warning.light",
+                          mb: 0.5,
+                          borderRadius: 1,
+                          "&:hover": {
+                            backgroundColor: "warning.main",
+                          }
+                        }}
+                      >
+                        <ListItemIcon>
+                          <HowToVote fontSize="small" color="warning" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={decision.title}
+                          primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                  {decisions.awaitingParticipationTotal > 5 && (
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
+                        sx={{ justifyContent: "center", color: "primary.main" }}
+                      >
+                        <Add fontSize="small" />
+                        <Typography variant="body2" sx={{ ml: 0.5 }}>
+                          Voir toutes ({decisions.awaitingParticipationTotal})
+                        </Typography>
+                      </ListItemButton>
+                    </ListItem>
+                  )}
+                </>
               )}
             </List>
           </Box>
@@ -428,19 +449,34 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                   Aucune décision en cours
                 </Typography>
               ) : (
-                decisions.ongoingDecisions.map((decision) => (
-                  <ListItem key={decision.id} disablePadding>
-                    <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}>
-                      <ListItemIcon>
-                        <HowToVote fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={decision.title}
-                        primaryTypographyProps={{ variant: "body2" }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))
+                <>
+                  {decisions.ongoingDecisions.map((decision) => (
+                    <ListItem key={decision.id} disablePadding>
+                      <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}>
+                        <ListItemIcon>
+                          <HowToVote fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={decision.title}
+                          primaryTypographyProps={{ variant: "body2" }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                  {decisions.ongoingDecisionsTotal > 5 && (
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
+                        sx={{ justifyContent: "center", color: "primary.main" }}
+                      >
+                        <Add fontSize="small" />
+                        <Typography variant="body2" sx={{ ml: 0.5 }}>
+                          Voir toutes ({decisions.ongoingDecisionsTotal})
+                        </Typography>
+                      </ListItemButton>
+                    </ListItem>
+                  )}
+                </>
               )}
             </List>
           </Box>
@@ -464,19 +500,34 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                   Aucune décision terminée
                 </Typography>
               ) : (
-                decisions.completedDecisions.map((decision) => (
-                  <ListItem key={decision.id} disablePadding>
-                    <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}>
-                      <ListItemIcon>
-                        <CheckCircle fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={decision.title}
-                        primaryTypographyProps={{ variant: "body2" }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))
+                <>
+                  {decisions.completedDecisions.map((decision) => (
+                    <ListItem key={decision.id} disablePadding>
+                      <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}>
+                        <ListItemIcon>
+                          <CheckCircle fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={decision.title}
+                          primaryTypographyProps={{ variant: "body2" }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                  {decisions.completedDecisionsTotal > 5 && (
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
+                        sx={{ justifyContent: "center", color: "primary.main" }}
+                      >
+                        <Add fontSize="small" />
+                        <Typography variant="body2" sx={{ ml: 0.5 }}>
+                          Voir toutes ({decisions.completedDecisionsTotal})
+                        </Typography>
+                      </ListItemButton>
+                    </ListItem>
+                  )}
+                </>
               )}
             </List>
           </Box>
