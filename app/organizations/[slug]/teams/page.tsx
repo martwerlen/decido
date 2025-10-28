@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -40,6 +40,7 @@ import {
   PersonAdd as PersonAddIcon,
   PersonRemove as PersonRemoveIcon,
   HowToVote as DecisionIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import Sidebar from '@/components/dashboard/Sidebar';
 
@@ -78,6 +79,7 @@ interface OrganizationMember {
 
 export default function OrganizationTeamsPage() {
   const params = useParams();
+  const router = useRouter();
   const organizationSlug = params.slug as string;
 
   const [teams, setTeams] = useState<Team[]>([]);
@@ -341,14 +343,24 @@ export default function OrganizationTeamsPage() {
           <Typography variant="h4" component="h1">
             Organigramme - Équipes
           </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreateTeam}
-          >
-            Créer une équipe
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<PeopleIcon />}
+              onClick={() => router.push(`/organizations/${organizationSlug}/members`)}
+            >
+              Gérer les membres
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleCreateTeam}
+            >
+              Créer une équipe
+            </Button>
+          </Box>
         </Box>
 
         {teams.length === 0 ? (

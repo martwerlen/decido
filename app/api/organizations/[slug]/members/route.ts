@@ -13,6 +13,7 @@ const addMemberSchema = z.object({
   email: z.string().email('Email invalide').optional().or(z.literal('')),
   role: z.enum(['MEMBER', 'ADMIN', 'OWNER']).optional().default('MEMBER'),
   sendInvitation: z.boolean().optional().default(true),
+  teams: z.array(z.string()).optional().default([]),
 });
 
 export async function POST(
@@ -60,7 +61,7 @@ export async function POST(
       );
     }
 
-    const { firstName, lastName, position, email, role, sendInvitation } = validationResult.data;
+    const { firstName, lastName, position, email, role, sendInvitation, teams } = validationResult.data;
 
     // Si un email est fourni et qu'on veut envoyer une invitation
     if (email && email.trim() !== '' && sendInvitation) {
@@ -104,6 +105,20 @@ export async function POST(
             },
           },
         });
+
+        // Ajouter le membre aux équipes sélectionnées
+        if (teams && teams.length > 0) {
+          await Promise.all(
+            teams.map((teamId) =>
+              prisma.teamMember.create({
+                data: {
+                  organizationMemberId: member.id,
+                  teamId,
+                },
+              })
+            )
+          );
+        }
 
         return NextResponse.json(member, { status: 201 });
       }
