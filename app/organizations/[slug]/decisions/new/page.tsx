@@ -49,12 +49,20 @@ export default function NewDecisionPage({
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+      console.log('API Response:', { ok: response.ok, status: response.status, data });
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Erreur lors de la création');
       }
 
-      const { decision } = await response.json();
+      if (!data.decision || !data.decision.id) {
+        console.error('Invalid response:', data);
+        throw new Error('Réponse invalide du serveur');
+      }
+
+      const { decision } = data;
+      console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/admin`);
 
       // Rediriger vers la page d'administration pour finaliser la configuration
       router.push(`/organizations/${slug}/decisions/${decision.id}/admin`);

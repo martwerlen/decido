@@ -15,11 +15,20 @@ export default async function VotePage({
 
   const { slug, decisionId } = await params;
 
+  // Récupérer l'organisation par son slug
+  const organization = await prisma.organization.findUnique({
+    where: { slug },
+  });
+
+  if (!organization) {
+    redirect(`/organizations/${slug}/decisions`);
+  }
+
   // Récupérer la décision avec toutes les données nécessaires
   const decision = await prisma.decision.findFirst({
     where: {
       id: decisionId,
-      organizationId: slug,
+      organizationId: organization.id,
     },
     include: {
       creator: {

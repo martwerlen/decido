@@ -15,11 +15,20 @@ export default async function DecisionAdminPage({
 
   const { slug, decisionId } = await params;
 
+  // Récupérer l'organisation par son slug
+  const organization = await prisma.organization.findUnique({
+    where: { slug },
+  });
+
+  if (!organization) {
+    redirect(`/organizations/${slug}/decisions`);
+  }
+
   // Récupérer la décision
   const decision = await prisma.decision.findFirst({
     where: {
       id: decisionId,
-      organizationId: slug,
+      organizationId: organization.id,
     },
     include: {
       creator: {
@@ -68,7 +77,7 @@ export default async function DecisionAdminPage({
   // Récupérer les équipes de l'organisation
   const teams = await prisma.team.findMany({
     where: {
-      organizationId: slug,
+      organizationId: organization.id,
     },
     include: {
       _count: {
@@ -82,7 +91,7 @@ export default async function DecisionAdminPage({
   // Récupérer les membres de l'organisation
   const members = await prisma.organizationMember.findMany({
     where: {
-      organizationId: slug,
+      organizationId: organization.id,
     },
     include: {
       user: {
