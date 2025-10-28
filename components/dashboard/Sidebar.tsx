@@ -285,6 +285,38 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
         <Divider />
 
+        {/* Nouvelle décision */}
+        {open && (
+          <Box sx={{ p: 2, pb: 0 }}>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => organization && router.push(`/organizations/${organization}/decisions/new`)}
+                disabled={!organization}
+                sx={{
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  borderRadius: 1,
+                  "&:hover": {
+                    backgroundColor: "primary.dark",
+                  },
+                  "&.Mui-disabled": {
+                    backgroundColor: "action.disabledBackground",
+                    color: "action.disabled",
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>
+                  <Add fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Nouvelle décision"
+                  primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                />
+              </ListItemButton>
+            </ListItem>
+          </Box>
+        )}
+
         {/* Décisions en cours */}
         {open && (
           <Box sx={{ p: 2 }}>
