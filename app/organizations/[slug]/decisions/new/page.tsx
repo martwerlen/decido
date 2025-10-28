@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DecisionTypeLabels, DecisionTypeDescriptions } from '@/types/enums';
 
 export default function NewDecisionPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +41,7 @@ export default function NewDecisionPage({
         }
       }
 
-      const response = await fetch(`/api/organizations/${params.slug}/decisions`, {
+      const response = await fetch(`/api/organizations/${slug}/decisions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +57,7 @@ export default function NewDecisionPage({
       const { decision } = await response.json();
 
       // Rediriger vers la page d'administration pour finaliser la configuration
-      router.push(`/organizations/${params.slug}/decisions/${decision.id}/admin`);
+      router.push(`/organizations/${slug}/decisions/${decision.id}/admin`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
       setLoading(false);

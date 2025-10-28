@@ -16,12 +16,21 @@ export async function GET(
 
     const { slug } = params;
 
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
+    }
+
     // Vérifier que l'utilisateur est membre de l'organisation
     const membership = await prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
-          organizationId: slug,
+          organizationId: organization.id,
         },
       },
     });
@@ -33,7 +42,7 @@ export async function GET(
     // Récupérer les décisions de l'organisation
     const decisions = await prisma.decision.findMany({
       where: {
-        organizationId: slug,
+        organizationId: organization.id,
       },
       include: {
         creator: {
@@ -86,12 +95,21 @@ export async function POST(
     const { slug } = params;
     const body = await request.json();
 
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
+    }
+
     // Vérifier que l'utilisateur est membre de l'organisation
     const membership = await prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
-          organizationId: slug,
+          organizationId: organization.id,
         },
       },
     });
@@ -144,7 +162,7 @@ export async function POST(
       const team = await prisma.team.findFirst({
         where: {
           id: teamId,
-          organizationId: slug,
+          organizationId: organization.id,
         },
       });
 
@@ -163,7 +181,7 @@ export async function POST(
         description,
         decisionType,
         status: 'DRAFT',
-        organizationId: slug,
+        organizationId: organization.id,
         creatorId: session.user.id,
         teamId: teamId || null,
         endDate: endDate ? new Date(endDate) : null,

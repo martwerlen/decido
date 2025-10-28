@@ -14,13 +14,22 @@ export async function POST(
     }
 
     const { slug, decisionId } = params;
+
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: "Organisation non trouvée" }, { status: 404 });
+    }
     const body = await request.json();
 
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 
@@ -55,7 +64,7 @@ export async function POST(
         const team = await prisma.team.findFirst({
           where: {
             id: teamId,
-            organizationId: slug,
+            organizationId: organization.id,
           },
           include: {
             members: {
@@ -104,7 +113,7 @@ export async function POST(
         const membership = await prisma.organizationMember.findFirst({
           where: {
             userId,
-            organizationId: slug,
+            organizationId: organization.id,
           },
         });
 
@@ -196,7 +205,7 @@ export async function DELETE(
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 

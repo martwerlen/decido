@@ -16,12 +16,21 @@ export async function GET(
 
     const { slug, decisionId } = params;
 
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: "Organisation non trouvée" }, { status: 404 });
+    }
+
     // Vérifier que l'utilisateur est membre de l'organisation
     const membership = await prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
-          organizationId: slug,
+          organizationId: organization.id,
         },
       },
     });
@@ -34,7 +43,7 @@ export async function GET(
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
       include: {
         creator: {
@@ -174,7 +183,7 @@ export async function PATCH(
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 
@@ -277,7 +286,7 @@ export async function DELETE(
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 

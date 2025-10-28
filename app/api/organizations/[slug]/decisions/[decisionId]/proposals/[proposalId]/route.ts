@@ -14,13 +14,22 @@ export async function PATCH(
     }
 
     const { slug, decisionId, proposalId } = params;
+
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: "Organisation non trouvée" }, { status: 404 });
+    }
     const body = await request.json();
 
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 
@@ -94,7 +103,7 @@ export async function DELETE(
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        organizationId: slug,
+        organizationId: organization.id,
       },
     });
 
