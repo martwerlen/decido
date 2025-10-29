@@ -6,21 +6,11 @@ import {
   Box,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
   TextField,
   Button,
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {
-  People as PeopleIcon,
-  Business as BusinessIcon,
-} from '@mui/icons-material';
 
 interface Organization {
   id: string;
@@ -37,10 +27,9 @@ export default function OrganizationSettingsPage() {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeSection, setActiveSection] = useState<'menu' | 'members' | 'info'>('menu');
-
   // Form state for organization info
   const [formData, setFormData] = useState({
+    name: '',
     slug: '',
     description: '',
   });
@@ -59,6 +48,7 @@ export default function OrganizationSettingsPage() {
 
       setOrganization(result);
       setFormData({
+        name: result.name,
         slug: result.slug,
         description: result.description || '',
       });
@@ -127,131 +117,87 @@ export default function OrganizationSettingsPage() {
 
   return (
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Paramètres de {organization?.name}
-        </Typography>
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Paramètres de l&apos;organisation
+          </Typography>
 
-        <Box sx={{ display: 'flex', gap: 3, mt: 4 }}>
-        {/* Menu latéral */}
-        <Paper elevation={3} sx={{ width: 280, height: 'fit-content' }}>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={activeSection === 'members'}
-                onClick={() => router.push(`/organizations/${organizationSlug}/members`)}
+          <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Informations de l&apos;organisation
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Modifiez les informations de votre organisation.
+            </Typography>
+
+            {formError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {formError}
+              </Alert>
+            )}
+
+            {formSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {formSuccess}
+              </Alert>
+            )}
+
+            <TextField
+              fullWidth
+              label="Nom"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              margin="normal"
+              helperText="Nom de l'organisation"
+            />
+
+            <TextField
+              fullWidth
+              label="Slug"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              margin="normal"
+              helperText="URL de l'organisation (ex: mon-organisation)"
+            />
+
+            <TextField
+              fullWidth
+              label="Description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              margin="normal"
+              multiline
+              rows={4}
+              helperText="Description de l'organisation"
+            />
+
+            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleUpdateOrganization}
+                disabled={formLoading}
               >
-                <ListItemIcon>
-                  <PeopleIcon />
-                </ListItemIcon>
-                <ListItemText primary="Gérer les membres" />
-              </ListItemButton>
-            </ListItem>
-            <Divider />
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={activeSection === 'info'}
-                onClick={() => setActiveSection('info')}
+                {formLoading ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFormData({
+                    name: organization?.name || '',
+                    slug: organization?.slug || '',
+                    description: organization?.description || '',
+                  });
+                  setFormError('');
+                  setFormSuccess('');
+                }}
+                disabled={formLoading}
               >
-                <ListItemIcon>
-                  <BusinessIcon />
-                </ListItemIcon>
-                <ListItemText primary="Informations de l'organisation" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </Paper>
-
-        {/* Contenu principal */}
-        <Paper elevation={3} sx={{ flex: 1, p: 3 }}>
-          {activeSection === 'menu' && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Bienvenue dans les paramètres
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Sélectionnez une option dans le menu pour commencer.
-              </Typography>
+                Annuler
+              </Button>
             </Box>
-          )}
-
-          {activeSection === 'info' && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Informations de l&apos;organisation
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Modifiez les informations de votre organisation.
-              </Typography>
-
-              {formError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {formError}
-                </Alert>
-              )}
-
-              {formSuccess && (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  {formSuccess}
-                </Alert>
-              )}
-
-              <TextField
-                fullWidth
-                label="Nom"
-                value={organization?.name || ''}
-                disabled
-                margin="normal"
-                helperText="Le nom de l'organisation ne peut pas être modifié"
-              />
-
-              <TextField
-                fullWidth
-                label="Slug"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                margin="normal"
-                helperText="URL de l'organisation (ex: mon-organisation)"
-              />
-
-              <TextField
-                fullWidth
-                label="Description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                margin="normal"
-                multiline
-                rows={4}
-                helperText="Description de l'organisation"
-              />
-
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleUpdateOrganization}
-                  disabled={formLoading}
-                >
-                  {formLoading ? 'Enregistrement...' : 'Enregistrer'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setFormData({
-                      slug: organization?.slug || '',
-                      description: organization?.description || '',
-                    });
-                    setFormError('');
-                    setFormSuccess('');
-                  }}
-                  disabled={formLoading}
-                >
-                  Annuler
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </Paper>
-      </Box>
+          </Paper>
+        </Box>
       </Box>
   );
 }

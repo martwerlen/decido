@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { getOrganizationBySlug, checkUserIsOwner, checkUserIsMember } from '@/lib/organization';
+import { getOrganizationBySlug, checkUserPermission, checkUserIsMember } from '@/lib/organization';
 
 const updateOrganizationSchema = z.object({
+  name: z.string().min(1, 'Le nom est requis').optional(),
   slug: z.string().min(1, 'Le slug est requis').optional(),
   description: z.string().optional(),
 });
@@ -79,11 +80,11 @@ export async function PATCH(
 
     const organizationId = organization.id;
 
-    // Vérifier que l'utilisateur est propriétaire
-    const isOwner = await checkUserIsOwner(organizationId, session.user.id);
-    if (!isOwner) {
+    // Vérifier que l'utilisateur est administrateur ou propriétaire
+    const hasPermission = await checkUserPermission(organizationId, session.user.id);
+    if (!hasPermission) {
       return NextResponse.json(
-        { error: 'Seul le propriétaire peut modifier l\'organisation' },
+        { error: 'Seuls les administrateurs et propriétaires peuvent modifier l\'organisation' },
         { status: 403 }
       );
     }
@@ -98,7 +99,7 @@ export async function PATCH(
       );
     }
 
-    const { slug: newSlug, description } = validationResult.data;
+    const { name, slug: newSlug, description } = validationResult.data;
 
     // Si le slug change, vérifier qu'il n'est pas déjà utilisé
     if (newSlug && newSlug !== organization.slug) {
@@ -118,6 +119,7 @@ export async function PATCH(
     const updatedOrganization = await prisma.organization.update({
       where: { id: organizationId },
       data: {
+        ...(name && { name }),
         ...(newSlug && { slug: newSlug }),
         ...(description !== undefined && { description }),
       },
