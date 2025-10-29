@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidDecisionType } from '@/types/enums';
+import { logDecisionCreated } from '@/lib/decision-logger';
 
 // GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
 export async function GET(
@@ -216,6 +217,9 @@ export async function POST(
         },
       },
     });
+
+    // Logger la création de la décision
+    await logDecisionCreated(decision.id, session.user.id);
 
     return Response.json({ decision }, { status: 201 });
   } catch (error) {

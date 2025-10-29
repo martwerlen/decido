@@ -221,3 +221,65 @@ export function isValidParticipantInvitedVia(via: string): via is ParticipantInv
 export function isValidConsensusVoteValue(value: string): value is ConsensusVoteValue {
   return CONSENSUS_VOTE_VALUES.includes(value as ConsensusVoteValue);
 }
+
+// Types d'événements pour l'historique des décisions
+export type DecisionLogEventType =
+  // Cycle de vie
+  | 'CREATED'                 // Décision créée
+  | 'STATUS_CHANGED'          // Changement de statut
+  | 'CLOSED'                  // Décision fermée
+  | 'REOPENED'                // Décision rouverte
+
+  // Modifications par créateur
+  | 'TITLE_UPDATED'           // Titre modifié
+  | 'DESCRIPTION_UPDATED'     // Description modifiée
+  | 'CONTEXT_UPDATED'         // Contexte modifié
+  | 'DEADLINE_UPDATED'        // Date limite modifiée
+  | 'PROPOSAL_AMENDED'        // Proposition amendée (consensus)
+
+  // Participants
+  | 'PARTICIPANT_ADDED'       // Participant ajouté
+  | 'PARTICIPANT_REMOVED'     // Participant retiré
+
+  // Actions des participants
+  | 'VOTE_RECORDED'           // Vote enregistré
+  | 'VOTE_UPDATED'            // Vote modifié
+  | 'COMMENT_ADDED';          // Commentaire ajouté
+
+export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
+  'CREATED',
+  'STATUS_CHANGED',
+  'CLOSED',
+  'REOPENED',
+  'TITLE_UPDATED',
+  'DESCRIPTION_UPDATED',
+  'CONTEXT_UPDATED',
+  'DEADLINE_UPDATED',
+  'PROPOSAL_AMENDED',
+  'PARTICIPANT_ADDED',
+  'PARTICIPANT_REMOVED',
+  'VOTE_RECORDED',
+  'VOTE_UPDATED',
+  'COMMENT_ADDED',
+];
+
+export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = {
+  CREATED: 'Décision créée',
+  STATUS_CHANGED: 'Statut modifié',
+  CLOSED: 'Décision fermée',
+  REOPENED: 'Décision rouverte',
+  TITLE_UPDATED: 'Titre modifié',
+  DESCRIPTION_UPDATED: 'Description modifiée',
+  CONTEXT_UPDATED: 'Contexte modifié',
+  DEADLINE_UPDATED: 'Date limite modifiée',
+  PROPOSAL_AMENDED: 'Proposition amendée',
+  PARTICIPANT_ADDED: 'Participant ajouté',
+  PARTICIPANT_REMOVED: 'Participant retiré',
+  VOTE_RECORDED: 'Vote enregistré',
+  VOTE_UPDATED: 'Vote modifié',
+  COMMENT_ADDED: 'Commentaire ajouté',
+};
+
+export function isValidDecisionLogEventType(type: string): type is DecisionLogEventType {
+  return DECISION_LOG_EVENT_TYPES.includes(type as DecisionLogEventType);
+}

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logVoteRecorded, logVoteUpdated } from '@/lib/decision-logger';
 
 // POST /api/organizations/[slug]/decisions/[decisionId]/vote - Vote pour une décision
 export async function POST(
@@ -89,6 +90,14 @@ export async function POST(
         );
       }
 
+      // Vérifier si l'utilisateur a déjà voté
+      const existingVote = await prisma.proposalVote.findFirst({
+        where: {
+          userId: session.user.id,
+          decisionId,
+        },
+      });
+
       // Supprimer le vote précédent s'il existe
       await prisma.proposalVote.deleteMany({
         where: {
@@ -120,6 +129,13 @@ export async function POST(
         },
       });
 
+      // Logger le vote (anonyme pour la majorité)
+      if (existingVote) {
+        await logVoteUpdated(decisionId);
+      } else {
+        await logVoteRecorded(decisionId);
+      }
+
       return Response.json({ vote, message: 'Vote enregistré avec succès' });
     } else if (decision.decisionType === 'CONSENSUS') {
       // Pour le consensus, on vote AGREE ou DISAGREE
@@ -131,6 +147,16 @@ export async function POST(
           { status: 400 }
         );
       }
+
+      // Vérifier si le vote existe déjà
+      const existingVote = await prisma.vote.findUnique({
+        where: {
+          userId_decisionId: {
+            userId: session.user.id,
+            decisionId,
+          },
+        },
+      });
 
       // Mettre à jour ou créer le vote
       const vote = await prisma.vote.upsert({
@@ -162,6 +188,27 @@ export async function POST(
           hasVoted: true,
         },
       });
+
+      // Logger le vote pour consensus (avec détails du votant et du vote)
+      const userName = session.user.name || session.user.email || 'Utilisateur';
+      if (existingVote) {
+        await logVoteUpdated(
+          decisionId,
+          session.user.id,
+          userName,
+          undefined,
+          existingVote.value,
+          value
+        );
+      } else {
+        await logVoteRecorded(
+          decisionId,
+          session.user.id,
+          userName,
+          undefined,
+          value
+        );
+      }
 
       // Vérifier si tous les participants ont voté "AGREE"
       const allParticipants = await prisma.decisionParticipant.findMany({
