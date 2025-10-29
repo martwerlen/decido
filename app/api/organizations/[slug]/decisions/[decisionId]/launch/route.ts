@@ -113,6 +113,17 @@ export async function POST(
       },
     });
 
+    // Mettre à jour tokenExpiresAt pour tous les participants externes
+    await prisma.decisionParticipant.updateMany({
+      where: {
+        decisionId,
+        externalEmail: { not: null },
+      },
+      data: {
+        tokenExpiresAt: decision.endDate,
+      },
+    });
+
     // Envoyer des emails uniquement aux participants externes (non-membres)
     if (decision.votingMode === 'INVITED') {
       // Filtrer uniquement les participants externes
@@ -124,7 +135,7 @@ export async function POST(
         const emailPromises = externalParticipants.map(async (participant) => {
           const email = participant.externalEmail!;
           const name = participant.externalName || 'Participant';
-          const voteUrl = `${process.env.NEXTAUTH_URL}/organizations/${slug}/decisions/${decisionId}/vote`;
+          const voteUrl = `${process.env.NEXTAUTH_URL}/vote/${participant.token}`;
 
           try {
             console.log(`📤 Envoi à ${email} (${name})`);
@@ -134,7 +145,7 @@ export async function POST(
               html: `
                 <h2>Vous êtes invité à participer à une décision</h2>
                 <p>Bonjour ${name},</p>
-                <p>L'organisation <strong>${decision.organization.name}</strong> vous invite à participer à une décision :</p>
+                <p>Vous êtes invité à participer à une décision :</p>
                 <h3>${decision.title}</h3>
                 <p>${decision.description}</p>
                 <p><strong>Type de décision :</strong> ${decision.decisionType === 'MAJORITY' ? 'Vote à la majorité' : 'Consensus'}</p>
@@ -145,6 +156,7 @@ export async function POST(
                   </a>
                 </p>
                 <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
+                <p style="color: #666; font-size: 12px; margin-top: 20px;">Ce lien est personnel et expire le ${new Date(decision.endDate).toLocaleDateString('fr-FR')}.</p>
               `,
             });
             console.log(`✅ Envoyé à ${email}`);

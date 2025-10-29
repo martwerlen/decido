@@ -35,12 +35,13 @@ npm run db:studio          # Open Prisma Studio (database GUI)
 ```
 app/                      # Next.js App Router
 ├── api/                  # API routes (auth, organizations, invitations)
+│   └── vote/[token]/    # Public voting API for external participants
 ├── auth/                 # Auth pages (signin, signup)
 ├── organizations/        # Organization management pages
 │   ├── [slug]/          # Dynamic organization routes
 │   │   ├── decisions/   # Decision management
 │   │   │   ├── [decisionId]/
-│   │   │   │   ├── vote/     # Voting interface
+│   │   │   │   ├── vote/     # Voting interface (authenticated)
 │   │   │   │   ├── results/  # Results display
 │   │   │   │   └── admin/    # Decision administration
 │   │   │   └── new/          # Create new decision
@@ -48,7 +49,8 @@ app/                      # Next.js App Router
 │   │   ├── teams/       # Team management
 │   │   └── settings/    # Organization settings
 │   └── new/             # Create new organization
-└── invitations/          # Invitation acceptance pages
+├── invitations/          # Invitation acceptance pages
+└── vote/[token]/         # Public voting page for external participants (no auth)
 
 lib/                      # Core business logic
 ├── auth.ts              # NextAuth configuration
@@ -76,11 +78,13 @@ The app uses dynamic routes extensively. Key patterns:
 
 - `/organizations/[slug]` - Organization by slug (e.g., `/organizations/acme-corp`)
 - `/organizations/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
-- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision
+- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision (requires authentication)
 - `/organizations/[slug]/decisions/[decisionId]/results` - View results
 - `/organizations/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
+- `/vote/[token]` - **Public voting page** for external participants (no authentication required)
 
-API routes mirror this structure under `/api/organizations/[slug]/...`
+API routes mirror this structure under `/api/organizations/[slug]/...` plus:
+- `/api/vote/[token]` - Public API for external participant voting (GET to fetch decision, POST to vote)
 
 ## Critical Architecture Details
 
@@ -172,6 +176,51 @@ Each decision has two possible voting modes (`votingMode` field):
 - Decision has a unique `publicToken` for URL access
 - Anyone with the link can vote (for anonymous/public decisions)
 - Used for broader consultations
+
+### External Participant Voting (Guest Voting)
+
+External participants (non-members) can vote through a unique token-based URL system:
+
+**How it works:**
+1. When adding external participants via the admin interface, each participant receives a unique `token` (stored in `DecisionParticipant`)
+2. Upon launching a decision, external participants receive an email with a personal voting link: `/vote/{token}`
+3. The token expires at the decision's `endDate` (stored in `tokenExpiresAt`)
+4. External participants access a simplified voting page without authentication, sidebar, or navigation
+
+**Database schema:**
+- `DecisionParticipant.token`: Unique 64-character hex string for external participants
+- `DecisionParticipant.tokenExpiresAt`: Expiration date (set to decision's endDate when launched)
+- `Vote.externalParticipantId`: Links votes to external participants (userId is null)
+- `ProposalVote.externalParticipantId`: Links proposal votes to external participants
+
+**Public voting page (`/vote/[token]`):**
+- **No authentication required** - Accessed via unique token URL
+- **Minimal UI** - No organization name, no sidebar, no navigation
+- **Display:** Decision title, description, context, and voting options
+- **For CONSENSUS:** Shows initial proposal, amended proposal, and all comments
+- **For MAJORITY:** Shows all proposals as radio button options
+- **Vote modification:** External participants can change their vote before the deadline
+- **Confirmation:** Simple "Thank you" message after voting
+
+**API endpoints:**
+- `GET /api/vote/[token]` - Fetches decision data and existing vote for the token
+- `POST /api/vote/[token]` - Records or updates the vote
+  - Validates token and expiration
+  - Checks decision is still OPEN
+  - Creates `Vote` or `ProposalVote` with `externalParticipantId`
+  - Marks `DecisionParticipant.hasVoted = true`
+
+**Email notification:**
+- Sent only to external participants (not organization members)
+- Contains personal token link: `${NEXTAUTH_URL}/vote/${token}`
+- Includes decision title, description, type, and deadline
+- Note about link expiration date
+
+**Security considerations:**
+- Each token is unique and non-guessable (crypto.randomBytes(32))
+- Tokens expire with the decision deadline
+- One vote per token (enforced by unique constraint on externalParticipantId + decisionId)
+- No sensitive information displayed (no organization details, no other voters)
 
 ### Proposal System (for MAJORITY votes)
 

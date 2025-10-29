@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
+
+// Génère un token unique pour les participants externes
+function generateExternalVoteToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 // POST /api/organizations/[slug]/decisions/[decisionId]/participants - Ajoute des participants
 export async function POST(
@@ -150,12 +156,17 @@ export async function POST(
         if (!external.email || !external.name) continue;
 
         try {
+          // Générer un token unique pour le participant externe
+          const token = generateExternalVoteToken();
+
           const participant = await prisma.decisionParticipant.create({
             data: {
               decisionId,
               externalEmail: external.email,
               externalName: external.name,
               invitedVia: 'EXTERNAL',
+              token,
+              // tokenExpiresAt sera défini lors du lancement de la décision
             },
           });
           createdParticipants.push(participant);
@@ -199,6 +210,15 @@ export async function DELETE(
         { error: 'L\'ID du participant est requis' },
         { status: 400 }
       );
+    }
+
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: "Organisation non trouvée" }, { status: 404 });
     }
 
     // Récupérer la décision

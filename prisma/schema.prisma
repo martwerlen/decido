@@ -264,6 +264,8 @@ model DecisionParticipant {
   // Participant externe (non membre)
   externalEmail  String?
   externalName   String?
+  token          String?  @unique // Token unique pour vote sans authentification
+  tokenExpiresAt DateTime? // Date d'expiration du token (= endDate de la décision)
 
   // Comment a-t-il été invité
   invitedVia     String   // TEAM (via équipe), MANUAL (ajouté manuellement), EXTERNAL (email externe)
@@ -274,8 +276,10 @@ model DecisionParticipant {
 
   createdAt      DateTime @default(now())
 
-  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision      Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes         Vote[]
+  proposalVotes ProposalVote[]
 
   @@unique([decisionId, userId])
   @@unique([decisionId, externalEmail])
@@ -296,29 +300,35 @@ model Vote {
   updatedAt  DateTime   @updatedAt
 
   // Relations
-  userId     String
-  decisionId String
+  userId                String?  // Nullable pour les votes externes
+  decisionId            String
+  externalParticipantId String?  // ID du DecisionParticipant pour votes externes
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision            Decision             @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  externalParticipant DecisionParticipant? @relation(fields: [externalParticipantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, decisionId])
+  @@unique([externalParticipantId, decisionId])
   @@map("votes")
 }
 
 // Vote pour une proposition spécifique (vote à la majorité)
 model ProposalVote {
-  id         String   @id @default(cuid())
-  proposalId String
-  userId     String
-  decisionId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  proposalId            String
+  userId                String?  // Nullable pour les votes externes
+  decisionId            String
+  externalParticipantId String?  // ID du DecisionParticipant pour votes externes
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id])
+  proposal            Proposal             @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [userId], references: [id])
+  externalParticipant DecisionParticipant? @relation(fields: [externalParticipantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, decisionId]) // Un utilisateur ne peut voter qu'une fois par décision
+  @@unique([externalParticipantId, decisionId])
   @@map("proposal_votes")
 }
 
