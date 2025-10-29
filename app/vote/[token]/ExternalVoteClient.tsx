@@ -85,7 +85,9 @@ export default function ExternalVoteClient({ token }: { token: string }) {
   const [comment, setComment] = useState<string>('');
 
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [voteSubmitted, setVoteSubmitted] = useState(false); // Pour cacher le formulaire de vote après validation
+  const [submitted, setSubmitted] = useState(false); // Pour MAJORITY uniquement
   const [submissionMessage, setSubmissionMessage] = useState<string>('');
 
   // Helper pour obtenir le nom de l'auteur d'un commentaire
@@ -133,6 +135,44 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     fetchDecision();
   }, [token]);
 
+  // Envoyer un commentaire (CONSENSUS uniquement)
+  const handleSendComment = async () => {
+    if (!decision || !comment.trim()) return;
+
+    setSubmittingComment(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/vote/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: comment.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de l\'envoi du commentaire');
+        setSubmittingComment(false);
+        return;
+      }
+
+      // Vider le champ de commentaire
+      setComment('');
+      setSubmittingComment(false);
+
+      // Rafraîchir les données de la décision pour afficher le nouveau commentaire
+      const refreshResponse = await fetch(`/api/vote/${token}`);
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        setDecision(refreshData.decision);
+        setExistingComments(refreshData.existingComments || []);
+      }
+    } catch (err) {
+      setError('Erreur lors de l\'envoi du commentaire');
+      setSubmittingComment(false);
+    }
+  };
+
   // Soumettre le vote
   const handleSubmitVote = async () => {
     if (!decision) return;
@@ -144,9 +184,9 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         return;
       }
     } else if (decision.decisionType === 'CONSENSUS') {
-      // Pour CONSENSUS, le vote OU le commentaire est requis (ou les deux)
-      if (!voteValue && !comment.trim()) {
-        setError('Veuillez fournir un vote et/ou un commentaire');
+      // Pour CONSENSUS, le vote est requis
+      if (!voteValue) {
+        setError('Veuillez sélectionner une position');
         return;
       }
     } else {
@@ -163,7 +203,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     try {
       const body = decision.decisionType === 'MAJORITY'
         ? { proposalId: selectedProposal }
-        : { value: voteValue || undefined, comment: comment.trim() || undefined };
+        : { value: voteValue };
 
       const response = await fetch(`/api/vote/${token}`, {
         method: 'POST',
@@ -179,9 +219,17 @@ export default function ExternalVoteClient({ token }: { token: string }) {
       }
 
       const data = await response.json();
-      setSubmissionMessage(data.message || 'Enregistré avec succès');
-      setSubmitted(true);
-      setSubmitting(false);
+
+      // Pour CONSENSUS, juste marquer comme voté et cacher le formulaire de vote
+      if (decision.decisionType === 'CONSENSUS') {
+        setVoteSubmitted(true);
+        setSubmitting(false);
+      } else {
+        // Pour MAJORITY, afficher le message de confirmation global
+        setSubmissionMessage(data.message || 'Enregistré avec succès');
+        setSubmitted(true);
+        setSubmitting(false);
+      }
     } catch (err) {
       setError('Erreur lors de l\'enregistrement du vote');
       setSubmitting(false);
@@ -406,125 +454,183 @@ export default function ExternalVoteClient({ token }: { token: string }) {
           </Card>
         )}
 
-        {/* Formulaire de vote */}
-        <Card>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Votre vote
-            </Typography>
-
-            {participant?.hasVoted && (existingVote || existingProposalVote) && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Vous avez déjà voté. Vous pouvez modifier votre vote ci-dessous.
-              </Alert>
-            )}
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            {decision.decisionType === 'MAJORITY' ? (
-              // Vote à la majorité : choix de proposition
-              <FormControl component="fieldset" fullWidth>
-                <RadioGroup value={selectedProposal} onChange={(e) => setSelectedProposal(e.target.value)}>
-                  {decision.proposals?.map((proposal) => (
-                    <Paper
-                      key={proposal.id}
-                      elevation={selectedProposal === proposal.id ? 3 : 0}
-                      sx={{
-                        p: 2,
-                        mb: 2,
-                        border: selectedProposal === proposal.id ? 2 : 1,
-                        borderColor: selectedProposal === proposal.id ? 'primary.main' : 'divider',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedProposal(proposal.id)}
-                    >
-                      <FormControlLabel
-                        value={proposal.id}
-                        control={<Radio />}
-                        label={
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight="bold">
-                              {proposal.title}
-                            </Typography>
-                            {proposal.description && (
-                              <Typography variant="body2" color="text.secondary">
-                                {proposal.description}
-                              </Typography>
-                            )}
-                          </Box>
-                        }
-                      />
-                    </Paper>
-                  ))}
-                </RadioGroup>
-              </FormControl>
-            ) : (
-              // Vote nuancé (CONSENSUS, CONSENT, etc.)
-              <>
-                {decision.decisionType === 'CONSENSUS' && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Vous pouvez voter, commenter, ou faire les deux.
+        {/* Formulaire de commentaire et vote pour CONSENSUS */}
+        {decision.decisionType === 'CONSENSUS' ? (
+          <>
+            {/* Section commentaire */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
                   </Alert>
                 )}
 
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mt: 2 }}>
-                  {decision.decisionType === 'CONSENSUS' ? 'Votre position (optionnel)' : 'Votre vote'}
-                </Typography>
-                <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
-                  <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
-                    {getVoteOptions().map((option) => (
-                      <FormControlLabel
-                        key={option.value}
-                        value={option.value}
-                        control={<Radio />}
-                        label={option.label}
-                        sx={{ mb: 1 }}
-                      />
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>
-                  {decision.decisionType === 'CONSENSUS' ? 'Votre commentaire (optionnel)' : 'Commentaire (optionnel)'}
-                </Typography>
                 <TextField
                   multiline
                   rows={4}
                   fullWidth
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  placeholder="Partagez votre avis, vos questions ou vos suggestions..."
                   sx={{ mb: 2 }}
-                  placeholder={decision.decisionType === 'CONSENSUS'
-                    ? "Partagez votre avis, vos questions ou vos suggestions..."
-                    : "Ajoutez un commentaire (optionnel)..."
-                  }
                 />
 
-                {existingComments && existingComments.length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Vous avez déjà publié {existingComments.length} commentaire{existingComments.length > 1 ? 's' : ''} sur cette décision.
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={handleSendComment}
+                  disabled={submittingComment || !comment.trim()}
+                >
+                  {submittingComment ? <CircularProgress size={24} /> : 'Envoyer'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Section vote */}
+            {!voteSubmitted ? (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Votre position
+                  </Typography>
+
+                  {existingVote && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      Vous avez déjà voté. Vous pouvez modifier votre vote ci-dessous.
+                    </Alert>
+                  )}
+
+                  <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                    <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
+                      {getVoteOptions().map((option) => (
+                        <FormControlLabel
+                          key={option.value}
+                          value={option.value}
+                          control={<Radio />}
+                          label={option.label}
+                          sx={{ mb: 1 }}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+
+                  <Button
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    onClick={handleSubmitVote}
+                    disabled={submitting || !voteValue}
+                  >
+                    {submitting ? <CircularProgress size={24} /> : 'Valider mon vote'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
+                    <CheckCircle color="success" sx={{ mr: 1, fontSize: 32 }} />
+                    <Typography variant="h6" color="success.main">
+                      Merci pour votre vote
                     </Typography>
                   </Box>
-                )}
-              </>
+                </CardContent>
+              </Card>
             )}
+          </>
+        ) : (
+          /* Formulaire de vote pour MAJORITY et autres types */
+          <Card>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Votre vote
+              </Typography>
 
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              onClick={handleSubmitVote}
-              disabled={submitting}
-            >
-              {submitting ? <CircularProgress size={24} /> : participant?.hasVoted ? 'Modifier mon vote' : 'Enregistrer mon vote'}
-            </Button>
-          </CardContent>
-        </Card>
+              {participant?.hasVoted && (existingVote || existingProposalVote) && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Vous avez déjà voté. Vous pouvez modifier votre vote ci-dessous.
+                </Alert>
+              )}
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {decision.decisionType === 'MAJORITY' ? (
+                // Vote à la majorité : choix de proposition
+                <FormControl component="fieldset" fullWidth>
+                  <RadioGroup value={selectedProposal} onChange={(e) => setSelectedProposal(e.target.value)}>
+                    {decision.proposals?.map((proposal) => (
+                      <Paper
+                        key={proposal.id}
+                        elevation={selectedProposal === proposal.id ? 3 : 0}
+                        sx={{
+                          p: 2,
+                          mb: 2,
+                          border: selectedProposal === proposal.id ? 2 : 1,
+                          borderColor: selectedProposal === proposal.id ? 'primary.main' : 'divider',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setSelectedProposal(proposal.id)}
+                      >
+                        <FormControlLabel
+                          value={proposal.id}
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                {proposal.title}
+                              </Typography>
+                              {proposal.description && (
+                                <Typography variant="body2" color="text.secondary">
+                                  {proposal.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </Paper>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+              ) : (
+                // Vote nuancé (CONSENT, WEIGHTED_VOTE, etc.)
+                <>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mt: 2 }}>
+                    Votre vote
+                  </Typography>
+                  <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                    <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
+                      {getVoteOptions().map((option) => (
+                        <FormControlLabel
+                          key={option.value}
+                          value={option.value}
+                          control={<Radio />}
+                          label={option.label}
+                          sx={{ mb: 1 }}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                </>
+              )}
+
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={handleSubmitVote}
+                disabled={submitting}
+              >
+                {submitting ? <CircularProgress size={24} /> : participant?.hasVoted ? 'Modifier mon vote' : 'Enregistrer mon vote'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </Container>
     </Box>
   );
