@@ -32,6 +32,7 @@ model User {
   proposalVotes         ProposalVote[]
   comments              Comment[]
   decisionParticipants  DecisionParticipant[]
+  decisionLogs          DecisionLog[]
   accounts              Account[]
   sessions              Session[]
 
@@ -224,6 +225,7 @@ model Decision {
   tags          DecisionTag[]
   proposals     Proposal[]            // Pour vote à la majorité
   participants  DecisionParticipant[] // Qui peut voter
+  logs          DecisionLog[]         // Historique des événements
 
   @@map("decisions")
 }
@@ -366,4 +368,32 @@ model DecisionTag {
 
   @@id([decisionId, tagId])
   @@map("decision_tags")
+}
+
+// ============================================
+// HISTORIQUE DES DÉCISIONS
+// ============================================
+
+model DecisionLog {
+  id          String   @id @default(cuid())
+  decisionId  String
+  eventType   String   // CREATED, STATUS_CHANGED, TITLE_UPDATED, etc.
+
+  // Acteur (celui qui fait l'action)
+  actorId     String?  // userId de celui qui fait l'action (null pour système)
+  actorName   String?  // Pour participants externes
+  actorEmail  String?  // Pour participants externes
+
+  // Détails de l'événement
+  oldValue    String?  // Pour les modifications (ancienne valeur)
+  newValue    String?  // Pour les modifications (nouvelle valeur)
+  metadata    String?  // JSON pour infos supplémentaires
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  actor    User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@map("decision_logs")
 }

@@ -2,6 +2,12 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidDecisionType, isValidDecisionStatus } from '@/types/enums';
+import {
+  logDecisionTitleUpdated,
+  logDecisionDescriptionUpdated,
+  logDecisionDeadlineUpdated,
+  logProposalAmended,
+} from '@/lib/decision-logger';
 
 // GET /api/organizations/[slug]/decisions/[decisionId] - Récupère une décision
 export async function GET(
@@ -179,6 +185,15 @@ export async function PATCH(
     const { slug, decisionId } = await params;
     const body = await request.json();
 
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
+    }
+
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({
       where: {
@@ -209,6 +224,10 @@ export async function PATCH(
             amendedProposal: body.amendedProposal,
           },
         });
+
+        // Logger l'amendement
+        await logProposalAmended(decisionId, session.user.id);
+
         return Response.json({ decision: updated });
       }
 
@@ -259,6 +278,24 @@ export async function PATCH(
       },
     });
 
+    // Logger les modifications
+    if (body.title !== undefined && body.title !== decision.title) {
+      await logDecisionTitleUpdated(decisionId, session.user.id, decision.title, body.title);
+    }
+    if (body.description !== undefined && body.description !== decision.description) {
+      await logDecisionDescriptionUpdated(decisionId, session.user.id, decision.description, body.description);
+    }
+    if (body.endDate !== undefined) {
+      const newEndDate = new Date(body.endDate);
+      const oldEndDate = decision.endDate;
+      if (oldEndDate?.getTime() !== newEndDate.getTime()) {
+        await logDecisionDeadlineUpdated(decisionId, session.user.id, oldEndDate, newEndDate);
+      }
+    }
+    if (body.amendedProposal !== undefined && body.amendedProposal !== decision.amendedProposal) {
+      await logProposalAmended(decisionId, session.user.id);
+    }
+
     return Response.json({ decision: updated });
   } catch (error) {
     console.error('Error updating decision:', error);
@@ -281,6 +318,15 @@ export async function DELETE(
     }
 
     const { slug, decisionId } = await params;
+
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
+    }
 
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({

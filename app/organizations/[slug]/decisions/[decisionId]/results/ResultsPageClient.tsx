@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { DecisionStatusLabels, DecisionTypeLabels, DecisionResultLabels } from '@/types/enums';
+import HistoryButton from '@/components/decisions/HistoryButton';
+import HistoryPanel from '@/components/decisions/HistoryPanel';
 
 interface Proposal {
   id: string;
@@ -66,8 +69,24 @@ export default function ResultsPageClient({
   const totalVotes = proposalResults.reduce((sum, r) => sum + r.voteCount, 0);
   const totalConsensusVotes = agreeCount + disagreeCount;
 
+  // Historique
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Bouton d'historique en haut à droite */}
+      <div className="fixed top-4 right-4 z-50">
+        <HistoryButton onClick={() => setHistoryOpen(true)} />
+      </div>
+
+      {/* Panneau d'historique */}
+      <HistoryPanel
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        organizationSlug={slug}
+        decisionId={decision.id}
+      />
+
       {/* En-tête */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{decision.title}</h1>

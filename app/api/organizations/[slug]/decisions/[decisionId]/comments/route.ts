@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logCommentAdded } from '@/lib/decision-logger';
 
 // POST /api/organizations/[slug]/decisions/[decisionId]/comments - Ajoute un commentaire
 export async function POST(
@@ -107,6 +108,10 @@ export async function POST(
         },
       },
     });
+
+    // Logger le commentaire
+    const userName = session.user.name || session.user.email || 'Utilisateur';
+    await logCommentAdded(decisionId, session.user.id, userName);
 
     return Response.json({ comment }, { status: 201 });
   } catch (error) {

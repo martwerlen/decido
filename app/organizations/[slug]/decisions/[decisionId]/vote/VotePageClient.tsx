@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
+import HistoryButton from '@/components/decisions/HistoryButton';
+import HistoryPanel from '@/components/decisions/HistoryPanel';
 
 interface Proposal {
   id: string;
@@ -83,6 +85,9 @@ export default function VotePageClient({
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+
+  // Historique
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const isOpen = decision.status === 'OPEN';
   const hasVoted = decision.decisionType === 'MAJORITY'
@@ -246,6 +251,19 @@ export default function VotePageClient({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Bouton d'historique en haut à droite */}
+      <div className="fixed top-4 right-4 z-50">
+        <HistoryButton onClick={() => setHistoryOpen(true)} />
+      </div>
+
+      {/* Panneau d'historique */}
+      <HistoryPanel
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        organizationSlug={slug}
+        decisionId={decision.id}
+      />
+
       {/* En-tête */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{decision.title}</h1>
