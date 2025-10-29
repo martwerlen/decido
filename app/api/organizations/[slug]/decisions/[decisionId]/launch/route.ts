@@ -113,50 +113,51 @@ export async function POST(
       },
     });
 
-    // Envoyer des emails aux participants si mode INVITED
+    // Envoyer des emails uniquement aux participants externes (non-membres)
     if (decision.votingMode === 'INVITED') {
-      console.log(`\n📧 === ENVOI EMAILS === ${decision.participants.length} participant(s)\n`);
+      // Filtrer uniquement les participants externes
+      const externalParticipants = decision.participants.filter(p => p.externalEmail);
 
-      const emailPromises = decision.participants.map(async (participant) => {
-        const email = participant.externalEmail || participant.user?.email;
-        const name = participant.externalName || participant.user?.name || 'Participant';
+      if (externalParticipants.length > 0) {
+        console.log(`\n📧 === ENVOI EMAILS === ${externalParticipants.length} participant(s) externe(s)\n`);
 
-        if (!email) {
-          console.warn(`⚠️  Participant sans email ignoré: ${name}`);
-          return;
-        }
+        const emailPromises = externalParticipants.map(async (participant) => {
+          const email = participant.externalEmail!;
+          const name = participant.externalName || 'Participant';
+          const voteUrl = `${process.env.NEXTAUTH_URL}/organizations/${slug}/decisions/${decisionId}/vote`;
 
-        const voteUrl = `${process.env.NEXTAUTH_URL}/organizations/${slug}/decisions/${decisionId}/vote`;
+          try {
+            console.log(`📤 Envoi à ${email} (${name})`);
+            await sendEmail({
+              to: email,
+              subject: `Nouvelle décision: ${decision.title}`,
+              html: `
+                <h2>Vous êtes invité à participer à une décision</h2>
+                <p>Bonjour ${name},</p>
+                <p>L'organisation <strong>${decision.organization.name}</strong> vous invite à participer à une décision :</p>
+                <h3>${decision.title}</h3>
+                <p>${decision.description}</p>
+                <p><strong>Type de décision :</strong> ${decision.decisionType === 'MAJORITY' ? 'Vote à la majorité' : 'Consensus'}</p>
+                <p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>
+                <p>
+                  <a href="${voteUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">
+                    Participer à la décision
+                  </a>
+                </p>
+                <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
+              `,
+            });
+            console.log(`✅ Envoyé à ${email}`);
+          } catch (error) {
+            console.error(`❌ Erreur pour ${email}:`, error);
+          }
+        });
 
-        try {
-          console.log(`📤 Envoi à ${email} (${name})`);
-          await sendEmail({
-            to: email,
-            subject: `Nouvelle décision: ${decision.title}`,
-            html: `
-              <h2>Vous êtes invité à participer à une décision</h2>
-              <p>Bonjour ${name},</p>
-              <p>L'organisation <strong>${decision.organization.name}</strong> vous invite à participer à une décision :</p>
-              <h3>${decision.title}</h3>
-              <p>${decision.description}</p>
-              <p><strong>Type de décision :</strong> ${decision.decisionType === 'MAJORITY' ? 'Vote à la majorité' : 'Consensus'}</p>
-              <p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>
-              <p>
-                <a href="${voteUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">
-                  Participer à la décision
-                </a>
-              </p>
-              <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
-            `,
-          });
-          console.log(`✅ Envoyé à ${email}`);
-        } catch (error) {
-          console.error(`❌ Erreur pour ${email}:`, error);
-        }
-      });
-
-      await Promise.allSettled(emailPromises);
-      console.log(`\n📧 === FIN ENVOI EMAILS ===\n`);
+        await Promise.allSettled(emailPromises);
+        console.log(`\n📧 === FIN ENVOI EMAILS ===\n`);
+      } else {
+        console.log(`📧 Aucun participant externe à notifier par email\n`);
+      }
     }
 
     return Response.json({
