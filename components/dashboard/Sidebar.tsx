@@ -19,6 +19,7 @@ import {
   SelectChangeEvent,
   CircularProgress,
   Alert,
+  Menu,
 } from "@mui/material"
 import {
   ChevronLeft,
@@ -37,8 +38,6 @@ import {
   AdminPanelSettings,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
-import Menu from "@mui/material/Menu"
-import MenuItem from "@mui/material/MenuItem"
 
 const drawerWidth = 280
 
