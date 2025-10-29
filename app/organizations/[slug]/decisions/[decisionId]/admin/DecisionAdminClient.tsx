@@ -55,7 +55,7 @@ interface Decision {
   votingMode: string;
   publicToken: string | null;
   initialProposal: string | null;
-  amendedProposal: string | null;
+  proposal: string | null;
   conclusion: string | null;
   endDate: Date | null;
   proposals: Proposal[];
@@ -87,7 +87,7 @@ export default function DecisionAdminClient({
   const [newProposal, setNewProposal] = useState({ title: '', description: '' });
 
   // État pour la proposition amendée (CONSENSUS)
-  const [amendedProposal, setAmendedProposal] = useState(decision.amendedProposal || '');
+  const [proposal, setAmendedProposal] = useState(decision.proposal || '');
 
   // État pour la conclusion
   const [conclusion, setConclusion] = useState(decision.conclusion || '');
@@ -188,7 +188,7 @@ export default function DecisionAdminClient({
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amendedProposal }),
+          body: JSON.stringify({ proposal }),
         }
       );
 
@@ -198,7 +198,7 @@ export default function DecisionAdminClient({
       }
 
       const { decision: updated } = await response.json();
-      setDecision({ ...decision, amendedProposal: updated.amendedProposal });
+      setDecision({ ...decision, proposal: updated.proposal });
       setSuccess('Proposition amendée mise à jour');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -474,13 +474,13 @@ export default function DecisionAdminClient({
             </div>
           </div>
 
-          {(isOpen || decision.amendedProposal) && (
+          {(isOpen || decision.proposal) && (
             <div>
               <h3 className="font-medium mb-2">Proposition amendée</h3>
               {isOpen ? (
                 <div className="space-y-3">
                   <textarea
-                    value={amendedProposal}
+                    value={proposal}
                     onChange={(e) => setAmendedProposal(e.target.value)}
                     rows={4}
                     className="w-full px-3 py-2 border rounded-lg"
@@ -494,9 +494,9 @@ export default function DecisionAdminClient({
                     Mettre à jour la proposition amendée
                   </button>
                 </div>
-              ) : decision.amendedProposal ? (
+              ) : decision.proposal ? (
                 <div className="p-4 bg-blue-50 rounded border border-blue-200">
-                  {decision.amendedProposal}
+                  {decision.proposal}
                 </div>
               ) : (
                 <p className="text-sm text-gray-600">Aucune proposition amendée</p>
@@ -674,7 +674,7 @@ export default function DecisionAdminClient({
       </div>
 
       {/* Section Conclusion - uniquement si le vote est terminé */}
-      {isVotingFinished ? (
+      {isVotingFinished && (
         <div className="bg-white border rounded-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -697,13 +697,6 @@ export default function DecisionAdminClient({
               Enregistrer la conclusion
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="bg-gray-50 border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-600">Conclusion</h2>
-          <p className="text-sm text-gray-600">
-            La conclusion pourra être rédigée une fois le vote terminé (date limite atteinte ou tous les participants ont voté).
-          </p>
         </div>
       )}
 

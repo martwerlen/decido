@@ -1,10 +1,10 @@
 # Configuration de l'envoi d'emails
 
-Ce guide explique comment configurer l'envoi d'emails dans Decido sans avoir besoin de créer un compte sur un service externe.
+Ce guide explique comment configurer l'envoi d'emails dans Decidoo sans avoir besoin de créer un compte sur un service externe.
 
 ## Options disponibles
 
-Decido supporte 4 méthodes d'envoi d'emails :
+Decidoo supporte 4 méthodes d'envoi d'emails :
 
 1. **Console** (par défaut) - Aucune configuration requise
 2. **Ethereal** - Service de test gratuit, aucune configuration requise
@@ -32,7 +32,7 @@ Quand un email d'invitation est envoyé :
 ```
 📧 ===== EMAIL SENT (CONSOLE MODE) =====
 To: jean.dupont@example.com
-Subject: Invitation à rejoindre Mon Organisation sur Decido
+Subject: Invitation à rejoindre Mon Organisation sur Decidoo
 
 Invitation URL: http://localhost:3000/invitations/accept?token=abc123...
 
@@ -106,7 +106,7 @@ EMAIL_PROVIDER="gmail"
 EMAIL_USER="votre.email@gmail.com"
 EMAIL_PASSWORD="votre-app-password"
 FROM_EMAIL="votre.email@gmail.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 ### Obtenir un App Password Gmail
@@ -119,7 +119,7 @@ Gmail nécessite un "App Password" (pas votre mot de passe normal) :
 4. Cherchez "Mots de passe d'application" ou "App Passwords"
 5. Créez un nouveau mot de passe d'application :
    - Application : **Mail**
-   - Appareil : **Autre** (nommez-le "Decido")
+   - Appareil : **Autre** (nommez-le "Decidoo")
 6. Copiez le mot de passe de 16 caractères généré (exemple: `abcd efgh ijkl mnop`)
 7. Utilisez ce mot de passe dans `EMAIL_PASSWORD` (sans espaces)
 
@@ -175,7 +175,7 @@ SMTP_SECURE="false"
 SMTP_USER="votre.email@outlook.com"
 SMTP_PASSWORD="votre-mot-de-passe"
 FROM_EMAIL="votre.email@outlook.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 #### Office 365
@@ -188,7 +188,7 @@ SMTP_SECURE="false"
 SMTP_USER="votre.email@votredomaine.com"
 SMTP_PASSWORD="votre-mot-de-passe"
 FROM_EMAIL="votre.email@votredomaine.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 #### Serveur SMTP personnalisé avec SSL
@@ -201,7 +201,7 @@ SMTP_SECURE="true"
 SMTP_USER="noreply@votredomaine.com"
 SMTP_PASSWORD="votre-mot-de-passe"
 FROM_EMAIL="noreply@votredomaine.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 **Avantages :**
@@ -235,7 +235,7 @@ EMAIL_PROVIDER="gmail"
 EMAIL_USER="votre.email@gmail.com"
 EMAIL_PASSWORD="votre-app-password"
 FROM_EMAIL="votre.email@gmail.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 Simple et gratuit avec Gmail.
 

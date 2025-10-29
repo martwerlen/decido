@@ -91,7 +91,7 @@ function calculateDecisionResult(decisionType, votes) {
 
 // === TESTS ===
 
-console.log('🧪 Tests de la logique de décision Decido\n')
+console.log('🧪 Tests de la logique de décision Decidoo\n')
 
 // Test 1: Consensus
 console.log('📊 Test 1: CONSENSUS')

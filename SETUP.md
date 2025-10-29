@@ -1,6 +1,6 @@
-# Configuration de Decido
+# Configuration de Decidoo
 
-Guide rapide pour initialiser l'application Decido.
+Guide rapide pour initialiser l'application Decidoo.
 
 ## Prérequis
 
@@ -70,7 +70,7 @@ Pour utiliser PostgreSQL au lieu de SQLite :
 
 1. Modifier `DATABASE_URL` dans `.env` :
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/decido?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/decidoo?schema=public"
 ```
 
 2. Utiliser les migrations Prisma :
@@ -89,7 +89,7 @@ npx prisma migrate deploy
 ## Structure du projet
 
 ```
-decido/
+decidoo/
 ├── app/                    # Pages et routes Next.js
 │   ├── api/               # Routes API
 │   ├── auth/              # Pages d'authentification

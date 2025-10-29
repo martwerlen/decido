@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Ce document décrit les nouvelles fonctionnalités de création d'organisations et d'invitation de membres dans Decido.
+Ce document décrit les nouvelles fonctionnalités de création d'organisations et d'invitation de membres dans Decidoo.
 
 ## Fonctionnalités implémentées
 
@@ -190,7 +190,7 @@ enum InvitationStatus {
 
 ### Configuration de l'envoi d'emails
 
-Decido utilise **Nodemailer** qui supporte plusieurs méthodes d'envoi d'emails, sans nécessiter de créer un compte sur un service externe.
+Decidoo utilise **Nodemailer** qui supporte plusieurs méthodes d'envoi d'emails, sans nécessiter de créer un compte sur un service externe.
 
 Pour un guide complet, consultez [EMAIL_SETUP.md](EMAIL_SETUP.md).
 
@@ -222,7 +222,7 @@ EMAIL_PROVIDER="gmail"
 EMAIL_USER="votre.email@gmail.com"
 EMAIL_PASSWORD="votre-app-password"
 FROM_EMAIL="votre.email@gmail.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 **Pour obtenir un App Password Gmail :**
@@ -243,7 +243,7 @@ SMTP_SECURE="false"
 SMTP_USER="your-username"
 SMTP_PASSWORD="your-password"
 FROM_EMAIL="noreply@votredomaine.com"
-FROM_NAME="Decido"
+FROM_NAME="Decidoo"
 ```
 
 ### Recommandations

@@ -198,8 +198,8 @@ model Decision {
   publicToken    String?        @unique // Token pour accès public si votingMode = PUBLIC_LINK
 
   // Pour le consensus
-  initialProposal  String?      // Proposition initiale
-  amendedProposal  String?      // Proposition amendée
+  initialProposal  String?      // Proposition originale (historique, immuable)
+  proposal         String?      // Proposition actuelle (modifiable par le créateur)
 
   // Résultat de la décision
   result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN

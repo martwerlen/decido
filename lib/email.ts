@@ -93,16 +93,16 @@ export async function sendInvitationEmail({
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h1 style="color: #2563eb; margin: 0 0 20px 0; font-size: 24px;">
-            Invitation à rejoindre Decido
+            Invitation à rejoindre Decidoo
           </h1>
           <p style="margin: 0 0 15px 0; font-size: 16px;">
             Bonjour ${firstName} ${lastName},
           </p>
           <p style="margin: 0 0 15px 0; font-size: 16px;">
-            <strong>${invitedByName}</strong> vous a invité à rejoindre l'organisation <strong>${organizationName}</strong> sur Decido.
+            <strong>${invitedByName}</strong> vous a invité à rejoindre l'organisation <strong>${organizationName}</strong> sur Decidoo.
           </p>
           <p style="margin: 0 0 25px 0; font-size: 16px;">
-            Decido est une plateforme collaborative de prise de décision qui permet aux équipes de voter et de prendre des décisions ensemble de manière transparente et démocratique.
+            Decidoo est une plateforme collaborative de prise de décision qui permet aux équipes de voter et de prendre des décisions ensemble de manière transparente et démocratique.
           </p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${invitationUrl}"
@@ -132,9 +132,9 @@ export async function sendInvitationEmail({
   const textContent = `
 Bonjour ${firstName} ${lastName},
 
-${invitedByName} vous a invité à rejoindre l'organisation ${organizationName} sur Decido.
+${invitedByName} vous a invité à rejoindre l'organisation ${organizationName} sur Decidoo.
 
-Decido est une plateforme collaborative de prise de décision qui permet aux équipes de voter et de prendre des décisions ensemble de manière transparente et démocratique.
+Decidoo est une plateforme collaborative de prise de décision qui permet aux équipes de voter et de prendre des décisions ensemble de manière transparente et démocratique.
 
 Pour accepter cette invitation, veuillez cliquer sur le lien suivant :
 ${invitationUrl}
@@ -147,7 +147,7 @@ Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
   const emailData = {
     from: fromEmail,
     to: [to],
-    subject: `Invitation à rejoindre ${organizationName} sur Decido`,
+    subject: `Invitation à rejoindre ${organizationName} sur Decidoo`,
     html: htmlContent,
     text: textContent,
   };
@@ -190,12 +190,12 @@ export async function sendWelcomeEmail({
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Bienvenue sur Decido</title>
+        <title>Bienvenue sur Decidoo</title>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h1 style="color: #2563eb; margin: 0 0 20px 0; font-size: 24px;">
-            Bienvenue sur Decido !
+            Bienvenue sur Decidoo !
           </h1>
           <p style="margin: 0 0 15px 0; font-size: 16px;">
             Bonjour ${name},
@@ -238,7 +238,7 @@ Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   const emailData = {
     from: fromEmail,
     to: [to],
-    subject: `Bienvenue sur Decido`,
+    subject: `Bienvenue sur Decidoo`,
     html: htmlContent,
     text: textContent,
   };

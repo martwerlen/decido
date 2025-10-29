@@ -55,15 +55,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
       }
+
+      // Si la session est mise à jour (ex: changement d'organisation)
+      if (trigger === "update" && session?.lastOrganizationSlug) {
+        token.lastOrganizationSlug = session.lastOrganizationSlug
+      }
+
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.lastOrganizationSlug = token.lastOrganizationSlug
       }
       return session
     },

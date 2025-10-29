@@ -1,6 +1,6 @@
-# Module d'authentification Decido
+# Module d'authentification Decidoo
 
-Ce document décrit l'installation et l'utilisation du module d'authentification pour Decido.
+Ce document décrit l'installation et l'utilisation du module d'authentification pour Decidoo.
 
 ## Installation terminée
 
@@ -228,7 +228,7 @@ Le module est prêt pour être étendu avec :
 ## Structure des fichiers
 
 ```
-decido/
+decidoo/
 ├── app/
 │   ├── api/
 │   │   └── auth/

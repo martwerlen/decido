@@ -45,8 +45,8 @@ Error: Failed to fetch sha256 checksum at https://binaries.prisma.sh/...
 
 ```bash
 # 1. Cloner le repo
-git clone https://github.com/martwerlen/decido
-cd decido
+git clone https://github.com/martwerlen/decidoo
+cd decidoo
 
 # 2. Checkout la bonne branche
 git checkout claude/check-prisma-schema-011CUYEtx5R88pXdDHvDixDi
@@ -125,8 +125,8 @@ CMD ["npm", "run", "dev"]
 Construire et lancer :
 
 ```bash
-docker build -t decido .
-docker run -p 3000:3000 -v $(pwd)/dev.db:/app/dev.db decido
+docker build -t decidoo .
+docker run -p 3000:3000 -v $(pwd)/dev.db:/app/dev.db decidoo
 ```
 
 ## 🧪 Vérification post-installation

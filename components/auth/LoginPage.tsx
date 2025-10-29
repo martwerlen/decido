@@ -60,7 +60,7 @@ export default function LoginPage() {
       >
         <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Connexion à Decido
+            Connexion à Decidoo
           </Typography>
           <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
             Ou{" "}

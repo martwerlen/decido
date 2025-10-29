@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Decido** is a collaborative decision-making platform for organizations with multiple decision modalities (consensus, consent, weighted voting, majority, supermajority, advisory). Built with Next.js 15, TypeScript, and Prisma.
+**Decidoo** is a collaborative decision-making platform for organizations with multiple decision modalities (consensus, consent, weighted voting, majority, supermajority, advisory). Built with Next.js 15, TypeScript, and Prisma.
 
 ## Development Commands
 
@@ -114,7 +114,9 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 
 **CONSENSUS**: Requires ALL votes to be "STRONG_SUPPORT" → APPROVED, otherwise REJECTED
 - Uses special vote values: 'AGREE' | 'DISAGREE' (see `ConsensusVoteValue` in types/enums.ts)
-- Supports proposal amendments: `initialProposal` and `amendedProposal` fields on Decision model
+- Supports proposal modifications by creator: `initialProposal` (immutable history) and `proposal` (current, modifiable) fields on Decision model
+- When the creator modifies the proposal, a system comment is automatically created to notify participants
+- Both initial and current proposals are displayed on vote/results pages if they differ
 
 **CONSENT**: Blocked by any "BLOCK" vote → BLOCKED; Rejected by "STRONG_OPPOSE" → REJECTED; Otherwise APPROVED
 
@@ -138,7 +140,8 @@ NextAuth v5 (beta) configuration in `lib/auth.ts`:
 - **Strategy**: JWT (not database sessions)
 - **Provider**: Credentials (email + bcrypt-hashed password)
 - **Custom pages**: `/auth/signin`, `/auth/signup`
-- **Session extension**: User ID added to session via JWT callback
+- **Session extension**: User ID and lastOrganizationSlug added to session via JWT callback
+- **Organization memory**: The last visited organization is remembered in the session and users are redirected to it upon login
 
 Protected routes require session check:
 ```typescript
@@ -289,7 +292,7 @@ DATABASE_URL="file:./dev.db"                    # SQLite for dev
 NEXTAUTH_URL="http://localhost:3000"            # App URL
 NEXTAUTH_SECRET="<generate-random-secret>"      # openssl rand -base64 32
 RESEND_API_KEY=""                               # Resend API key (optional for dev)
-FROM_EMAIL="noreply@decido.app"                 # Sender email for invitations
+FROM_EMAIL="noreply@decidoo.fr"                 # Sender email for invitations
 ```
 
 ## Important Conventions

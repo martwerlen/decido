@@ -1,4 +1,4 @@
--- Script SQL pour créer les tables Decido
+-- Script SQL pour créer les tables Decidoo
 -- Généré à partir de prisma/schema.prisma
 
 -- Table User

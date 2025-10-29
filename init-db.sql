@@ -1,4 +1,4 @@
--- Création de la base de données SQLite pour Decido
+-- Création de la base de données SQLite pour Decidoo
 
 -- Table users
 CREATE TABLE IF NOT EXISTS users (

@@ -4,7 +4,7 @@ import SessionProvider from "@/components/providers/SessionProvider";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Decido - Prise de décision collaborative",
+  title: "Decidoo - Prise de décision collaborative",
   description: "Application de gestion de décisions pour organisations",
 };
 

@@ -18,7 +18,7 @@ export default function Dashboard() {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          Bienvenue sur Decido
+          Bienvenue sur Decidoo
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Sélectionnez une décision dans le menu pour commencer.
