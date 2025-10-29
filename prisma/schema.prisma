@@ -204,6 +204,7 @@ model Decision {
   // Résultat de la décision
   result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN
   resultDetails  String?
+  conclusion     String?        // Conclusion rédigée par le créateur (visible dans les résultats)
 
   // Dates
   createdAt      DateTime       @default(now())

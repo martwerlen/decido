@@ -28,14 +28,14 @@ export default function NewDecisionPage({
     setError('');
 
     try {
-      // Vérifier que endDate est au moins 24h dans le futur
+      // Vérifier que endDate est au moins 1h dans le futur
       if (formData.endDate) {
         const endDate = new Date(formData.endDate);
         const minDate = new Date();
-        minDate.setHours(minDate.getHours() + 24);
+        minDate.setHours(minDate.getHours() + 1);
 
         if (endDate < minDate) {
-          setError('La date de fin doit être au moins 24h dans le futur');
+          setError('La date de fin doit être au moins 1h dans le futur');
           setLoading(false);
           return;
         }
@@ -72,9 +72,9 @@ export default function NewDecisionPage({
     }
   };
 
-  // Calcul de la date minimale (24h dans le futur)
+  // Calcul de la date minimale (1h dans le futur)
   const minDate = new Date();
-  minDate.setHours(minDate.getHours() + 24);
+  minDate.setHours(minDate.getHours() + 1);
   const minDateString = minDate.toISOString().slice(0, 16);
 
   return (
@@ -191,7 +191,7 @@ export default function NewDecisionPage({
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-sm text-gray-600 mt-1">
-            Doit être au moins 24h dans le futur
+            Doit être au moins 1h dans le futur
           </p>
         </div>
 
