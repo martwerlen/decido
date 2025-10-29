@@ -413,7 +413,7 @@ export default function VotePageClient({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{comment.user.name || 'Anonyme'}</span>
+                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
                           <span className="text-xs text-gray-500">
                             {new Date(comment.createdAt).toLocaleString('fr-FR')}
                             {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
@@ -452,7 +452,7 @@ export default function VotePageClient({
                         )}
                       </div>
 
-                      {comment.user.id === userId && isOpen && !editingCommentId && (
+                      {comment.user?.id === userId && isOpen && !editingCommentId && (
                         <button
                           onClick={() => {
                             setEditingCommentId(comment.id);

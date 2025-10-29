@@ -233,7 +233,7 @@ export default function ResultsPageClient({
                 {decision.comments.map((comment) => (
                   <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{comment.user.name || 'Anonyme'}</span>
+                      <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(comment.createdAt).toLocaleString('fr-FR')}
                         {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
