@@ -185,9 +185,9 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 ### Decision Lifecycle & Status Management
 
 **Voting Deadlines:**
-- Minimum deadline: 1 hour from creation time
+- Minimum deadline: 24 hours from creation time
 - The `endDate` field stores the voting deadline
-- When creating or updating a decision, ensure endDate is at least 1 hour in the future
+- When creating or updating a decision, ensure endDate is at least 24 hours in the future
 
 **Automatic Status Updates:**
 - A decision is considered "finished" when either:

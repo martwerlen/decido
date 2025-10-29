@@ -245,11 +245,11 @@ export async function PATCH(
     if (body.endDate !== undefined) {
       const endDateObj = new Date(body.endDate);
       const minDate = new Date();
-      minDate.setHours(minDate.getHours() + 1);
+      minDate.setHours(minDate.getHours() + 24);
 
       if (endDateObj < minDate) {
         return Response.json(
-          { error: 'La date de fin doit être au moins 1h dans le futur' },
+          { error: 'La date de fin doit être au moins 24h dans le futur' },
           { status: 400 }
         );
       }
