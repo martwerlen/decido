@@ -1,5 +1,5 @@
 /**
- * Types d'énumérations pour Decido
+ * Types d'énumérations pour Decidoo
  *
  * Ces types remplacent les enums Prisma qui ne sont pas supportés par SQLite.
  * En base de données, ces valeurs sont stockées comme des champs TEXT.

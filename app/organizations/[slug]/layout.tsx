@@ -1,5 +1,6 @@
 import { Box } from "@mui/material"
 import Sidebar from "@/components/dashboard/Sidebar"
+import OrganizationMemoryUpdater from "@/components/OrganizationMemoryUpdater"
 
 export default async function OrganizationLayout({
   children,
@@ -12,6 +13,7 @@ export default async function OrganizationLayout({
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <OrganizationMemoryUpdater organizationSlug={slug} />
       <Sidebar currentOrgSlug={slug} />
       <Box
         component="main"

@@ -44,7 +44,7 @@ interface Decision {
   decisionType: string;
   status: string;
   initialProposal: string | null;
-  amendedProposal: string | null;
+  proposal: string | null;
   endDate: Date | null;
   proposals: Proposal[];
   comments: Comment[];
@@ -377,21 +377,27 @@ export default function VotePageClient({
           <div className="bg-white border rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Proposition</h2>
 
-            <div className="mb-4">
-              <h3 className="font-medium text-gray-700 mb-2">Proposition initiale</h3>
-              <div className="p-4 bg-gray-50 rounded border">
-                <p className="whitespace-pre-wrap">{decision.initialProposal}</p>
-              </div>
-            </div>
-
-            {decision.amendedProposal && (
-              <div>
-                <h3 className="font-medium text-blue-700 mb-2">Proposition amendée</h3>
-                <div className="p-4 bg-blue-50 rounded border border-blue-200">
-                  <p className="whitespace-pre-wrap">{decision.amendedProposal}</p>
+            {/* Afficher proposition initiale si elle diffère de la proposition actuelle */}
+            {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal && (
+              <div className="mb-4">
+                <h3 className="font-medium text-gray-700 mb-2">Proposition initiale</h3>
+                <div className="p-4 bg-gray-50 rounded border">
+                  <p className="whitespace-pre-wrap">{decision.initialProposal}</p>
                 </div>
               </div>
             )}
+
+            {/* Afficher la proposition actuelle */}
+            <div>
+              {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? (
+                <h3 className="font-medium text-blue-700 mb-2">Proposition actuelle</h3>
+              ) : (
+                <h3 className="font-medium text-gray-700 mb-2">Proposition</h3>
+              )}
+              <div className={`p-4 rounded border ${decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
+                <p className="whitespace-pre-wrap">{decision.proposal || decision.initialProposal}</p>
+              </div>
+            </div>
           </div>
 
           {/* Commentaires */}
@@ -407,7 +413,7 @@ export default function VotePageClient({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{comment.user.name || 'Anonyme'}</span>
+                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
                           <span className="text-xs text-gray-500">
                             {new Date(comment.createdAt).toLocaleString('fr-FR')}
                             {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
@@ -446,7 +452,7 @@ export default function VotePageClient({
                         )}
                       </div>
 
-                      {comment.user.id === userId && isOpen && !editingCommentId && (
+                      {comment.user?.id === userId && isOpen && !editingCommentId && (
                         <button
                           onClick={() => {
                             setEditingCommentId(comment.id);

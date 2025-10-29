@@ -1,4 +1,4 @@
-# Decido - Plateforme de prise de décision collaborative
+# Decidoo - Plateforme de prise de décision collaborative
 
 Application de gestion de décisions pour organisations avec différentes modalités décisionnelles.
 
@@ -26,7 +26,7 @@ Application de gestion de décisions pour organisations avec différentes modali
 ### Structure du projet
 
 ```
-decido/
+decidoo/
 ├── app/                    # Next.js App Router
 │   ├── layout.tsx
 │   ├── page.tsx
@@ -94,7 +94,7 @@ enum VoteValue {
 1. **Cloner le projet**
 ```bash
 git clone <votre-repo>
-cd decido
+cd decidoo
 ```
 
 2. **Installer les dépendances**
@@ -111,7 +111,7 @@ cp .env.example .env
 
 Modifier la variable `DATABASE_URL` avec vos credentials PostgreSQL :
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/decido?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/decidoo?schema=public"
 ```
 
 4. **Générer le client Prisma**

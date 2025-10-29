@@ -40,7 +40,7 @@ interface Decision {
   result: string | null;
   resultDetails: string | null;
   initialProposal: string | null;
-  amendedProposal: string | null;
+  proposal: string | null;
   conclusion: string | null;
   endDate: Date | null;
   decidedAt: Date | null;
@@ -199,11 +199,11 @@ export default function ResultsPageClient({
           <div className="bg-white border rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Proposition</h2>
 
-            {decision.amendedProposal ? (
+            {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? (
               <div>
-                <h3 className="font-medium text-blue-700 mb-2">Proposition finale (amendée)</h3>
+                <h3 className="font-medium text-blue-700 mb-2">Proposition actuelle</h3>
                 <div className="p-4 bg-blue-50 rounded border border-blue-200">
-                  <p className="whitespace-pre-wrap">{decision.amendedProposal}</p>
+                  <p className="whitespace-pre-wrap">{decision.proposal}</p>
                 </div>
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
@@ -218,7 +218,7 @@ export default function ResultsPageClient({
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Proposition</h3>
                 <div className="p-4 bg-gray-50 rounded border">
-                  <p className="whitespace-pre-wrap">{decision.initialProposal}</p>
+                  <p className="whitespace-pre-wrap">{decision.proposal || decision.initialProposal}</p>
                 </div>
               </div>
             )}
@@ -233,7 +233,7 @@ export default function ResultsPageClient({
                 {decision.comments.map((comment) => (
                   <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{comment.user.name || 'Anonyme'}</span>
+                      <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(comment.createdAt).toLocaleString('fr-FR')}
                         {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}

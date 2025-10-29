@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 export default function SignInForm() {
@@ -26,7 +26,16 @@ export default function SignInForm() {
       if (result?.error) {
         setError("Email ou mot de passe incorrect")
       } else {
-        router.push("/")
+        // Récupérer la session pour obtenir lastOrganizationSlug
+        const response = await fetch("/api/auth/session")
+        const session = await response.json()
+
+        // Rediriger vers la dernière organisation ou le dashboard
+        if (session?.user?.lastOrganizationSlug) {
+          router.push(`/organizations/${session.user.lastOrganizationSlug}`)
+        } else {
+          router.push("/")
+        }
         router.refresh()
       }
     } catch (error) {

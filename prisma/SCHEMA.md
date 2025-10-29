@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Le schéma de données de Decido est organisé autour de 4 concepts principaux :
+Le schéma de données de Decidoo est organisé autour de 4 concepts principaux :
 
 1. **Gestion des utilisateurs** (User, Account, Session)
 2. **Structure organisationnelle** (Organization, Team, Members)

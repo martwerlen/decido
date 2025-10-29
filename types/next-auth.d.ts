@@ -5,6 +5,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string
+      lastOrganizationSlug?: string
     } & DefaultSession["user"]
   }
 
@@ -19,5 +20,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
+    lastOrganizationSlug?: string
   }
 }

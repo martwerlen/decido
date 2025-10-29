@@ -216,19 +216,40 @@ export async function PATCH(
 
     // Si la décision est OPEN ou CLOSED, on ne peut plus modifier certains champs
     if (decision.status === 'OPEN' || decision.status === 'CLOSED') {
-      // On peut seulement modifier amendedProposal pour le consensus
-      if (decision.decisionType === 'CONSENSUS' && body.amendedProposal !== undefined) {
-        const updated = await prisma.decision.update({
-          where: { id: decisionId },
-          data: {
-            amendedProposal: body.amendedProposal,
-          },
-        });
+      // On peut seulement modifier proposal pour le consensus
+      if (decision.decisionType === 'CONSENSUS' && body.proposal !== undefined) {
+        // Vérifier si la proposition a réellement changé
+        if (body.proposal !== decision.proposal) {
+          const updated = await prisma.decision.update({
+            where: { id: decisionId },
+            data: {
+              proposal: body.proposal,
+            },
+          });
 
-        // Logger l'amendement
-        await logProposalAmended(decisionId, session.user.id);
+          // Récupérer les informations de l'utilisateur
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { name: true, email: true },
+          });
 
-        return Response.json({ decision: updated });
+          // Créer un commentaire système pour notifier la modification
+          await prisma.comment.create({
+            data: {
+              content: `${user?.name || user?.email || 'Un utilisateur'} a modifié la proposition`,
+              decisionId,
+              userId: session.user.id,
+            },
+          });
+
+          // Logger l'amendement
+          await logProposalAmended(decisionId, session.user.id);
+
+          return Response.json({ decision: updated });
+        }
+
+        // Si pas de changement, juste retourner la décision actuelle
+        return Response.json({ decision });
       }
 
       return Response.json(
@@ -257,7 +278,7 @@ export async function PATCH(
       updateData.endDate = endDateObj;
     }
     if (body.initialProposal !== undefined) updateData.initialProposal = body.initialProposal;
-    if (body.amendedProposal !== undefined) updateData.amendedProposal = body.amendedProposal;
+    if (body.proposal !== undefined) updateData.proposal = body.proposal;
     if (body.votingMode !== undefined) updateData.votingMode = body.votingMode;
     if (body.teamId !== undefined) updateData.teamId = body.teamId;
 
@@ -292,7 +313,7 @@ export async function PATCH(
         await logDecisionDeadlineUpdated(decisionId, session.user.id, oldEndDate, newEndDate);
       }
     }
-    if (body.amendedProposal !== undefined && body.amendedProposal !== decision.amendedProposal) {
+    if (body.proposal !== undefined && body.proposal !== decision.proposal) {
       await logProposalAmended(decisionId, session.user.id);
     }
 
