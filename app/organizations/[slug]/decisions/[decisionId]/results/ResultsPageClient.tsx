@@ -75,7 +75,7 @@ export default function ResultsPageClient({
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Bouton d'historique en haut à droite */}
-      <div className="fixed top-20 right-4 z-10">
+      <div className="fixed top-4 right-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 

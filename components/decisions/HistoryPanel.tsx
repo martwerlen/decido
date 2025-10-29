@@ -8,6 +8,8 @@ import {
   IconButton,
   CircularProgress,
   Alert,
+} from '@mui/material';
+import {
   Timeline,
   TimelineItem,
   TimelineSeparator,
@@ -15,7 +17,7 @@ import {
   TimelineContent,
   TimelineDot,
   TimelineOppositeContent,
-} from '@mui/material';
+} from '@mui/lab';
 import CloseIcon from '@mui/icons-material/Close';
 import CreateIcon from '@mui/icons-material/Create';
 import EditIcon from '@mui/icons-material/Edit';
