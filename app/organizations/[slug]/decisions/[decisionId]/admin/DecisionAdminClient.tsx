@@ -102,6 +102,12 @@ export default function DecisionAdminClient({
   const isDraft = decision.status === 'DRAFT';
   const isOpen = decision.status === 'OPEN';
 
+  // Vérifier si la décision est terminée (pour permettre l'ajout d'une conclusion)
+  const now = new Date();
+  const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
+  const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
+  const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
+
   // Ajouter une proposition
   const handleAddProposal = async () => {
     if (!newProposal.title.trim()) {
@@ -667,30 +673,39 @@ export default function DecisionAdminClient({
         )}
       </div>
 
-      {/* Section Conclusion */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
-          Vous pouvez utiliser la syntaxe Markdown pour le formatage.
-        </p>
-        <div className="space-y-3">
-          <textarea
-            value={conclusion}
-            onChange={(e) => setConclusion(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
-            placeholder="Entrez votre conclusion ici... (Markdown supporté)"
-          />
-          <button
-            onClick={handleUpdateConclusion}
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            Enregistrer la conclusion
-          </button>
+      {/* Section Conclusion - uniquement si le vote est terminé */}
+      {isVotingFinished ? (
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
+            Vous pouvez utiliser la syntaxe Markdown pour le formatage.
+          </p>
+          <div className="space-y-3">
+            <textarea
+              value={conclusion}
+              onChange={(e) => setConclusion(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+              placeholder="Entrez votre conclusion ici... (Markdown supporté)"
+            />
+            <button
+              onClick={handleUpdateConclusion}
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Enregistrer la conclusion
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-600">Conclusion</h2>
+          <p className="text-sm text-gray-600">
+            La conclusion pourra être rédigée une fois le vote terminé (date limite atteinte ou tous les participants ont voté).
+          </p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-4">

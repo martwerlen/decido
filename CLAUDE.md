@@ -203,10 +203,11 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 
 **Decision Conclusion:**
 - The `conclusion` field allows the decision creator to add a summary/conclusion
-- Can be edited at any time (even after the decision is closed)
+- Can only be edited once the voting is finished (deadline reached OR all participants have voted)
 - Displayed at the end of the results page
 - Supports plain text with preserved line breaks (Markdown rendering can be added later)
 - Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
+- The conclusion section is only visible in the admin page once voting is finished
 
 ### Invitation System
 

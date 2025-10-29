@@ -25,11 +25,14 @@ export async function PATCH(
       return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
     }
 
-    // Récupérer la décision
+    // Récupérer la décision avec les participants
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
         organizationId: organization.id,
+      },
+      include: {
+        participants: true,
       },
     });
 
@@ -42,6 +45,19 @@ export async function PATCH(
       return Response.json(
         { error: 'Seul le créateur peut modifier la conclusion' },
         { status: 403 }
+      );
+    }
+
+    // Vérifier si le vote est terminé
+    const now = new Date();
+    const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
+    const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
+    const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
+
+    if (!isVotingFinished) {
+      return Response.json(
+        { error: 'La conclusion ne peut être modifiée que lorsque le vote est terminé' },
+        { status: 400 }
       );
     }
 
