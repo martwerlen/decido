@@ -2,7 +2,8 @@
 // En développement, les emails sont loggés dans la console
 // En production, configure RESEND_API_KEY pour envoyer de vrais emails
 
-const fromEmail = process.env.FROM_EMAIL || 'noreply@decidoo.fr';
+// Utilise l'adresse de test Resend par défaut (fonctionne sans vérification de domaine)
+const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 // Fonction utilitaire pour convertir HTML en texte brut
 function htmlToText(html: string): string {

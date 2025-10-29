@@ -115,36 +115,21 @@ export async function POST(
 
     // Envoyer des emails aux participants si mode INVITED
     if (decision.votingMode === 'INVITED') {
-      console.log(`\n📊 ========================================`);
-      console.log(`📊 DIAGNOSTIC ENVOI EMAILS`);
-      console.log(`📊 ========================================`);
-      console.log(`📊 Nombre total de participants: ${decision.participants.length}`);
-      console.log(`📊 Mode de vote: ${decision.votingMode}`);
-      console.log(`📊 Titre décision: ${decision.title}`);
-      console.log(`📊 ========================================\n`);
+      console.log(`\n📧 === ENVOI EMAILS === ${decision.participants.length} participant(s)\n`);
 
       const emailPromises = decision.participants.map(async (participant) => {
         const email = participant.externalEmail || participant.user?.email;
         const name = participant.externalName || participant.user?.name || 'Participant';
 
-        console.log(`👤 ----------------------------------------`);
-        console.log(`👤 Participant: ${name}`);
-        console.log(`👤 Email: ${email || 'NON DÉFINI'}`);
-        console.log(`👤 Type d'invitation: ${participant.invitedVia}`);
-        console.log(`👤 User ID: ${participant.userId || 'N/A'}`);
-        console.log(`👤 External Email: ${participant.externalEmail || 'N/A'}`);
-        console.log(`👤 External Name: ${participant.externalName || 'N/A'}`);
-
         if (!email) {
-          console.warn(`⚠️  Participant sans email ignoré: ${name} (${participant.invitedVia})`);
-          console.log(`👤 ----------------------------------------\n`);
+          console.warn(`⚠️  Participant sans email ignoré: ${name}`);
           return;
         }
 
         const voteUrl = `${process.env.NEXTAUTH_URL}/organizations/${slug}/decisions/${decisionId}/vote`;
 
         try {
-          console.log(`✉️  Envoi email à: ${email}`);
+          console.log(`📤 Envoi à ${email} (${name})`);
           await sendEmail({
             to: email,
             subject: `Nouvelle décision: ${decision.title}`,
@@ -164,18 +149,14 @@ export async function POST(
               <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
             `,
           });
-          console.log(`✅ Email envoyé avec succès à: ${email}`);
+          console.log(`✅ Envoyé à ${email}`);
         } catch (error) {
-          console.error(`❌ Erreur lors de l'envoi de l'email à ${email}:`, error);
+          console.error(`❌ Erreur pour ${email}:`, error);
         }
-        console.log(`👤 ----------------------------------------\n`);
       });
 
       await Promise.allSettled(emailPromises);
-
-      console.log(`\n📊 ========================================`);
-      console.log(`📊 FIN ENVOI EMAILS`);
-      console.log(`📊 ========================================\n`);
+      console.log(`\n📧 === FIN ENVOI EMAILS ===\n`);
     }
 
     return Response.json({
