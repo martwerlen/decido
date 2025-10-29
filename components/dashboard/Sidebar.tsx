@@ -28,13 +28,17 @@ import {
   HowToVote,
   CheckCircle,
   Search,
-  Help,
-  Logout,
   Add,
   Settings,
   AccountTree,
+  Person,
+  Group,
+  Logout,
+  AdminPanelSettings,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
+import Menu from "@mui/material/Menu"
+import MenuItem from "@mui/material/MenuItem"
 
 const drawerWidth = 280
 
@@ -87,6 +91,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     completedDecisionsTotal: 0,
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
+  const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null)
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -166,10 +171,36 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     signOut({ callbackUrl: "/" })
   }
 
-  const handleSettings = () => {
+  const handleSettingsClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSettingsMenuAnchor(event.currentTarget)
+  }
+
+  const handleSettingsMenuClose = () => {
+    setSettingsMenuAnchor(null)
+  }
+
+  const handleProfileSettings = () => {
+    router.push("/settings/profile")
+    handleSettingsMenuClose()
+  }
+
+  const handleOrganizationSettings = () => {
     if (organization) {
       router.push(`/organizations/${organization}/settings`)
     }
+    handleSettingsMenuClose()
+  }
+
+  const handleMembers = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}/members`)
+    }
+    handleSettingsMenuClose()
+  }
+
+  const handleLogoutFromMenu = () => {
+    handleSettingsMenuClose()
+    handleLogout()
   }
 
   const handleTeams = () => {
@@ -538,7 +569,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
         <Divider />
 
-        {/* Rechercher, Paramètres et Aide */}
+        {/* Rechercher et Paramètres */}
         <List>
           <ListItem disablePadding>
             <ListItemButton>
@@ -549,30 +580,55 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={handleSettings} disabled={!organization}>
+            <ListItemButton onClick={handleSettingsClick}>
               <ListItemIcon>
                 <Settings />
               </ListItemIcon>
               {open && <ListItemText primary="Paramètres" />}
             </ListItemButton>
           </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                <Help />
-              </ListItemIcon>
-              {open && <ListItemText primary="Aide" />}
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleLogout}>
-              <ListItemIcon>
-                <Logout />
-              </ListItemIcon>
-              {open && <ListItemText primary="Déconnexion" />}
-            </ListItemButton>
-          </ListItem>
         </List>
+
+        {/* Menu déroulant des paramètres */}
+        <Menu
+          anchorEl={settingsMenuAnchor}
+          open={Boolean(settingsMenuAnchor)}
+          onClose={handleSettingsMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+        >
+          <MenuItem onClick={handleProfileSettings}>
+            <ListItemIcon>
+              <Person fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Modifier mon profil</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleOrganizationSettings} disabled={!organization}>
+            <ListItemIcon>
+              <AdminPanelSettings fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Paramètres de l&apos;organisation</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMembers} disabled={!organization}>
+            <ListItemIcon>
+              <Group fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Gérer les membres</ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleLogoutFromMenu}>
+            <ListItemIcon>
+              <Logout fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Se déconnecter</ListItemText>
+          </MenuItem>
+        </Menu>
       </Box>
     </Drawer>
   )

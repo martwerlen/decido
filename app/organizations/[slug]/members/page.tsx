@@ -316,7 +316,7 @@ export default function OrganizationMembersPage() {
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1">
-            Gestion des membres
+            Gérer les membres
           </Typography>
         <Button
           variant="contained"
@@ -334,7 +334,7 @@ export default function OrganizationMembersPage() {
           <EmailIcon /> Membres avec compte ({data?.members.length || 0})
         </Typography>
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Nom</TableCell>
@@ -405,7 +405,7 @@ export default function OrganizationMembersPage() {
           <PersonIcon /> Membres sans compte ({data?.nonUserMembers.length || 0})
         </Typography>
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Prénom</TableCell>
@@ -461,7 +461,7 @@ export default function OrganizationMembersPage() {
             Invitations en attente ({data.pendingInvitations.length})
           </Typography>
           <TableContainer>
-            <Table>
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Nom</TableCell>
