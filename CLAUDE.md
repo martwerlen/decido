@@ -192,23 +192,32 @@ External participants (non-members) can vote through a unique token-based URL sy
 - `DecisionParticipant.tokenExpiresAt`: Expiration date (set to decision's endDate when launched)
 - `Vote.externalParticipantId`: Links votes to external participants (userId is null)
 - `ProposalVote.externalParticipantId`: Links proposal votes to external participants
+- `Comment.externalParticipantId`: Links comments to external participants (userId is null)
 
 **Public voting page (`/vote/[token]`):**
 - **No authentication required** - Accessed via unique token URL
 - **Minimal UI** - No organization name, no sidebar, no navigation
 - **Display:** Decision title, description, context, and voting options
-- **For CONSENSUS:** Shows initial proposal, amended proposal, and all comments
+- **For CONSENSUS:**
+  - Shows initial proposal, amended proposal, and all comments (from both internal and external participants)
+  - External participants can vote (AGREE/DISAGREE), comment, or both
+  - Vote and comment are both optional, but at least one is required
+  - Comments appear in the same discussion thread as internal member comments
+  - External participant names are displayed next to their comments
 - **For MAJORITY:** Shows all proposals as radio button options
-- **Vote modification:** External participants can change their vote before the deadline
-- **Confirmation:** Simple "Thank you" message after voting
+- **Vote modification:** External participants can change their vote and add new comments before the deadline
+- **Confirmation:** Personalized "Thank you" message (e.g., "Vote and comment saved successfully")
 
 **API endpoints:**
-- `GET /api/vote/[token]` - Fetches decision data and existing vote for the token
-- `POST /api/vote/[token]` - Records or updates the vote
+- `GET /api/vote/[token]` - Fetches decision data, existing vote, and existing comments for the token
+- `POST /api/vote/[token]` - Records or updates the vote and/or comment
   - Validates token and expiration
   - Checks decision is still OPEN
-  - Creates `Vote` or `ProposalVote` with `externalParticipantId`
-  - Marks `DecisionParticipant.hasVoted = true`
+  - For CONSENSUS: Accepts optional `value` (vote) and optional `comment` (at least one required)
+  - Creates `Vote` with `externalParticipantId` if vote provided
+  - Creates `Comment` with `externalParticipantId` if comment provided
+  - For other types: Creates `Vote` or `ProposalVote` with `externalParticipantId`
+  - Marks `DecisionParticipant.hasVoted = true` when vote is submitted
 
 **Email notification:**
 - Sent only to external participants (not organization members)

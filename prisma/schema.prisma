@@ -276,10 +276,11 @@ model DecisionParticipant {
 
   createdAt      DateTime @default(now())
 
-  decision      Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision      Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   votes         Vote[]
   proposalVotes ProposalVote[]
+  comments      Comment[]
 
   @@unique([decisionId, userId])
   @@unique([decisionId, externalEmail])
@@ -337,20 +338,22 @@ model ProposalVote {
 // ============================================
 
 model Comment {
-  id         String   @id @default(cuid())
-  content    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  content               String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Relations
-  userId     String
-  decisionId String
-  parentId   String?  // Pour les réponses
+  userId                String?  // Nullable pour les commentaires externes
+  decisionId            String
+  parentId              String?  // Pour les réponses
+  externalParticipantId String?  // ID du DecisionParticipant pour commentaires externes
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  decision Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision            Decision             @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  parent              Comment?             @relation("CommentReplies", fields: [parentId], references: [id])
+  replies             Comment[]            @relation("CommentReplies")
+  externalParticipant DecisionParticipant? @relation(fields: [externalParticipantId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }

@@ -45,9 +45,12 @@ interface Comment {
   id: string;
   content: string;
   createdAt: string;
-  user: {
+  user?: {
     name: string | null;
-  };
+  } | null;
+  externalParticipant?: {
+    externalName: string | null;
+  } | null;
   replies?: Comment[];
 }
 
@@ -75,6 +78,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [existingVote, setExistingVote] = useState<ExistingVote | null>(null);
   const [existingProposalVote, setExistingProposalVote] = useState<ExistingProposalVote | null>(null);
+  const [existingComments, setExistingComments] = useState<Comment[]>([]);
 
   const [selectedProposal, setSelectedProposal] = useState<string>('');
   const [voteValue, setVoteValue] = useState<string>('');
@@ -82,6 +86,14 @@ export default function ExternalVoteClient({ token }: { token: string }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState<string>('');
+
+  // Helper pour obtenir le nom de l'auteur d'un commentaire
+  const getCommentAuthorName = (comment: Comment): string => {
+    if (comment.user?.name) return comment.user.name;
+    if (comment.externalParticipant?.externalName) return comment.externalParticipant.externalName;
+    return 'Anonyme';
+  };
 
   // Charger les données de la décision
   useEffect(() => {
@@ -101,11 +113,11 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         setParticipant(data.participant);
         setExistingVote(data.existingVote);
         setExistingProposalVote(data.existingProposalVote);
+        setExistingComments(data.existingComments || []);
 
         // Pré-remplir le vote existant
         if (data.existingVote) {
           setVoteValue(data.existingVote.value);
-          setComment(data.existingVote.comment || '');
         }
         if (data.existingProposalVote) {
           setSelectedProposal(data.existingProposalVote.proposal.id);
@@ -131,7 +143,14 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         setError('Veuillez sélectionner une proposition');
         return;
       }
+    } else if (decision.decisionType === 'CONSENSUS') {
+      // Pour CONSENSUS, le vote OU le commentaire est requis (ou les deux)
+      if (!voteValue && !comment.trim()) {
+        setError('Veuillez fournir un vote et/ou un commentaire');
+        return;
+      }
     } else {
+      // Pour les autres types, le vote est requis
       if (!voteValue) {
         setError('Veuillez sélectionner une option de vote');
         return;
@@ -144,7 +163,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     try {
       const body = decision.decisionType === 'MAJORITY'
         ? { proposalId: selectedProposal }
-        : { value: voteValue, comment };
+        : { value: voteValue || undefined, comment: comment.trim() || undefined };
 
       const response = await fetch(`/api/vote/${token}`, {
         method: 'POST',
@@ -159,6 +178,8 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         return;
       }
 
+      const data = await response.json();
+      setSubmissionMessage(data.message || 'Enregistré avec succès');
       setSubmitted(true);
       setSubmitting(false);
     } catch (err) {
@@ -229,10 +250,10 @@ export default function ExternalVoteClient({ token }: { token: string }) {
               <Typography variant="h5">Merci !</Typography>
             </Box>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              Votre vote a été enregistré avec succès.
+              {submissionMessage}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Vous pouvez fermer cette page ou utiliser le même lien pour modifier votre vote avant la date limite.
+              Vous pouvez fermer cette page ou utiliser le même lien pour modifier votre participation avant la date limite.
             </Typography>
           </CardContent>
         </Card>
@@ -361,7 +382,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                       {comment.content}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {comment.user.name || 'Anonyme'} • {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
+                      {getCommentAuthorName(comment)} • {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
                     </Typography>
 
                     {comment.replies && comment.replies.length > 0 && (
@@ -372,7 +393,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                               {reply.content}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {reply.user.name || 'Anonyme'}
+                              {getCommentAuthorName(reply)}
                             </Typography>
                           </Paper>
                         ))}
@@ -444,6 +465,15 @@ export default function ExternalVoteClient({ token }: { token: string }) {
             ) : (
               // Vote nuancé (CONSENSUS, CONSENT, etc.)
               <>
+                {decision.decisionType === 'CONSENSUS' && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Vous pouvez voter, commenter, ou faire les deux.
+                  </Alert>
+                )}
+
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mt: 2 }}>
+                  {decision.decisionType === 'CONSENSUS' ? 'Votre position (optionnel)' : 'Votre vote'}
+                </Typography>
                 <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
                   <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
                     {getVoteOptions().map((option) => (
@@ -458,15 +488,29 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                   </RadioGroup>
                 </FormControl>
 
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>
+                  {decision.decisionType === 'CONSENSUS' ? 'Votre commentaire (optionnel)' : 'Commentaire (optionnel)'}
+                </Typography>
                 <TextField
-                  label="Commentaire (optionnel)"
                   multiline
-                  rows={3}
+                  rows={4}
                   fullWidth
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   sx={{ mb: 2 }}
+                  placeholder={decision.decisionType === 'CONSENSUS'
+                    ? "Partagez votre avis, vos questions ou vos suggestions..."
+                    : "Ajoutez un commentaire (optionnel)..."
+                  }
                 />
+
+                {existingComments && existingComments.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Vous avez déjà publié {existingComments.length} commentaire{existingComments.length > 1 ? 's' : ''} sur cette décision.
+                    </Typography>
+                  </Box>
+                )}
               </>
             )}
 

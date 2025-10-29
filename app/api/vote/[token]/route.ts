@@ -30,11 +30,21 @@ export async function GET(
                     name: true,
                   },
                 },
+                externalParticipant: {
+                  select: {
+                    externalName: true,
+                  },
+                },
                 replies: {
                   include: {
                     user: {
                       select: {
                         name: true,
+                      },
+                    },
+                    externalParticipant: {
+                      select: {
+                        externalName: true,
                       },
                     },
                   },
@@ -72,6 +82,7 @@ export async function GET(
     // Récupérer le vote existant si présent
     let existingVote = null;
     let existingProposalVote = null;
+    let existingComments = [];
 
     if (participant.decision.decisionType === 'MAJORITY') {
       existingProposalVote = await prisma.proposalVote.findFirst({
@@ -92,6 +103,18 @@ export async function GET(
       });
     }
 
+    // Récupérer les commentaires du participant externe
+    existingComments = await prisma.comment.findMany({
+      where: {
+        externalParticipantId: participant.id,
+        decisionId: participant.decision.id,
+        parentId: null, // Seulement les commentaires de niveau supérieur
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
     return Response.json({
       decision: participant.decision,
       participant: {
@@ -101,6 +124,7 @@ export async function GET(
       },
       existingVote,
       existingProposalVote,
+      existingComments,
     });
   } catch (error) {
     console.error('Error fetching decision for external vote:', error);
@@ -202,42 +226,106 @@ export async function POST(
       // Vote nuancé (CONSENSUS, CONSENT, etc.)
       const { value, comment } = body;
 
-      if (!value) {
-        return Response.json(
-          { error: 'La valeur du vote est requise' },
-          { status: 400 }
-        );
+      // Pour CONSENSUS, le vote et le commentaire sont tous deux optionnels
+      // Mais au moins l'un des deux doit être fourni
+      if (decisionType === 'CONSENSUS') {
+        if (!value && !comment) {
+          return Response.json(
+            { error: 'Veuillez fournir un vote et/ou un commentaire' },
+            { status: 400 }
+          );
+        }
+
+        let vote = null;
+        let createdComment = null;
+
+        // Créer ou mettre à jour le vote si fourni
+        if (value) {
+          const weight = getVoteWeight(value);
+
+          // Supprimer le vote existant s'il y en a un
+          await prisma.vote.deleteMany({
+            where: {
+              externalParticipantId: participant.id,
+              decisionId: participant.decision.id,
+            },
+          });
+
+          // Créer le nouveau vote
+          vote = await prisma.vote.create({
+            data: {
+              value,
+              weight,
+              decisionId: participant.decision.id,
+              externalParticipantId: participant.id,
+            },
+          });
+
+          // Marquer le participant comme ayant voté
+          await prisma.decisionParticipant.update({
+            where: { id: participant.id },
+            data: { hasVoted: true },
+          });
+        }
+
+        // Créer un commentaire dans la discussion si fourni
+        if (comment && comment.trim()) {
+          createdComment = await prisma.comment.create({
+            data: {
+              content: comment.trim(),
+              decisionId: participant.decision.id,
+              externalParticipantId: participant.id,
+            },
+          });
+        }
+
+        return Response.json({
+          vote,
+          comment: createdComment,
+          message: vote && createdComment
+            ? 'Vote et commentaire enregistrés avec succès'
+            : vote
+            ? 'Vote enregistré avec succès'
+            : 'Commentaire enregistré avec succès',
+        });
+      } else {
+        // Pour les autres types (CONSENT, WEIGHTED_VOTE, etc.), le vote est obligatoire
+        if (!value) {
+          return Response.json(
+            { error: 'La valeur du vote est requise' },
+            { status: 400 }
+          );
+        }
+
+        // Calculer le poids du vote
+        const weight = getVoteWeight(value);
+
+        // Supprimer le vote existant s'il y en a un (pour permettre la modification)
+        await prisma.vote.deleteMany({
+          where: {
+            externalParticipantId: participant.id,
+            decisionId: participant.decision.id,
+          },
+        });
+
+        // Créer le nouveau vote
+        const vote = await prisma.vote.create({
+          data: {
+            value,
+            weight,
+            decisionId: participant.decision.id,
+            externalParticipantId: participant.id,
+          },
+        });
+
+        // Marquer le participant comme ayant voté
+        await prisma.decisionParticipant.update({
+          where: { id: participant.id },
+          data: { hasVoted: true },
+        });
+
+        return Response.json({ vote, message: 'Vote enregistré avec succès' });
       }
-
-      // Calculer le poids du vote
-      const weight = getVoteWeight(value);
-
-      // Supprimer le vote existant s'il y en a un (pour permettre la modification)
-      await prisma.vote.deleteMany({
-        where: {
-          externalParticipantId: participant.id,
-          decisionId: participant.decision.id,
-        },
-      });
-
-      // Créer le nouveau vote
-      const vote = await prisma.vote.create({
-        data: {
-          value,
-          weight,
-          comment: comment || null,
-          decisionId: participant.decision.id,
-          externalParticipantId: participant.id,
-        },
-      });
-
-      // Marquer le participant comme ayant voté
-      await prisma.decisionParticipant.update({
-        where: { id: participant.id },
-        data: { hasVoted: true },
-      });
-
-      return Response.json({ vote, message: 'Vote enregistré avec succès' });
     }
   } catch (error) {
     console.error('Error recording external vote:', error);
