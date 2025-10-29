@@ -119,12 +119,27 @@ export default async function ResultsPage({
 
   const isCreator = decision.creatorId === session.user.id;
 
-  // Vérifier si l'utilisateur peut voir les résultats
-  const isOpen = decision.status === 'OPEN';
+  // Vérifier si le vote est terminé
+  const now = new Date();
+  const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
   const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
-  const canSeeResults = isCreator || !isOpen || allParticipantsVoted;
+  const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
 
-  if (!canSeeResults && isOpen) {
+  // Mettre à jour le statut automatiquement si le vote est terminé
+  if (decision.status === 'OPEN' && isVotingFinished) {
+    await prisma.decision.update({
+      where: { id: decision.id },
+      data: { status: 'CLOSED' },
+    });
+    decision.status = 'CLOSED';
+  }
+
+  // Vérifier si l'utilisateur peut voir les résultats
+  // Pour CONSENSUS : accès libre à tout moment
+  // Pour MAJORITY : accès uniquement quand le vote est terminé
+  const canSeeResults = decision.decisionType === 'CONSENSUS' || isVotingFinished;
+
+  if (!canSeeResults) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -132,7 +147,8 @@ export default async function ResultsPage({
             Résultats non disponibles
           </h2>
           <p className="text-yellow-700">
-            Les résultats ne seront visibles que lorsque le vote sera terminé ou que tous les participants auront voté.
+            Les résultats du vote à la majorité ne sont visibles qu'une fois le vote terminé
+            (date limite atteinte ou tous les participants ont voté).
           </p>
           <div className="mt-4">
             <a

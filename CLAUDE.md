@@ -182,6 +182,33 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 4. Each user can only vote for one proposal per decision
 5. The proposal with the most votes wins
 
+### Decision Lifecycle & Status Management
+
+**Voting Deadlines:**
+- Minimum deadline: 24 hours from creation time
+- The `endDate` field stores the voting deadline
+- When creating or updating a decision, ensure endDate is at least 24 hours in the future
+
+**Automatic Status Updates:**
+- A decision is considered "finished" when either:
+  - The `endDate` has been reached, OR
+  - All participants have voted (`hasVoted = true` for all participants)
+- When accessing the results page, the system automatically updates `status` from 'OPEN' to 'CLOSED' if the vote is finished
+- This ensures the decision status reflects the current voting state
+
+**Access to Results:**
+- **CONSENSUS decisions**: Results are accessible at any time (even during voting)
+- **MAJORITY decisions**: Results are only visible once voting is finished
+- If a user tries to access results before voting is finished (MAJORITY only), they see a message explaining the restriction
+
+**Decision Conclusion:**
+- The `conclusion` field allows the decision creator to add a summary/conclusion
+- Can only be edited once the voting is finished (deadline reached OR all participants have voted)
+- Displayed at the end of the results page
+- Supports plain text with preserved line breaks (Markdown rendering can be added later)
+- Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
+- The conclusion section is only visible in the admin page once voting is finished
+
 ### Invitation System
 
 Members are invited via email using Resend:

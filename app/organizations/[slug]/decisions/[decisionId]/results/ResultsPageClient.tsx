@@ -41,6 +41,7 @@ interface Decision {
   resultDetails: string | null;
   initialProposal: string | null;
   amendedProposal: string | null;
+  conclusion: string | null;
   endDate: Date | null;
   decidedAt: Date | null;
   comments: Comment[];
@@ -302,6 +303,16 @@ export default function ResultsPageClient({
         <div className="bg-gray-50 border rounded-lg p-6 mb-6">
           <h3 className="font-medium mb-2">Détails</h3>
           <p className="text-gray-700">{decision.resultDetails}</p>
+        </div>
+      )}
+
+      {/* Conclusion */}
+      {decision.conclusion && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-blue-900">Conclusion</h2>
+          <div className="prose max-w-none text-gray-800">
+            <p className="whitespace-pre-wrap">{decision.conclusion}</p>
+          </div>
         </div>
       )}
 
