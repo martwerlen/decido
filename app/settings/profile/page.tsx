@@ -42,6 +42,7 @@ export default function ProfilePage() {
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [formLoading, setFormLoading] = useState(false);
+  const [imageProcessing, setImageProcessing] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -66,7 +67,74 @@ export default function ProfilePage() {
     }
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (file: File, maxSizeKB: number = 500): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            reject(new Error('Impossible de créer le contexte canvas'));
+            return;
+          }
+
+          // Définir la taille maximale (800x800 pour garder une bonne qualité)
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+
+          // Redimensionner si nécessaire
+          if (width > height) {
+            if (width > maxWidth) {
+              height = height * (maxWidth / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = width * (maxHeight / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          // Dessiner l'image redimensionnée
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compresser progressivement jusqu'à atteindre la taille souhaitée
+          let quality = 0.9;
+          const tryCompress = () => {
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            const sizeKB = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
+
+            if (sizeKB <= maxSizeKB || quality <= 0.1) {
+              resolve(compressedDataUrl);
+            } else {
+              quality -= 0.1;
+              tryCompress();
+            }
+          };
+
+          tryCompress();
+        };
+        img.onerror = () => {
+          reject(new Error('Erreur lors du chargement de l\'image'));
+        };
+      };
+      reader.onerror = () => {
+        reject(new Error('Erreur lors de la lecture du fichier'));
+      };
+    });
+  };
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -76,21 +144,26 @@ export default function ProfilePage() {
       return;
     }
 
-    // Vérifier la taille (max 500KB)
-    if (file.size > 500 * 1024) {
-      setFormError('L\'image doit faire moins de 500KB');
+    // Vérifier la taille initiale (max 5MB pour éviter les fichiers trop volumineux)
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('L\'image doit faire moins de 5MB');
       return;
     }
 
-    // Convertir en base64
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setImageData(base64String);
-      setImagePreview(base64String);
+    // Compresser l'image
+    setImageProcessing(true);
+    setFormError('');
+
+    try {
+      const compressedBase64 = await compressImage(file, 500);
+      setImageData(compressedBase64);
+      setImagePreview(compressedBase64);
       setFormError('');
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setFormError(err.message || 'Erreur lors du traitement de l\'image');
+    } finally {
+      setImageProcessing(false);
+    }
   };
 
   const handleRemoveImage = () => {
@@ -188,18 +261,33 @@ export default function ProfilePage() {
 
           {/* Photo de profil */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-            <Avatar
-              src={imagePreview || undefined}
-              sx={{
-                width: 120,
-                height: 120,
-                mb: 2,
-                fontSize: '2.5rem',
-                bgcolor: imagePreview ? 'transparent' : 'primary.main',
-              }}
-            >
-              {!imagePreview && getInitials(name || profile?.name || '')}
-            </Avatar>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar
+                src={imagePreview || undefined}
+                sx={{
+                  width: 120,
+                  height: 120,
+                  mb: 2,
+                  fontSize: '2.5rem',
+                  bgcolor: imagePreview ? 'transparent' : 'primary.main',
+                  opacity: imageProcessing ? 0.5 : 1,
+                }}
+              >
+                {!imagePreview && getInitials(name || profile?.name || '')}
+              </Avatar>
+              {imageProcessing && (
+                <CircularProgress
+                  size={40}
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    marginTop: '-20px',
+                    marginLeft: '-20px',
+                  }}
+                />
+              )}
+            </Box>
 
             <input
               ref={fileInputRef}
@@ -207,6 +295,7 @@ export default function ProfilePage() {
               accept="image/png,image/jpeg,image/jpg,image/webp"
               onChange={handleImageChange}
               style={{ display: 'none' }}
+              disabled={imageProcessing}
             />
 
             <Box sx={{ display: 'flex', gap: 1 }}>
@@ -214,8 +303,9 @@ export default function ProfilePage() {
                 variant="outlined"
                 startIcon={<PhotoCamera />}
                 onClick={() => fileInputRef.current?.click()}
+                disabled={imageProcessing}
               >
-                Changer la photo
+                {imageProcessing ? 'Traitement...' : 'Changer la photo'}
               </Button>
 
               {imagePreview && (
@@ -223,6 +313,7 @@ export default function ProfilePage() {
                   variant="outlined"
                   color="error"
                   onClick={handleRemoveImage}
+                  disabled={imageProcessing}
                 >
                   Supprimer
                 </Button>
@@ -230,7 +321,7 @@ export default function ProfilePage() {
             </Box>
 
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-              PNG, JPG ou WebP. Max 500KB.
+              PNG, JPG ou WebP. Max 5MB. L&apos;image sera automatiquement optimisée.
             </Typography>
           </Box>
 

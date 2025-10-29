@@ -75,9 +75,9 @@ export async function PATCH(request: NextRequest) {
 
       // Vérifier la taille approximative (base64 est ~33% plus gros que l'original)
       // Pour 500KB max, la chaîne base64 devrait faire environ 660KB
-      if (image.length > 660 * 1024) {
+      if (image.length > 700 * 1024) {
         return NextResponse.json(
-          { error: 'L\'image est trop volumineuse (max 500KB)' },
+          { error: 'L\'image est trop volumineuse après compression. Veuillez réessayer avec une image différente.' },
           { status: 400 }
         );
       }
