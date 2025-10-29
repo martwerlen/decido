@@ -2,7 +2,66 @@
 // En développement, les emails sont loggés dans la console
 // En production, configure RESEND_API_KEY pour envoyer de vrais emails
 
-const fromEmail = process.env.FROM_EMAIL || 'noreply@decido.app';
+const fromEmail = process.env.FROM_EMAIL || 'noreply@maintenantoumaintenant.fr';
+
+// Fonction utilitaire pour convertir HTML en texte brut
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
+}
+
+// Interface pour l'envoi d'email générique
+interface SendEmailParams {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string; // Optionnel, sera généré depuis HTML si non fourni
+}
+
+// Fonction générique d'envoi d'email
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailParams) {
+  const textContent = text || htmlToText(html);
+
+  const emailData = {
+    from: fromEmail,
+    to: [to],
+    subject,
+    html,
+    text: textContent,
+  };
+
+  // Si RESEND_API_KEY est défini, utiliser Resend
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const data = await resend.emails.send(emailData);
+      return { success: true, data };
+    } catch (error) {
+      console.error(`❌ Erreur email pour ${to}:`, error);
+    }
+  }
+
+  // Mode console
+  console.log(`📧 [CONSOLE] Email à ${to}: ${subject}`);
+  return { success: true, mode: 'console' };
+}
 
 interface SendInvitationEmailParams {
   to: string;
@@ -96,33 +155,19 @@ Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.
   // Si RESEND_API_KEY est défini, utiliser Resend
   if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
     try {
-      // Import dynamique de Resend seulement si nécessaire
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
-
       const data = await resend.emails.send(emailData);
-      console.log('📧 Email d\'invitation envoyé via Resend:', { to, success: true });
+      console.log(`✅ Invitation envoyée à ${to}`);
       return { success: true, data };
     } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi via Resend:', error);
-      // Continuer en mode console si l'envoi échoue
+      console.error(`❌ Erreur invitation pour ${to}:`, error);
     }
   }
 
-  // Mode développement : afficher l'email dans la console
-  console.log('\n📧 ========================================');
-  console.log('📧 EMAIL D\'INVITATION (MODE DÉVELOPPEMENT)');
-  console.log('📧 ========================================');
-  console.log(`📧 À: ${to}`);
-  console.log(`📧 Sujet: ${emailData.subject}`);
-  console.log('📧 ----------------------------------------');
-  console.log(`📧 Lien d'invitation:`);
-  console.log(`📧 ${invitationUrl}`);
-  console.log('📧 ----------------------------------------');
-  console.log(`📧 Message:`);
-  console.log(textContent);
-  console.log('📧 ========================================\n');
-
+  // Mode console
+  console.log(`📧 [CONSOLE] Invitation à ${to}`);
+  console.log(`   Lien: ${invitationUrl}\n`);
   return { success: true, mode: 'console' };
 }
 
@@ -201,32 +246,18 @@ Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   // Si RESEND_API_KEY est défini, utiliser Resend
   if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
     try {
-      // Import dynamique de Resend seulement si nécessaire
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
-
       const data = await resend.emails.send(emailData);
-      console.log('📧 Email de bienvenue envoyé via Resend:', { to, success: true });
+      console.log(`✅ Email de bienvenue envoyé à ${to}`);
       return { success: true, data };
     } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi via Resend:', error);
-      // Continuer en mode console si l'envoi échoue
+      console.error(`❌ Erreur bienvenue pour ${to}:`, error);
     }
   }
 
-  // Mode développement : afficher l'email dans la console
-  console.log('\n📧 ========================================');
-  console.log('📧 EMAIL DE BIENVENUE (MODE DÉVELOPPEMENT)');
-  console.log('📧 ========================================');
-  console.log(`📧 À: ${to}`);
-  console.log(`📧 Sujet: ${emailData.subject}`);
-  console.log('📧 ----------------------------------------');
-  console.log(`📧 Lien de connexion:`);
-  console.log(`📧 ${loginUrl}`);
-  console.log('📧 ----------------------------------------');
-  console.log(`📧 Message:`);
-  console.log(textContent);
-  console.log('📧 ========================================\n');
-
+  // Mode console
+  console.log(`📧 [CONSOLE] Bienvenue à ${to}`);
+  console.log(`   Connexion: ${loginUrl}\n`);
   return { success: true, mode: 'console' };
 }
