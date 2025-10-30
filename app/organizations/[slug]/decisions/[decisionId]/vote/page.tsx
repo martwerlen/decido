@@ -51,6 +51,11 @@ export default async function VotePage({
           },
         },
       },
+      nuancedProposals: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
       comments: {
         where: {
           parentId: null,
@@ -117,6 +122,7 @@ export default async function VotePage({
   // Récupérer le vote de l'utilisateur
   let userVote = null;
   let userProposalVote = null;
+  let userNuancedVotes = null;
 
   if (decision.decisionType === 'CONSENSUS') {
     userVote = await prisma.vote.findUnique({
@@ -137,6 +143,16 @@ export default async function VotePage({
         proposal: true,
       },
     });
+  } else if (decision.decisionType === 'NUANCED_VOTE') {
+    userNuancedVotes = await prisma.nuancedVote.findMany({
+      where: {
+        userId: session.user.id,
+        decisionId,
+      },
+      include: {
+        proposal: true,
+      },
+    });
   }
 
   return (
@@ -144,6 +160,7 @@ export default async function VotePage({
       decision={decision}
       userVote={userVote}
       userProposalVote={userProposalVote}
+      userNuancedVotes={userNuancedVotes}
       slug={slug}
       userId={session.user.id}
       isCreator={decision.creatorId === session.user.id}
