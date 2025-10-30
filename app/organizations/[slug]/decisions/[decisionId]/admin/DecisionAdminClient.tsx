@@ -14,6 +14,16 @@ interface Proposal {
   };
 }
 
+interface NuancedProposal {
+  id: string;
+  title: string;
+  description: string | null;
+  order: number;
+  _count: {
+    nuancedVotes: number;
+  };
+}
+
 interface Participant {
   id: string;
   userId: string | null;
@@ -58,7 +68,11 @@ interface Decision {
   proposal: string | null;
   conclusion: string | null;
   endDate: Date | null;
+  nuancedScale?: string | null;
+  nuancedWinnerCount?: number | null;
+  nuancedSlug?: string | null;
   proposals: Proposal[];
+  nuancedProposals?: NuancedProposal[];
   participants: Participant[];
 }
 
