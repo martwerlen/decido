@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { DecisionStatusLabels, DecisionTypeLabels, DecisionResultLabels } from '@/types/enums';
+import {
+  DecisionStatusLabels,
+  DecisionTypeLabels,
+  DecisionResultLabels,
+  getMentionLabel,
+  getMentionColor,
+  NuancedScaleLabels,
+} from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
 
@@ -17,6 +24,15 @@ interface ProposalResult {
   voteCount: number;
   percentage: number;
   isWinner: boolean;
+}
+
+interface NuancedProposalResult {
+  proposalId: string;
+  title: string;
+  majorityMention: string;
+  mentionProfile: Record<string, number>;
+  rank: number;
+  score: number;
 }
 
 interface Comment {
@@ -44,6 +60,8 @@ interface Decision {
   conclusion: string | null;
   endDate: Date | null;
   decidedAt: Date | null;
+  nuancedScale?: string | null;
+  nuancedWinnerCount?: number | null;
   comments: Comment[];
   participants: any[];
 }
@@ -51,6 +69,7 @@ interface Decision {
 interface Props {
   decision: Decision;
   proposalResults: ProposalResult[];
+  nuancedResults: NuancedProposalResult[];
   agreeCount: number;
   disagreeCount: number;
   consensusReached: boolean;
@@ -61,6 +80,7 @@ interface Props {
 export default function ResultsPageClient({
   decision,
   proposalResults,
+  nuancedResults,
   agreeCount,
   disagreeCount,
   consensusReached,

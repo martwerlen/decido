@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { calculateNuancedVoteResults } from '@/lib/decision-logic';
 import ResultsPageClient from './ResultsPageClient';
 
 export default async function ResultsPage({
@@ -45,6 +46,24 @@ export default async function ResultsPage({
         },
         include: {
           proposalVotes: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      nuancedProposals: {
+        orderBy: {
+          order: 'asc',
+        },
+        include: {
+          nuancedVotes: {
             include: {
               user: {
                 select: {
@@ -136,7 +155,7 @@ export default async function ResultsPage({
 
   // Vérifier si l'utilisateur peut voir les résultats
   // Pour CONSENSUS : accès libre à tout moment
-  // Pour MAJORITY : accès uniquement quand le vote est terminé
+  // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé
   const canSeeResults = decision.decisionType === 'CONSENSUS' || isVotingFinished;
 
   if (!canSeeResults) {
@@ -193,10 +212,26 @@ export default async function ResultsPage({
   const totalConsensusVotes = agreeCount + disagreeCount;
   const consensusReached = totalConsensusVotes > 0 && disagreeCount === 0;
 
+  // Calculer les résultats pour le vote nuancé
+  let nuancedResults: any[] = [];
+  if (decision.decisionType === 'NUANCED_VOTE' && decision.nuancedProposals) {
+    const proposalsWithMentions = decision.nuancedProposals.map(proposal => ({
+      id: proposal.id,
+      title: proposal.title,
+      mentions: proposal.nuancedVotes.map(vote => vote.mention),
+    }));
+
+    nuancedResults = calculateNuancedVoteResults(
+      proposalsWithMentions,
+      decision.nuancedScale || '5_LEVELS'
+    );
+  }
+
   return (
     <ResultsPageClient
       decision={decision}
       proposalResults={proposalResults}
+      nuancedResults={nuancedResults}
       agreeCount={agreeCount}
       disagreeCount={disagreeCount}
       consensusReached={consensusReached}
