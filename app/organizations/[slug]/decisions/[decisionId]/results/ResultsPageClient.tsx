@@ -8,6 +8,7 @@ import {
   DecisionResultLabels,
   getMentionLabel,
   getMentionColor,
+  getMentionsForScale,
   NuancedScaleLabels,
 } from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
@@ -200,6 +201,158 @@ export default function ResultsPageClient({
                 </div>
               </div>
             ))}
+          </div>
+
+          {decision.status === 'OPEN' && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-blue-800">
+                Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Résultats vote nuancé (jugement majoritaire) */}
+      {decision.decisionType === 'NUANCED_VOTE' && (
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Résultats du vote nuancé</h2>
+
+          <div className="mb-6">
+            <p className="text-gray-600">
+              {decision.participants.filter(p => p.hasVoted).length} vote{decision.participants.filter(p => p.hasVoted).length > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
+              {decision.nuancedWinnerCount && decision.nuancedWinnerCount > 1 &&
+                ` • ${decision.nuancedWinnerCount} propositions gagnantes`}
+            </p>
+          </div>
+
+          {/* Propositions gagnantes */}
+          {decision.nuancedWinnerCount && nuancedResults.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-4 text-green-700">
+                🏆 {decision.nuancedWinnerCount === 1 ? 'Proposition gagnante' : `${decision.nuancedWinnerCount} propositions gagnantes`}
+              </h3>
+              <div className="space-y-3">
+                {nuancedResults.slice(0, decision.nuancedWinnerCount).map((result) => {
+                  const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+                  const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+
+                  return (
+                    <div
+                      key={result.proposalId}
+                      className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">🏆</span>
+                        <span className="font-bold text-lg">{result.rank}. {result.title}</span>
+                        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                          GAGNANT
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Mention majoritaire :</span>
+                        <span
+                          className="px-3 py-1 rounded-lg text-sm font-semibold text-white"
+                          style={{ backgroundColor: mentionColor }}
+                        >
+                          {mentionLabel}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Toutes les propositions avec leur profil de mérite */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">
+              {decision.nuancedWinnerCount && nuancedResults.length > decision.nuancedWinnerCount
+                ? 'Autres propositions'
+                : 'Classement complet'}
+            </h3>
+
+            {nuancedResults.map((result) => {
+              const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+              const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+              const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
+              const isWinner = decision.nuancedWinnerCount && result.rank <= decision.nuancedWinnerCount;
+
+              return (
+                <div
+                  key={result.proposalId}
+                  className={`border rounded-lg p-4 ${
+                    isWinner ? 'bg-green-50 border-green-200' : 'bg-gray-50'
+                  }`}
+                >
+                  {/* En-tête de la proposition */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-lg">
+                        {result.rank}. {result.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Mention majoritaire :</span>
+                      <span
+                        className="px-2 py-1 rounded text-sm font-semibold text-white"
+                        style={{ backgroundColor: mentionColor }}
+                      >
+                        {mentionLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Profil de mérite - Barres horizontales */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      Distribution des mentions
+                    </p>
+                    {Object.entries(result.mentionProfile)
+                      .sort((a, b) => {
+                        // Trier par ordre des mentions (meilleure en haut)
+                        const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                        return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
+                      })
+                      .map(([mention, count]) => {
+                        const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
+                        const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                        const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+                        const isMajority = mention === result.majorityMention;
+
+                        return (
+                          <div key={mention} className="flex items-center gap-2">
+                            <div className="w-24 text-xs text-gray-600">{label}</div>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                                <div
+                                  className={`h-6 rounded-full transition-all ${
+                                    isMajority ? 'ring-2 ring-gray-800 ring-inset' : ''
+                                  }`}
+                                  style={{
+                                    width: `${percentage}%`,
+                                    backgroundColor: color,
+                                  }}
+                                />
+                              </div>
+                              <div className="w-16 text-right">
+                                <span className="text-sm font-medium">{count}</span>
+                                <span className="text-xs text-gray-500 ml-1">
+                                  ({percentage.toFixed(0)}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {decision.status === 'OPEN' && (
