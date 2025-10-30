@@ -144,3 +144,175 @@ export function formatDecisionResult(result: DecisionResult | null): string {
 
   return labels[result] || 'Inconnu'
 }
+
+// ============================================
+// JUGEMENT MAJORITAIRE (VOTE NUANCÉ)
+// ============================================
+
+export interface NuancedProposalResult {
+  proposalId: string
+  title: string
+  majorityMention: string // La mention majoritaire (médiane)
+  mentionProfile: Record<string, number> // Distribution des mentions
+  rank: number // Classement (1 = gagnant)
+  score: number // Score pour le départage (plus élevé = meilleur)
+}
+
+/**
+ * Calcule la mention majoritaire (médiane) pour une proposition
+ * @param mentions - Liste des mentions attribuées à la proposition
+ * @param scale - Échelle utilisée pour le vote
+ * @returns La mention majoritaire
+ */
+export function calculateMajorityMention(
+  mentions: string[],
+  scale: string
+): string {
+  if (mentions.length === 0) {
+    // Si aucune mention, retourner la pire mention de l'échelle
+    const allMentions = getMentionsForScale(scale)
+    return allMentions[allMentions.length - 1]
+  }
+
+  // Trier les mentions par rang (0 = meilleure, N = pire)
+  const sortedMentions = [...mentions].sort((a, b) => {
+    return getMentionRank(scale, a) - getMentionRank(scale, b)
+  })
+
+  // Calculer la médiane
+  const middleIndex = Math.floor(sortedMentions.length / 2)
+
+  if (sortedMentions.length % 2 === 1) {
+    // Nombre impair : prendre l'élément du milieu
+    return sortedMentions[middleIndex]
+  } else {
+    // Nombre pair : prendre la pire des deux mentions centrales (plus conservateur)
+    return sortedMentions[middleIndex]
+  }
+}
+
+/**
+ * Calcule le profil de mérite d'une proposition (distribution des mentions)
+ */
+export function calculateMentionProfile(
+  mentions: string[],
+  scale: string
+): Record<string, number> {
+  const allMentions = getMentionsForScale(scale)
+  const profile: Record<string, number> = {}
+
+  // Initialiser toutes les mentions à 0
+  allMentions.forEach(mention => {
+    profile[mention] = 0
+  })
+
+  // Compter les mentions
+  mentions.forEach(mention => {
+    if (profile[mention] !== undefined) {
+      profile[mention]++
+    }
+  })
+
+  return profile
+}
+
+/**
+ * Calcule un score de départage pour les propositions avec la même mention majoritaire
+ * Le score est calculé en retirant progressivement les votes médians
+ * Plus le score est élevé, meilleure est la proposition
+ */
+export function calculateTiebreakerScore(
+  mentions: string[],
+  scale: string,
+  depth: number = 0
+): number {
+  if (mentions.length === 0 || depth > 10) {
+    return 0
+  }
+
+  const majorityMention = calculateMajorityMention(mentions, scale)
+  const mentionRank = getMentionRank(scale, majorityMention)
+
+  // Le score de base est inversé : meilleure mention = score plus élevé
+  const allMentions = getMentionsForScale(scale)
+  const baseScore = (allMentions.length - mentionRank) * Math.pow(100, 10 - depth)
+
+  // Retirer toutes les occurrences de la mention majoritaire
+  const remainingMentions = mentions.filter(m => m !== majorityMention)
+
+  // Calculer récursivement le score pour les mentions restantes
+  if (remainingMentions.length > 0) {
+    return baseScore + calculateTiebreakerScore(remainingMentions, scale, depth + 1)
+  }
+
+  return baseScore
+}
+
+/**
+ * Calcule les résultats du vote nuancé pour toutes les propositions
+ * et les classe par mention majoritaire
+ */
+export function calculateNuancedVoteResults(
+  proposals: Array<{
+    id: string
+    title: string
+    mentions: string[] // Liste des mentions reçues
+  }>,
+  scale: string
+): NuancedProposalResult[] {
+  // Calculer les résultats pour chaque proposition
+  const results: NuancedProposalResult[] = proposals.map(proposal => ({
+    proposalId: proposal.id,
+    title: proposal.title,
+    majorityMention: calculateMajorityMention(proposal.mentions, scale),
+    mentionProfile: calculateMentionProfile(proposal.mentions, scale),
+    rank: 0, // Sera calculé après le tri
+    score: calculateTiebreakerScore(proposal.mentions, scale),
+  }))
+
+  // Trier par mention majoritaire (meilleure mention d'abord), puis par score
+  results.sort((a, b) => {
+    const rankA = getMentionRank(scale, a.majorityMention)
+    const rankB = getMentionRank(scale, b.majorityMention)
+
+    if (rankA !== rankB) {
+      return rankA - rankB // Rang plus petit = meilleure mention
+    }
+
+    // En cas d'égalité, utiliser le score de départage
+    return b.score - a.score // Score plus élevé = meilleur
+  })
+
+  // Attribuer les rangs
+  results.forEach((result, index) => {
+    result.rank = index + 1
+  })
+
+  return results
+}
+
+/**
+ * Helper pour obtenir les mentions selon l'échelle
+ * (Wrapper pour la fonction dans enums.ts)
+ */
+function getMentionsForScale(scale: string): string[] {
+  switch (scale) {
+    case '3_LEVELS':
+      return ['GOOD', 'PASSABLE', 'INSUFFICIENT']
+    case '5_LEVELS':
+      return ['EXCELLENT', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
+    case '7_LEVELS':
+      return ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'FAIRLY_GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
+    default:
+      return []
+  }
+}
+
+/**
+ * Helper pour obtenir le rang d'une mention
+ * (Wrapper pour la fonction dans enums.ts)
+ */
+function getMentionRank(scale: string, mention: string): number {
+  const mentions = getMentionsForScale(scale)
+  return mentions.indexOf(mention)
+}

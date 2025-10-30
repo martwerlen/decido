@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
+import {
+  DecisionStatusLabels,
+  DecisionTypeLabels,
+  getMentionsForScale,
+  getMentionLabel,
+  getMentionColor,
+  NuancedScaleLabels,
+} from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
@@ -13,6 +20,20 @@ interface Proposal {
   title: string;
   description: string | null;
   order: number;
+}
+
+interface NuancedProposal {
+  id: string;
+  title: string;
+  description: string | null;
+  order: number;
+}
+
+interface NuancedVote {
+  id: string;
+  proposalId: string;
+  mention: string;
+  proposal: NuancedProposal;
 }
 
 interface Comment {
@@ -47,7 +68,10 @@ interface Decision {
   initialProposal: string | null;
   proposal: string | null;
   endDate: Date | null;
+  nuancedScale?: string | null;
+  nuancedWinnerCount?: number | null;
   proposals: Proposal[];
+  nuancedProposals?: NuancedProposal[];
   comments: Comment[];
   participants: any[];
 }
@@ -56,6 +80,7 @@ interface Props {
   decision: Decision;
   userVote: { id: string; value: string } | null;
   userProposalVote: { id: string; proposalId: string; proposal: Proposal } | null;
+  userNuancedVotes: NuancedVote[] | null;
   slug: string;
   userId: string;
   isCreator: boolean;
@@ -65,6 +90,7 @@ export default function VotePageClient({
   decision,
   userVote: initialUserVote,
   userProposalVote: initialUserProposalVote,
+  userNuancedVotes: initialUserNuancedVotes,
   slug,
   userId,
   isCreator,
@@ -83,6 +109,15 @@ export default function VotePageClient({
   // Vote consensus
   const [consensusVote, setConsensusVote] = useState(initialUserVote?.value || '');
 
+  // Vote nuancé - Map de proposalId -> mention
+  const initialNuancedVotes: Record<string, string> = {};
+  if (initialUserNuancedVotes) {
+    initialUserNuancedVotes.forEach(vote => {
+      initialNuancedVotes[vote.proposalId] = vote.mention;
+    });
+  }
+  const [nuancedVotes, setNuancedVotes] = useState<Record<string, string>>(initialNuancedVotes);
+
   // Commentaires
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -94,6 +129,8 @@ export default function VotePageClient({
   const isOpen = decision.status === 'OPEN';
   const hasVoted = decision.decisionType === 'MAJORITY'
     ? !!initialUserProposalVote
+    : decision.decisionType === 'NUANCED_VOTE'
+    ? initialUserNuancedVotes && initialUserNuancedVotes.length > 0
     : !!initialUserVote;
 
   // Vote pour une proposition (majorité)
@@ -167,6 +204,47 @@ export default function VotePageClient({
         refreshSidebar();
       }
 
+      setTimeout(() => {
+        router.refresh();
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Vote nuancé - Soumettre tous les votes
+  const handleVoteNuanced = async () => {
+    // Vérifier que toutes les propositions ont une mention
+    const proposalIds = decision.nuancedProposals?.map(p => p.id) || [];
+    const missingVotes = proposalIds.filter(id => !nuancedVotes[id]);
+
+    if (missingVotes.length > 0) {
+      setError('Vous devez attribuer une mention à toutes les propositions');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/vote`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nuancedVotes }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      setSuccess('Votre vote a été enregistré !');
+      refreshSidebar();
       setTimeout(() => {
         router.refresh();
       }, 1500);
@@ -370,6 +448,85 @@ export default function VotePageClient({
           {hasVoted && (
             <p className="text-sm text-green-600 mt-2 text-center">
               ✓ Vous avez voté pour : {initialUserProposalVote?.proposal.title}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Vote nuancé (jugement majoritaire) */}
+      {decision.decisionType === 'NUANCED_VOTE' && (
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Vote nuancé (Jugement majoritaire)</h2>
+          <p className="text-gray-600 mb-2">
+            Évaluez chaque proposition en lui attribuant une mention.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
+          </p>
+
+          <div className="space-y-4 mb-6">
+            {decision.nuancedProposals?.map((proposal) => {
+              const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+              const selectedMention = nuancedVotes[proposal.id];
+
+              return (
+                <div key={proposal.id} className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-2">{proposal.title}</h3>
+                  {proposal.description && (
+                    <p className="text-gray-600 text-sm mb-3">{proposal.description}</p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {mentions.map((mention) => {
+                      const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+                      const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                      const isSelected = selectedMention === mention;
+
+                      return (
+                        <button
+                          key={mention}
+                          onClick={() => {
+                            if (isOpen) {
+                              setNuancedVotes(prev => ({
+                                ...prev,
+                                [proposal.id]: mention,
+                              }));
+                            }
+                          }}
+                          disabled={!isOpen}
+                          className={`px-4 py-2 rounded-lg border-2 transition font-medium ${
+                            isSelected
+                              ? 'border-gray-800 shadow-md'
+                              : 'border-transparent hover:border-gray-300'
+                          } ${!isOpen ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                          style={{
+                            backgroundColor: isSelected ? color : `${color}33`,
+                            color: isSelected ? '#fff' : '#333',
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {isOpen && (
+            <button
+              onClick={handleVoteNuanced}
+              disabled={loading || Object.keys(nuancedVotes).length !== (decision.nuancedProposals?.length || 0)}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? 'Enregistrement...' : hasVoted ? 'Modifier mon vote' : 'Voter'}
+            </button>
+          )}
+
+          {hasVoted && (
+            <p className="text-sm text-green-600 mt-2 text-center">
+              ✓ Vous avez déjà voté
             </p>
           )}
         </div>

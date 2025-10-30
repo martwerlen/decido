@@ -51,6 +51,18 @@ export default async function DecisionAdminPage({
           },
         },
       },
+      nuancedProposals: {
+        orderBy: {
+          order: 'asc',
+        },
+        include: {
+          _count: {
+            select: {
+              nuancedVotes: true,
+            },
+          },
+        },
+      },
       participants: {
         include: {
           user: {

@@ -144,6 +144,56 @@ export async function POST(
       );
     }
 
+    // Pour vote nuancé, vérifier la configuration
+    if (decisionType === 'NUANCED_VOTE') {
+      if (!body.nuancedScale || !['3_LEVELS', '5_LEVELS', '7_LEVELS'].includes(body.nuancedScale)) {
+        return Response.json(
+          { error: 'Échelle de mentions invalide pour le vote nuancé' },
+          { status: 400 }
+        );
+      }
+      if (!body.nuancedWinnerCount || body.nuancedWinnerCount < 1) {
+        return Response.json(
+          { error: 'Le nombre de gagnants doit être au moins 1' },
+          { status: 400 }
+        );
+      }
+      if (!body.nuancedProposals || body.nuancedProposals.length < 2) {
+        return Response.json(
+          { error: 'Au moins 2 propositions sont requises pour le vote nuancé' },
+          { status: 400 }
+        );
+      }
+      if (body.nuancedProposals.length > 25) {
+        return Response.json(
+          { error: 'Maximum 25 propositions pour le vote nuancé' },
+          { status: 400 }
+        );
+      }
+      if (body.nuancedWinnerCount > body.nuancedProposals.length) {
+        return Response.json(
+          { error: 'Le nombre de gagnants ne peut pas dépasser le nombre de propositions' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Pour vote à la majorité, vérifier la présence des propositions
+    if (decisionType === 'MAJORITY') {
+      if (!body.proposals || body.proposals.length < 2) {
+        return Response.json(
+          { error: 'Au moins 2 propositions sont requises pour le vote à la majorité' },
+          { status: 400 }
+        );
+      }
+      if (body.proposals.length > 25) {
+        return Response.json(
+          { error: 'Maximum 25 propositions pour le vote à la majorité' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Vérifier que endDate est au moins 24h dans le futur
     if (endDate) {
       const endDateObj = new Date(endDate);
@@ -175,26 +225,56 @@ export async function POST(
       }
     }
 
-    // Créer la décision avec le créateur comme participant par défaut
-    const decision = await prisma.decision.create({
-      data: {
-        title,
-        description,
-        decisionType,
-        status: 'DRAFT',
-        organizationId: organization.id,
-        creatorId: session.user.id,
-        teamId: teamId || null,
-        endDate: endDate ? new Date(endDate) : null,
-        initialProposal: body.initialProposal || null,
-        votingMode: body.votingMode || 'INVITED',
-        participants: {
-          create: {
-            userId: session.user.id,
-            invitedVia: 'MANUAL',
-          },
+    // Préparer les données de la décision
+    const decisionData: any = {
+      title,
+      description,
+      decisionType,
+      status: 'DRAFT',
+      organizationId: organization.id,
+      creatorId: session.user.id,
+      teamId: teamId || null,
+      endDate: endDate ? new Date(endDate) : null,
+      initialProposal: body.initialProposal || null,
+      votingMode: body.votingMode || 'INVITED',
+      participants: {
+        create: {
+          userId: session.user.id,
+          invitedVia: 'MANUAL',
         },
       },
+    };
+
+    // Pour le vote nuancé, ajouter les champs spécifiques
+    if (decisionType === 'NUANCED_VOTE') {
+      decisionData.nuancedScale = body.nuancedScale;
+      decisionData.nuancedWinnerCount = body.nuancedWinnerCount;
+      decisionData.nuancedSlug = body.nuancedSlug || null;
+
+      // Créer les propositions nuancées
+      decisionData.nuancedProposals = {
+        create: body.nuancedProposals.map((proposal: any, index: number) => ({
+          title: proposal.title,
+          description: proposal.description || null,
+          order: index,
+        })),
+      };
+    }
+
+    // Pour le vote à la majorité, créer les propositions
+    if (decisionType === 'MAJORITY') {
+      decisionData.proposals = {
+        create: body.proposals.map((proposal: any, index: number) => ({
+          title: proposal.title,
+          description: proposal.description || null,
+          order: index,
+        })),
+      };
+    }
+
+    // Créer la décision avec le créateur comme participant par défaut
+    const decision = await prisma.decision.create({
+      data: decisionData,
       include: {
         creator: {
           select: {
@@ -215,6 +295,16 @@ export async function POST(
             },
           },
         },
+        proposals: decisionType === 'MAJORITY' ? {
+          orderBy: {
+            order: 'asc',
+          },
+        } : false,
+        nuancedProposals: decisionType === 'NUANCED_VOTE' ? {
+          orderBy: {
+            order: 'asc',
+          },
+        } : false,
       },
     });
 

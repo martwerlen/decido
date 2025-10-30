@@ -14,6 +14,16 @@ interface Proposal {
   };
 }
 
+interface NuancedProposal {
+  id: string;
+  title: string;
+  description: string | null;
+  order: number;
+  _count: {
+    nuancedVotes: number;
+  };
+}
+
 interface Participant {
   id: string;
   userId: string | null;
@@ -58,7 +68,11 @@ interface Decision {
   proposal: string | null;
   conclusion: string | null;
   endDate: Date | null;
+  nuancedScale?: string | null;
+  nuancedWinnerCount?: number | null;
+  nuancedSlug?: string | null;
   proposals: Proposal[];
+  nuancedProposals?: NuancedProposal[];
   participants: Participant[];
 }
 
@@ -83,9 +97,6 @@ export default function DecisionAdminClient({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // État pour les propositions (MAJORITY)
-  const [newProposal, setNewProposal] = useState({ title: '', description: '' });
-
   // État pour la proposition amendée (CONSENSUS)
   const [proposal, setAmendedProposal] = useState(decision.proposal || '');
 
@@ -107,75 +118,6 @@ export default function DecisionAdminClient({
   const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
   const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
   const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
-
-  // Ajouter une proposition
-  const handleAddProposal = async () => {
-    if (!newProposal.title.trim()) {
-      setError('Le titre de la proposition est requis');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/proposals`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newProposal),
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error);
-      }
-
-      const { proposal } = await response.json();
-      setDecision({
-        ...decision,
-        proposals: [...decision.proposals, proposal],
-      });
-      setNewProposal({ title: '', description: '' });
-      setSuccess('Proposition ajoutée avec succès');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Supprimer une proposition
-  const handleDeleteProposal = async (proposalId: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer cette proposition ?')) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/proposals/${proposalId}`,
-        { method: 'DELETE' }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error);
-      }
-
-      setDecision({
-        ...decision,
-        proposals: decision.proposals.filter((p) => p.id !== proposalId),
-      });
-      setSuccess('Proposition supprimée');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Mettre à jour la proposition amendée (CONSENSUS)
   const handleUpdateAmendedProposal = async () => {
@@ -395,70 +337,6 @@ export default function DecisionAdminClient({
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
           {success}
-        </div>
-      )}
-
-      {/* Section Propositions (MAJORITY) */}
-      {decision.decisionType === 'MAJORITY' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Propositions</h2>
-
-          {decision.proposals.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {decision.proposals.map((proposal, index) => (
-                <div key={proposal.id} className="flex items-start justify-between p-4 border rounded">
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {index + 1}. {proposal.title}
-                    </div>
-                    {proposal.description && (
-                      <div className="text-sm text-gray-600 mt-1">{proposal.description}</div>
-                    )}
-                  </div>
-                  {isDraft && (
-                    <button
-                      onClick={() => handleDeleteProposal(proposal.id)}
-                      className="text-red-600 hover:text-red-700 text-sm ml-4"
-                    >
-                      Supprimer
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {isDraft && (
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Titre de la proposition"
-                value={newProposal.title}
-                onChange={(e) => setNewProposal({ ...newProposal, title: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-              <textarea
-                placeholder="Description (optionnelle)"
-                value={newProposal.description}
-                onChange={(e) => setNewProposal({ ...newProposal, description: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-              <button
-                onClick={handleAddProposal}
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                Ajouter une proposition
-              </button>
-            </div>
-          )}
-
-          {decision.proposals.length < 2 && isDraft && (
-            <p className="text-sm text-orange-600 mt-2">
-              Au moins 2 propositions sont requises pour lancer le vote
-            </p>
-          )}
         </div>
       )}
 

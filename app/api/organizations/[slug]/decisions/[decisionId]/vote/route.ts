@@ -241,6 +241,110 @@ export async function POST(
         message: 'Vote enregistré avec succès',
         consensusReached: allAgree,
       });
+    } else if (decision.decisionType === 'NUANCED_VOTE') {
+      // Pour le vote nuancé, on reçoit un objet { proposalId: mention }
+      const { nuancedVotes } = body;
+
+      if (!nuancedVotes || typeof nuancedVotes !== 'object') {
+        return Response.json(
+          { error: 'Votes nuancés manquants ou invalides' },
+          { status: 400 }
+        );
+      }
+
+      // Récupérer toutes les propositions de la décision
+      const proposals = await prisma.nuancedProposal.findMany({
+        where: { decisionId },
+      });
+
+      if (proposals.length === 0) {
+        return Response.json(
+          { error: 'Aucune proposition trouvée pour cette décision' },
+          { status: 404 }
+        );
+      }
+
+      // Vérifier que toutes les propositions ont un vote
+      const proposalIds = proposals.map(p => p.id);
+      for (const proposalId of proposalIds) {
+        if (!nuancedVotes[proposalId]) {
+          return Response.json(
+            { error: 'Toutes les propositions doivent avoir une mention' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Vérifier que les mentions sont valides
+      const validMentions = decision.nuancedScale === '3_LEVELS'
+        ? ['GOOD', 'PASSABLE', 'INSUFFICIENT']
+        : decision.nuancedScale === '5_LEVELS'
+        ? ['EXCELLENT', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
+        : ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'FAIRLY_GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT'];
+
+      for (const mention of Object.values(nuancedVotes)) {
+        if (!validMentions.includes(mention as string)) {
+          return Response.json(
+            { error: 'Mention invalide détectée' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Vérifier si l'utilisateur a déjà voté
+      const existingVotes = await prisma.nuancedVote.findMany({
+        where: {
+          userId: session.user.id,
+          decisionId,
+        },
+      });
+
+      const hadVoted = existingVotes.length > 0;
+
+      // Supprimer les votes précédents
+      if (hadVoted) {
+        await prisma.nuancedVote.deleteMany({
+          where: {
+            userId: session.user.id,
+            decisionId,
+          },
+        });
+      }
+
+      // Créer les nouveaux votes
+      const voteData = Object.entries(nuancedVotes).map(([proposalId, mention]) => ({
+        proposalId,
+        mention: mention as string,
+        userId: session.user.id,
+        decisionId,
+      }));
+
+      await prisma.nuancedVote.createMany({
+        data: voteData,
+      });
+
+      // Mettre à jour le statut du participant
+      await prisma.decisionParticipant.updateMany({
+        where: {
+          decisionId,
+          userId: session.user.id,
+        },
+        data: {
+          hasVoted: true,
+        },
+      });
+
+      // Logger le vote
+      if (hadVoted) {
+        await logVoteUpdated(decisionId);
+      } else {
+        await logVoteRecorded(decisionId);
+      }
+
+      return Response.json({
+        message: 'Vote enregistré avec succès',
+        votesCount: voteData.length,
+      });
     }
 
     return Response.json(

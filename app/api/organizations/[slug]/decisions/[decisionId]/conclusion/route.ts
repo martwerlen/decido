@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logConclusionAdded } from '@/lib/decision-logger';
 
 // PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion - Met à jour la conclusion
 export async function PATCH(
@@ -76,6 +77,9 @@ export async function PATCH(
         conclusion: body.conclusion,
       },
     });
+
+    // Logger l'ajout de la conclusion
+    await logConclusionAdded(decisionId, session.user.id);
 
     return Response.json({ decision: updated });
   } catch (error) {

@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { DecisionStatusLabels, DecisionTypeLabels, DecisionResultLabels } from '@/types/enums';
+import {
+  DecisionStatusLabels,
+  DecisionTypeLabels,
+  DecisionResultLabels,
+  getMentionLabel,
+  getMentionColor,
+  getMentionsForScale,
+  NuancedScaleLabels,
+} from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
 
@@ -17,6 +25,15 @@ interface ProposalResult {
   voteCount: number;
   percentage: number;
   isWinner: boolean;
+}
+
+interface NuancedProposalResult {
+  proposalId: string;
+  title: string;
+  majorityMention: string;
+  mentionProfile: Record<string, number>;
+  rank: number;
+  score: number;
 }
 
 interface Comment {
@@ -44,6 +61,8 @@ interface Decision {
   conclusion: string | null;
   endDate: Date | null;
   decidedAt: Date | null;
+  nuancedScale?: string | null;
+  nuancedWinnerCount?: number | null;
   comments: Comment[];
   participants: any[];
 }
@@ -51,6 +70,7 @@ interface Decision {
 interface Props {
   decision: Decision;
   proposalResults: ProposalResult[];
+  nuancedResults: NuancedProposalResult[];
   agreeCount: number;
   disagreeCount: number;
   consensusReached: boolean;
@@ -61,6 +81,7 @@ interface Props {
 export default function ResultsPageClient({
   decision,
   proposalResults,
+  nuancedResults,
   agreeCount,
   disagreeCount,
   consensusReached,
@@ -125,61 +146,300 @@ export default function ResultsPageClient({
       </div>
 
       {/* Résultats vote à la majorité */}
-      {decision.decisionType === 'MAJORITY' && (
+      {decision.decisionType === 'MAJORITY' && (() => {
+        // Déterminer les gagnants et les ex-aequo
+        const winners = proposalResults.filter(r => r.isWinner);
+        const maxVotes = Math.max(...proposalResults.map(r => r.voteCount));
+        const hasExAequo = winners.length > 1;
+        const otherProposals = proposalResults.filter(r => !r.isWinner);
+
+        return (
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Résultats du vote</h2>
+
+            <div className="mb-6">
+              <p className="text-gray-600">
+                {totalVotes} vote{totalVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
+              </p>
+            </div>
+
+            {/* Proposition gagnante (si gagnant clair) */}
+            {!hasExAequo && winners.length === 1 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4 text-green-700">
+                  🏆 Proposition gagnante
+                </h3>
+                {winners.map((result) => (
+                  <div
+                    key={result.proposal.id}
+                    className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-2xl">🏆</span>
+                          <span className="font-bold text-lg">{result.proposal.title}</span>
+                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                            GAGNANT
+                          </span>
+                        </div>
+                        {result.proposal.description && (
+                          <p className="text-sm text-gray-600 mt-1">{result.proposal.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right ml-4">
+                        <div className="text-2xl font-bold">{result.voteCount}</div>
+                        <div className="text-sm text-gray-600">
+                          {result.percentage.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+                      <div
+                        className="h-3 rounded-full bg-green-600 transition-all"
+                        style={{ width: `${result.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ex-aequo (si plusieurs gagnants à égalité) */}
+            {hasExAequo && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4 text-orange-700">
+                  ⚖️ Ex-aequo ({winners.length} propositions à égalité)
+                </h3>
+                <div className="space-y-3">
+                  {winners.map((result) => (
+                    <div
+                      key={result.proposal.id}
+                      className="border-2 border-orange-400 bg-orange-50 rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-2xl">⚖️</span>
+                            <span className="font-bold text-lg">{result.proposal.title}</span>
+                            <span className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-medium">
+                              EX-AEQUO
+                            </span>
+                          </div>
+                          {result.proposal.description && (
+                            <p className="text-sm text-gray-600 mt-1">{result.proposal.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-2xl font-bold">{result.voteCount}</div>
+                          <div className="text-sm text-gray-600">
+                            {result.percentage.toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+                        <div
+                          className="h-3 rounded-full bg-orange-500 transition-all"
+                          style={{ width: `${result.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Autres propositions (sans numérotation) */}
+            {otherProposals.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                  Autres propositions
+                </h3>
+                <div className="space-y-3">
+                  {otherProposals.map((result) => (
+                    <div
+                      key={result.proposal.id}
+                      className="border rounded-lg p-4 bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="font-medium text-lg mb-1">
+                            {result.proposal.title}
+                          </div>
+                          {result.proposal.description && (
+                            <p className="text-sm text-gray-600">{result.proposal.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-2xl font-bold">{result.voteCount}</div>
+                          <div className="text-sm text-gray-600">
+                            {result.percentage.toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+                        <div
+                          className="h-3 rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${result.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {decision.status === 'OPEN' && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm text-blue-800">
+                  Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Résultats vote nuancé (jugement majoritaire) */}
+      {decision.decisionType === 'NUANCED_VOTE' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Résultats du vote</h2>
+          <h2 className="text-xl font-semibold mb-4">Résultats du vote nuancé</h2>
 
           <div className="mb-6">
             <p className="text-gray-600">
-              {totalVotes} vote{totalVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
+              {decision.participants.filter(p => p.hasVoted).length} vote{decision.participants.filter(p => p.hasVoted).length > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
+              {decision.nuancedWinnerCount && decision.nuancedWinnerCount > 1 &&
+                ` • ${decision.nuancedWinnerCount} propositions gagnantes`}
             </p>
           </div>
 
-          <div className="space-y-4">
-            {proposalResults.map((result, index) => (
-              <div
-                key={result.proposal.id}
-                className={`border-2 rounded-lg p-4 ${
-                  result.isWinner
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-lg">
-                        {index + 1}. {result.proposal.title}
-                      </span>
-                      {result.isWinner && (
+          {/* Propositions gagnantes */}
+          {decision.nuancedWinnerCount && nuancedResults.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-4 text-green-700">
+                🏆 {decision.nuancedWinnerCount === 1 ? 'Proposition gagnante' : `${decision.nuancedWinnerCount} propositions gagnantes`}
+              </h3>
+              <div className="space-y-3">
+                {nuancedResults.slice(0, decision.nuancedWinnerCount).map((result) => {
+                  const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+                  const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+
+                  return (
+                    <div
+                      key={result.proposalId}
+                      className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">🏆</span>
+                        <span className="font-bold text-lg">{result.rank}. {result.title}</span>
                         <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
                           GAGNANT
                         </span>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Mention majoritaire :</span>
+                        <span
+                          className="px-3 py-1 rounded-lg text-sm font-semibold text-white"
+                          style={{ backgroundColor: mentionColor }}
+                        >
+                          {mentionLabel}
+                        </span>
+                      </div>
                     </div>
-                    {result.proposal.description && (
-                      <p className="text-sm text-gray-600 mt-1">{result.proposal.description}</p>
-                    )}
-                  </div>
-                  <div className="text-right ml-4">
-                    <div className="text-2xl font-bold">{result.voteCount}</div>
-                    <div className="text-sm text-gray-600">
-                      {result.percentage.toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-
-                {/* Barre de progression */}
-                <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-                  <div
-                    className={`h-3 rounded-full transition-all ${
-                      result.isWinner ? 'bg-green-600' : 'bg-blue-600'
-                    }`}
-                    style={{ width: `${result.percentage}%` }}
-                  />
-                </div>
+                  );
+                })}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Toutes les propositions avec leur profil de mérite */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">
+              {decision.nuancedWinnerCount && nuancedResults.length > decision.nuancedWinnerCount
+                ? 'Autres propositions'
+                : 'Classement complet'}
+            </h3>
+
+            {nuancedResults.map((result) => {
+              const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+              const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+              const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
+              const isWinner = decision.nuancedWinnerCount && result.rank <= decision.nuancedWinnerCount;
+
+              return (
+                <div
+                  key={result.proposalId}
+                  className={`border rounded-lg p-4 ${
+                    isWinner ? 'bg-green-50 border-green-200' : 'bg-gray-50'
+                  }`}
+                >
+                  {/* En-tête de la proposition */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-lg">
+                        {result.rank}. {result.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Mention majoritaire :</span>
+                      <span
+                        className="px-2 py-1 rounded text-sm font-semibold text-white"
+                        style={{ backgroundColor: mentionColor }}
+                      >
+                        {mentionLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Profil de mérite - Barres horizontales */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      Distribution des mentions
+                    </p>
+                    {Object.entries(result.mentionProfile)
+                      .sort((a, b) => {
+                        // Trier par ordre des mentions (meilleure en haut)
+                        const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                        return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
+                      })
+                      .map(([mention, count]) => {
+                        const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
+                        const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                        const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+                        const isMajority = mention === result.majorityMention;
+
+                        return (
+                          <div key={mention} className="flex items-center gap-2">
+                            <div className="w-24 text-xs text-gray-600">{label}</div>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                                <div
+                                  className={`h-6 rounded-full transition-all ${
+                                    isMajority ? 'ring-2 ring-gray-800 ring-inset' : ''
+                                  }`}
+                                  style={{
+                                    width: `${percentage}%`,
+                                    backgroundColor: color,
+                                  }}
+                                />
+                              </div>
+                              <div className="w-16 text-right">
+                                <span className="text-sm font-medium">{count}</span>
+                                <span className="text-xs text-gray-500 ml-1">
+                                  ({percentage.toFixed(0)}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {decision.status === 'OPEN' && (
