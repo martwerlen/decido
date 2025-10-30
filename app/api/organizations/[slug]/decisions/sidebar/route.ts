@@ -38,95 +38,73 @@ export async function GET(
       return Response.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // 1. Décisions en cours où l'utilisateur est invité (participation attendue)
-    const awaitingParticipationWhere = {
+    // 1. Décisions en cours (OPEN)
+    const ongoingWhere = {
       organizationId: organization.id,
       status: 'OPEN',
-      participants: {
-        some: {
-          userId: session.user.id,
-          hasVoted: false,
-        },
-      },
     };
 
-    const [awaitingParticipation, awaitingParticipationTotal] = await Promise.all([
+    const [ongoingDecisions, ongoingTotal] = await Promise.all([
       prisma.decision.findMany({
-        where: awaitingParticipationWhere,
+        where: ongoingWhere,
         select: {
           id: true,
           title: true,
-          endDate: true,
-        },
-        orderBy: {
-          endDate: 'asc',
-        },
-        take: 5,
-      }),
-      prisma.decision.count({ where: awaitingParticipationWhere }),
-    ]);
-
-    // 2. Décisions en cours de l'organisation (où l'utilisateur n'est pas invité)
-    const ongoingDecisionsWhere = {
-      organizationId: organization.id,
-      status: 'OPEN',
-      NOT: {
-        participants: {
-          some: {
-            userId: session.user.id,
+          status: true,
+          participants: {
+            where: {
+              userId: session.user.id,
+            },
+            select: {
+              hasVoted: true,
+            },
           },
-        },
-      },
-    };
-
-    const [ongoingDecisions, ongoingDecisionsTotal] = await Promise.all([
-      prisma.decision.findMany({
-        where: ongoingDecisionsWhere,
-        select: {
-          id: true,
-          title: true,
-          endDate: true,
         },
         orderBy: {
           createdAt: 'desc',
         },
-        take: 5,
       }),
-      prisma.decision.count({ where: ongoingDecisionsWhere }),
+      prisma.decision.count({ where: ongoingWhere }),
     ]);
 
-    // 3. Décisions terminées
-    const completedDecisionsWhere = {
+    // Enrichir avec les infos de participation
+    const enrichedOngoing = ongoingDecisions.map((decision) => ({
+      id: decision.id,
+      title: decision.title,
+      status: decision.status,
+      isParticipant: decision.participants.length > 0,
+      hasVoted: decision.participants.length > 0 ? decision.participants[0].hasVoted : false,
+    }));
+
+    // 2. Décisions terminées (CLOSED, IMPLEMENTED, ARCHIVED, WITHDRAWN)
+    const completedWhere = {
       organizationId: organization.id,
       status: {
-        in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED'],
+        in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'],
       },
     };
 
-    const [completedDecisions, completedDecisionsTotal] = await Promise.all([
+    const [completedDecisions, completedTotal] = await Promise.all([
       prisma.decision.findMany({
-        where: completedDecisionsWhere,
+        where: completedWhere,
         select: {
           id: true,
           title: true,
-          decidedAt: true,
+          status: true,
           result: true,
         },
         orderBy: {
-          decidedAt: 'desc',
+          createdAt: 'desc',
         },
-        take: 5,
       }),
-      prisma.decision.count({ where: completedDecisionsWhere }),
+      prisma.decision.count({ where: completedWhere }),
     ]);
 
     return Response.json({
-      awaitingParticipation,
-      awaitingParticipationTotal,
-      ongoingDecisions,
-      ongoingDecisionsTotal,
-      completedDecisions,
-      completedDecisionsTotal,
+      ongoing: enrichedOngoing,
+      ongoingTotal,
+      completed: completedDecisions,
+      completedTotal,
     });
   } catch (error) {
     console.error('Error fetching sidebar decisions:', error);
