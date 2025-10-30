@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calculateNuancedVoteResults } from '@/lib/decision-logic';
+import { logDecisionClosed } from '@/lib/decision-logger';
 import ResultsPageClient from './ResultsPageClient';
 
 export default async function ResultsPage({
@@ -151,6 +152,10 @@ export default async function ResultsPage({
       data: { status: 'CLOSED' },
     });
     decision.status = 'CLOSED';
+
+    // Logger la fermeture automatique avec la raison
+    const reason = isDeadlinePassed ? 'deadline_reached' : 'all_voted';
+    await logDecisionClosed(decision.id, session.user.id, reason);
   }
 
   // Vérifier si l'utilisateur peut voir les résultats

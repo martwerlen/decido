@@ -88,12 +88,15 @@ export async function logDecisionStatusChanged(
  */
 export async function logDecisionClosed(
   decisionId: string,
-  actorId: string
+  actorId: string,
+  reason?: 'deadline_reached' | 'all_voted' | 'manual'
 ): Promise<void> {
+  const metadata = reason ? { reason } : null;
   await logDecisionEvent({
     decisionId,
     eventType: 'CLOSED',
     actorId,
+    metadata,
   });
 }
 
@@ -193,6 +196,20 @@ export async function logProposalAmended(
   await logDecisionEvent({
     decisionId,
     eventType: 'PROPOSAL_AMENDED',
+    actorId,
+  });
+}
+
+/**
+ * Log l'ajout d'une conclusion
+ */
+export async function logConclusionAdded(
+  decisionId: string,
+  actorId: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONCLUSION_ADDED',
     actorId,
   });
 }

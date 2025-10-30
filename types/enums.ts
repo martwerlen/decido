@@ -240,6 +240,7 @@ export type DecisionLogEventType =
   | 'CONTEXT_UPDATED'         // Contexte modifié
   | 'DEADLINE_UPDATED'        // Date limite modifiée
   | 'PROPOSAL_AMENDED'        // Proposition amendée (consensus)
+  | 'CONCLUSION_ADDED'        // Conclusion ajoutée
 
   // Participants
   | 'PARTICIPANT_ADDED'       // Participant ajouté
@@ -260,6 +261,7 @@ export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'CONTEXT_UPDATED',
   'DEADLINE_UPDATED',
   'PROPOSAL_AMENDED',
+  'CONCLUSION_ADDED',
   'PARTICIPANT_ADDED',
   'PARTICIPANT_REMOVED',
   'VOTE_RECORDED',
@@ -277,6 +279,7 @@ export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = 
   CONTEXT_UPDATED: 'Contexte modifié',
   DEADLINE_UPDATED: 'Date limite modifiée',
   PROPOSAL_AMENDED: 'Proposition amendée',
+  CONCLUSION_ADDED: 'Conclusion ajoutée',
   PARTICIPANT_ADDED: 'Participant ajouté',
   PARTICIPANT_REMOVED: 'Participant retiré',
   VOTE_RECORDED: 'Vote enregistré',
