@@ -35,6 +35,7 @@ export type DecisionType =
   | 'MAJORITY'        // Vote majoritaire simple
   | 'SUPERMAJORITY'   // Vote qualifié (2/3, 3/4...)
   | 'WEIGHTED_VOTE'   // Vote nuancé avec échelle
+  | 'NUANCED_VOTE'    // Jugement majoritaire
   | 'ADVISORY';       // Consultatif
 
 export const DECISION_TYPES: DecisionType[] = [
@@ -43,6 +44,7 @@ export const DECISION_TYPES: DecisionType[] = [
   'MAJORITY',
   'SUPERMAJORITY',
   'WEIGHTED_VOTE',
+  'NUANCED_VOTE',
   'ADVISORY',
 ];
 
@@ -52,6 +54,7 @@ export const DecisionTypeLabels: Record<DecisionType, string> = {
   MAJORITY: 'Majorité simple',
   SUPERMAJORITY: 'Super-majorité (2/3)',
   WEIGHTED_VOTE: 'Vote nuancé',
+  NUANCED_VOTE: 'Vote nuancé (jugement majoritaire)',
   ADVISORY: 'Consultatif',
 };
 
@@ -61,6 +64,7 @@ export const DecisionTypeDescriptions: Record<DecisionType, string> = {
   MAJORITY: 'Plus de la moitié des votes sont favorables',
   SUPERMAJORITY: 'Au moins 2/3 des votes sont favorables',
   WEIGHTED_VOTE: 'Vote avec échelle de préférence (-3 à +3)',
+  NUANCED_VOTE: 'Chaque participant évalue toutes les propositions avec une mention',
   ADVISORY: 'Vote consultatif sans décision contraignante',
 };
 
@@ -282,4 +286,171 @@ export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = 
 
 export function isValidDecisionLogEventType(type: string): type is DecisionLogEventType {
   return DECISION_LOG_EVENT_TYPES.includes(type as DecisionLogEventType);
+}
+
+// ============================================
+// VOTE NUANCÉ (JUGEMENT MAJORITAIRE)
+// ============================================
+
+// Échelles de mentions disponibles
+export type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
+
+export const NUANCED_SCALES: NuancedScale[] = ['3_LEVELS', '5_LEVELS', '7_LEVELS'];
+
+export const NuancedScaleLabels: Record<NuancedScale, string> = {
+  '3_LEVELS': '3 niveaux',
+  '5_LEVELS': '5 niveaux',
+  '7_LEVELS': '7 niveaux',
+};
+
+// Mentions pour l'échelle à 3 niveaux
+export type NuancedMention3 = 'GOOD' | 'PASSABLE' | 'INSUFFICIENT';
+
+export const NUANCED_MENTIONS_3: NuancedMention3[] = ['GOOD', 'PASSABLE', 'INSUFFICIENT'];
+
+export const NuancedMention3Labels: Record<NuancedMention3, string> = {
+  GOOD: 'Bon',
+  PASSABLE: 'Passable',
+  INSUFFICIENT: 'Insuffisant',
+};
+
+export const NuancedMention3Colors: Record<NuancedMention3, string> = {
+  GOOD: '#10b981',      // green-500
+  PASSABLE: '#f59e0b',  // amber-500
+  INSUFFICIENT: '#ef4444', // red-500
+};
+
+// Mentions pour l'échelle à 5 niveaux
+export type NuancedMention5 = 'EXCELLENT' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'TO_REJECT';
+
+export const NUANCED_MENTIONS_5: NuancedMention5[] = [
+  'EXCELLENT',
+  'GOOD',
+  'PASSABLE',
+  'INSUFFICIENT',
+  'TO_REJECT',
+];
+
+export const NuancedMention5Labels: Record<NuancedMention5, string> = {
+  EXCELLENT: 'Excellent',
+  GOOD: 'Bien',
+  PASSABLE: 'Passable',
+  INSUFFICIENT: 'Insuffisant',
+  TO_REJECT: 'À rejeter',
+};
+
+export const NuancedMention5Colors: Record<NuancedMention5, string> = {
+  EXCELLENT: '#10b981',   // green-500
+  GOOD: '#84cc16',        // lime-500
+  PASSABLE: '#f59e0b',    // amber-500
+  INSUFFICIENT: '#f97316', // orange-500
+  TO_REJECT: '#ef4444',   // red-500
+};
+
+// Mentions pour l'échelle à 7 niveaux
+export type NuancedMention7 =
+  | 'EXCELLENT'
+  | 'VERY_GOOD'
+  | 'GOOD'
+  | 'FAIRLY_GOOD'
+  | 'PASSABLE'
+  | 'INSUFFICIENT'
+  | 'TO_REJECT';
+
+export const NUANCED_MENTIONS_7: NuancedMention7[] = [
+  'EXCELLENT',
+  'VERY_GOOD',
+  'GOOD',
+  'FAIRLY_GOOD',
+  'PASSABLE',
+  'INSUFFICIENT',
+  'TO_REJECT',
+];
+
+export const NuancedMention7Labels: Record<NuancedMention7, string> = {
+  EXCELLENT: 'Excellent',
+  VERY_GOOD: 'Très bien',
+  GOOD: 'Bien',
+  FAIRLY_GOOD: 'Assez bien',
+  PASSABLE: 'Passable',
+  INSUFFICIENT: 'Insuffisant',
+  TO_REJECT: 'À rejeter',
+};
+
+export const NuancedMention7Colors: Record<NuancedMention7, string> = {
+  EXCELLENT: '#10b981',    // green-500
+  VERY_GOOD: '#22c55e',    // green-400
+  GOOD: '#84cc16',         // lime-500
+  FAIRLY_GOOD: '#eab308',  // yellow-500
+  PASSABLE: '#f59e0b',     // amber-500
+  INSUFFICIENT: '#f97316', // orange-500
+  TO_REJECT: '#ef4444',    // red-500
+};
+
+// Type union pour toutes les mentions
+export type NuancedMention = NuancedMention3 | NuancedMention5 | NuancedMention7;
+
+// Helpers de validation
+export function isValidNuancedScale(scale: string): scale is NuancedScale {
+  return NUANCED_SCALES.includes(scale as NuancedScale);
+}
+
+export function isValidNuancedMention3(mention: string): mention is NuancedMention3 {
+  return NUANCED_MENTIONS_3.includes(mention as NuancedMention3);
+}
+
+export function isValidNuancedMention5(mention: string): mention is NuancedMention5 {
+  return NUANCED_MENTIONS_5.includes(mention as NuancedMention5);
+}
+
+export function isValidNuancedMention7(mention: string): mention is NuancedMention7 {
+  return NUANCED_MENTIONS_7.includes(mention as NuancedMention7);
+}
+
+// Helper pour obtenir les mentions selon l'échelle
+export function getMentionsForScale(scale: NuancedScale): string[] {
+  switch (scale) {
+    case '3_LEVELS':
+      return NUANCED_MENTIONS_3;
+    case '5_LEVELS':
+      return NUANCED_MENTIONS_5;
+    case '7_LEVELS':
+      return NUANCED_MENTIONS_7;
+    default:
+      return [];
+  }
+}
+
+// Helper pour obtenir les labels selon l'échelle
+export function getMentionLabel(scale: NuancedScale, mention: string): string {
+  switch (scale) {
+    case '3_LEVELS':
+      return NuancedMention3Labels[mention as NuancedMention3] || mention;
+    case '5_LEVELS':
+      return NuancedMention5Labels[mention as NuancedMention5] || mention;
+    case '7_LEVELS':
+      return NuancedMention7Labels[mention as NuancedMention7] || mention;
+    default:
+      return mention;
+  }
+}
+
+// Helper pour obtenir les couleurs selon l'échelle
+export function getMentionColor(scale: NuancedScale, mention: string): string {
+  switch (scale) {
+    case '3_LEVELS':
+      return NuancedMention3Colors[mention as NuancedMention3] || '#6b7280';
+    case '5_LEVELS':
+      return NuancedMention5Colors[mention as NuancedMention5] || '#6b7280';
+    case '7_LEVELS':
+      return NuancedMention7Colors[mention as NuancedMention7] || '#6b7280';
+    default:
+      return '#6b7280';
+  }
+}
+
+// Helper pour obtenir le rang d'une mention (0 = meilleure, N = pire)
+export function getMentionRank(scale: NuancedScale, mention: string): number {
+  const mentions = getMentionsForScale(scale);
+  return mentions.indexOf(mention);
 }
