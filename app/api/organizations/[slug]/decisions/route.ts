@@ -178,6 +178,22 @@ export async function POST(
       }
     }
 
+    // Pour vote à la majorité, vérifier la présence des propositions
+    if (decisionType === 'MAJORITY') {
+      if (!body.proposals || body.proposals.length < 2) {
+        return Response.json(
+          { error: 'Au moins 2 propositions sont requises pour le vote à la majorité' },
+          { status: 400 }
+        );
+      }
+      if (body.proposals.length > 25) {
+        return Response.json(
+          { error: 'Maximum 25 propositions pour le vote à la majorité' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Vérifier que endDate est au moins 24h dans le futur
     if (endDate) {
       const endDateObj = new Date(endDate);
@@ -245,6 +261,17 @@ export async function POST(
       };
     }
 
+    // Pour le vote à la majorité, créer les propositions
+    if (decisionType === 'MAJORITY') {
+      decisionData.proposals = {
+        create: body.proposals.map((proposal: any, index: number) => ({
+          title: proposal.title,
+          description: proposal.description || null,
+          order: index,
+        })),
+      };
+    }
+
     // Créer la décision avec le créateur comme participant par défaut
     const decision = await prisma.decision.create({
       data: decisionData,
@@ -268,6 +295,11 @@ export async function POST(
             },
           },
         },
+        proposals: decisionType === 'MAJORITY' ? {
+          orderBy: {
+            order: 'asc',
+          },
+        } : false,
         nuancedProposals: decisionType === 'NUANCED_VOTE' ? {
           orderBy: {
             order: 'asc',

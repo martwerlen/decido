@@ -43,6 +43,11 @@ export default function NewDecisionPage({
     { title: '', description: '' },
   ]);
 
+  const [majorityProposals, setMajorityProposals] = useState<NuancedProposal[]>([
+    { title: '', description: '' },
+    { title: '', description: '' },
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,10 +82,22 @@ export default function NewDecisionPage({
         }
       }
 
-      // Préparer le body avec les propositions nuancées si nécessaire
+      // Validation spécifique au vote à la majorité
+      if (formData.decisionType === 'MAJORITY') {
+        const validProposals = majorityProposals.filter(p => p.title.trim() !== '');
+        if (validProposals.length < 2) {
+          setError('Vous devez avoir au moins 2 propositions pour le vote à la majorité');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Préparer le body avec les propositions si nécessaire
       const body: any = { ...formData };
       if (formData.decisionType === 'NUANCED_VOTE') {
         body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
+      } else if (formData.decisionType === 'MAJORITY') {
+        body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
       }
 
       const response = await fetch(`/api/organizations/${slug}/decisions`, {
@@ -130,6 +147,24 @@ export default function NewDecisionPage({
     const updated = [...nuancedProposals];
     updated[index][field] = value;
     setNuancedProposals(updated);
+  };
+
+  const addMajorityProposal = () => {
+    if (majorityProposals.length < 25) {
+      setMajorityProposals([...majorityProposals, { title: '', description: '' }]);
+    }
+  };
+
+  const removeMajorityProposal = (index: number) => {
+    if (majorityProposals.length > 2) {
+      setMajorityProposals(majorityProposals.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateMajorityProposal = (index: number, field: 'title' | 'description', value: string) => {
+    const updated = [...majorityProposals];
+    updated[index][field] = value;
+    setMajorityProposals(updated);
   };
 
   // Calcul de la date minimale (24h dans le futur)
@@ -232,6 +267,63 @@ export default function NewDecisionPage({
             </label>
           </div>
         </div>
+
+        {/* Propositions (uniquement pour MAJORITY) */}
+        {formData.decisionType === 'MAJORITY' && (
+          <div className="space-y-6 border-t pt-6">
+            <h3 className="text-lg font-semibold">Propositions à soumettre au vote</h3>
+
+            <div>
+              <label className="block font-medium mb-2">
+                Propositions * (minimum 2, maximum 25)
+              </label>
+              <div className="space-y-4">
+                {majorityProposals.map((proposal, index) => (
+                  <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium">Proposition {index + 1}</h4>
+                      {majorityProposals.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMajorityProposal(index)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={proposal.title}
+                        onChange={(e) => updateMajorityProposal(index, 'title', e.target.value)}
+                        placeholder="Titre de la proposition"
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required={index < 2}
+                      />
+                      <textarea
+                        value={proposal.description}
+                        onChange={(e) => updateMajorityProposal(index, 'description', e.target.value)}
+                        placeholder="Description (optionnelle)"
+                        rows={2}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {majorityProposals.length < 25 && (
+                <button
+                  type="button"
+                  onClick={addMajorityProposal}
+                  className="mt-3 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                >
+                  + Ajouter une proposition
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Proposition initiale (uniquement pour consensus) */}
         {formData.decisionType === 'CONSENSUS' && (
