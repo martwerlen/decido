@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import {
   Box,
@@ -25,9 +25,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Business,
-  Article,
-  HowToVote,
-  CheckCircle,
   Search,
   Add,
   Settings,
@@ -36,26 +33,39 @@ import {
   Group,
   Logout,
   AdminPanelSettings,
+  AccessTime,
+  ThumbUp,
+  Visibility,
+  CheckCircle,
+  Cancel,
+  ErrorOutline,
+  MoreHoriz,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
+import { useSidebarRefresh } from "@/components/providers/SidebarRefreshProvider"
 
 const drawerWidth = 280
 
-interface Decision {
+interface OngoingDecision {
   id: string
   title: string
-  endDate?: Date | null
-  decidedAt?: Date | null
-  result?: string | null
+  status: string
+  isParticipant: boolean
+  hasVoted: boolean
+}
+
+interface CompletedDecision {
+  id: string
+  title: string
+  status: string
+  result: string | null
 }
 
 interface SidebarDecisions {
-  awaitingParticipation: Decision[]
-  awaitingParticipationTotal: number
-  ongoingDecisions: Decision[]
-  ongoingDecisionsTotal: number
-  completedDecisions: Decision[]
-  completedDecisionsTotal: number
+  ongoing: OngoingDecision[]
+  ongoingTotal: number
+  completed: CompletedDecision[]
+  completedTotal: number
 }
 
 interface Organization {
@@ -73,6 +83,31 @@ interface SidebarProps {
   currentOrgSlug?: string
 }
 
+// Helper pour obtenir l'icône et la couleur des décisions en cours
+const getOngoingIcon = (decision: OngoingDecision) => {
+  if (!decision.isParticipant) {
+    return { Icon: Visibility, color: "action.active" }
+  }
+  if (decision.hasVoted) {
+    return { Icon: ThumbUp, color: "success.main" }
+  }
+  return { Icon: AccessTime, color: "warning.main" }
+}
+
+// Helper pour obtenir l'icône et la couleur des décisions terminées
+const getCompletedIcon = (decision: CompletedDecision) => {
+  if (decision.status === "WITHDRAWN") {
+    return { Icon: Cancel, color: "error.main" }
+  }
+  if (decision.result === "REJECTED" || decision.result === "BLOCKED") {
+    return { Icon: ErrorOutline, color: "warning.main" }
+  }
+  if (decision.result === "APPROVED") {
+    return { Icon: CheckCircle, color: "success.main" }
+  }
+  return { Icon: CheckCircle, color: "action.active" }
+}
+
 export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -82,15 +117,16 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [decisions, setDecisions] = useState<SidebarDecisions>({
-    awaitingParticipation: [],
-    awaitingParticipationTotal: 0,
-    ongoingDecisions: [],
-    ongoingDecisionsTotal: 0,
-    completedDecisions: [],
-    completedDecisionsTotal: 0,
+    ongoing: [],
+    ongoingTotal: 0,
+    completed: [],
+    completedTotal: 0,
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
   const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null)
+  const { refreshTrigger } = useSidebarRefresh()
+  const decisionsContainerRef = useRef<HTMLDivElement>(null)
+  const [maxDecisions, setMaxDecisions] = useState({ ongoing: 10, completed: 10 })
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -143,6 +179,32 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       fetchDecisions()
     }
   }, [organization, fetchDecisions])
+
+  // Rafraîchir quand le trigger change (après un vote ou changement de statut)
+  useEffect(() => {
+    if (refreshTrigger > 0 && organization) {
+      fetchDecisions()
+    }
+  }, [refreshTrigger, organization, fetchDecisions])
+
+  // Calculer le nombre max de décisions affichables
+  useEffect(() => {
+    const calculateMaxDecisions = () => {
+      if (!decisionsContainerRef.current) return
+
+      const containerHeight = decisionsContainerRef.current.clientHeight
+      const itemHeight = 40 // Hauteur approximative d'un item de décision (réduite)
+      const sectionHeaderHeight = 40 // Hauteur du titre de section
+      const availableHeight = containerHeight - (sectionHeaderHeight * 2) // 2 sections
+
+      const maxPerSection = Math.floor(availableHeight / 2 / itemHeight)
+      setMaxDecisions({ ongoing: maxPerSection, completed: maxPerSection })
+    }
+
+    calculateMaxDecisions()
+    window.addEventListener("resize", calculateMaxDecisions)
+    return () => window.removeEventListener("resize", calculateMaxDecisions)
+  }, [open])
 
   const handleDrawerToggle = () => {
     setOpen(!open)
@@ -386,185 +448,144 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           </Box>
         )}
 
-        {/* Participation attendue */}
+        {/* Container pour les décisions (avec ref pour calculer la hauteur) */}
         {open && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              Participation attendue
-              {decisions.awaitingParticipation.length > 0 && (
-                <Box component="span" sx={{
-                  backgroundColor: "error.main",
-                  color: "white",
-                  borderRadius: "50%",
-                  width: 20,
-                  height: 20,
+          <Box ref={decisionsContainerRef} sx={{ flexGrow: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            {/* Décisions en cours */}
+            <Box sx={{ p: 2, pb: 1 }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                gutterBottom
+                sx={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.75rem",
-                  fontWeight: "bold"
-                }}>
-                  {decisions.awaitingParticipation.length}
-                </Box>
-              )}
-            </Typography>
-            <List dense>
-              {decisionsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : decisions.awaitingParticipation.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
-                  Aucune participation attendue
-                </Typography>
-              ) : (
-                <>
-                  {decisions.awaitingParticipation.map((decision) => (
-                    <ListItem key={decision.id} disablePadding>
-                      <ListItemButton
-                        onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
-                        sx={{
-                          backgroundColor: "warning.light",
-                          mb: 0.5,
-                          borderRadius: 1,
-                          "&:hover": {
-                            backgroundColor: "warning.main",
-                          }
-                        }}
-                      >
-                        <ListItemIcon>
-                          <HowToVote fontSize="small" color="warning" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={decision.title}
-                          primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                  {decisions.awaitingParticipationTotal > 5 && (
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
-                        sx={{ justifyContent: "center", color: "primary.main" }}
-                      >
-                        <Add fontSize="small" />
-                        <Typography variant="body2" sx={{ ml: 0.5 }}>
-                          Voir toutes ({decisions.awaitingParticipationTotal})
-                        </Typography>
-                      </ListItemButton>
-                    </ListItem>
-                  )}
-                </>
-              )}
-            </List>
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  "&:hover": { color: "primary.main" }
+                }}
+                onClick={() => router.push(`/organizations/${organization}`)}
+              >
+                <span>En cours</span>
+                {decisions.ongoingTotal > maxDecisions.ongoing && (
+                  <IconButton size="small" sx={{ p: 0 }}>
+                    <MoreHoriz fontSize="small" />
+                  </IconButton>
+                )}
+              </Typography>
+              <List dense sx={{ py: 0 }}>
+                {decisionsLoading ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                    <CircularProgress size={20} />
+                  </Box>
+                ) : decisions.ongoing.length === 0 ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
+                    Aucune décision en cours
+                  </Typography>
+                ) : (
+                  <>
+                    {decisions.ongoing.slice(0, maxDecisions.ongoing).map((decision) => {
+                      const { Icon, color } = getOngoingIcon(decision)
+                      return (
+                        <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
+                          <ListItemButton
+                            onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
+                            sx={{
+                              py: 0.5,
+                              px: 1,
+                              borderRadius: 0.5,
+                              minHeight: 36
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <Icon fontSize="small" sx={{ color }} />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={decision.title}
+                              primaryTypographyProps={{
+                                variant: "caption",
+                                noWrap: true,
+                                sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
+                              }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      )
+                    })}
+                  </>
+                )}
+              </List>
+            </Box>
+
+            <Divider />
+
+            {/* Décisions terminées */}
+            <Box sx={{ p: 2, pt: 1 }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                gutterBottom
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  "&:hover": { color: "primary.main" }
+                }}
+                onClick={() => router.push(`/organizations/${organization}`)}
+              >
+                <span>Terminées</span>
+                {decisions.completedTotal > maxDecisions.completed && (
+                  <IconButton size="small" sx={{ p: 0 }}>
+                    <MoreHoriz fontSize="small" />
+                  </IconButton>
+                )}
+              </Typography>
+              <List dense sx={{ py: 0 }}>
+                {decisionsLoading ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                    <CircularProgress size={20} />
+                  </Box>
+                ) : decisions.completed.length === 0 ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
+                    Aucune décision terminée
+                  </Typography>
+                ) : (
+                  <>
+                    {decisions.completed.slice(0, maxDecisions.completed).map((decision) => {
+                      const { Icon, color } = getCompletedIcon(decision)
+                      return (
+                        <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
+                          <ListItemButton
+                            onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}
+                            sx={{
+                              py: 0.5,
+                              px: 1,
+                              borderRadius: 0.5,
+                              minHeight: 36
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <Icon fontSize="small" sx={{ color }} />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={decision.title}
+                              primaryTypographyProps={{
+                                variant: "caption",
+                                noWrap: true,
+                                sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
+                              }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      )
+                    })}
+                  </>
+                )}
+              </List>
+            </Box>
           </Box>
         )}
-
-        <Divider />
-
-        {/* Décisions en cours */}
-        {open && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Décisions en cours
-            </Typography>
-            <List dense>
-              {decisionsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : decisions.ongoingDecisions.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
-                  Aucune décision en cours
-                </Typography>
-              ) : (
-                <>
-                  {decisions.ongoingDecisions.map((decision) => (
-                    <ListItem key={decision.id} disablePadding>
-                      <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}>
-                        <ListItemIcon>
-                          <HowToVote fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={decision.title}
-                          primaryTypographyProps={{ variant: "body2" }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                  {decisions.ongoingDecisionsTotal > 5 && (
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
-                        sx={{ justifyContent: "center", color: "primary.main" }}
-                      >
-                        <Add fontSize="small" />
-                        <Typography variant="body2" sx={{ ml: 0.5 }}>
-                          Voir toutes ({decisions.ongoingDecisionsTotal})
-                        </Typography>
-                      </ListItemButton>
-                    </ListItem>
-                  )}
-                </>
-              )}
-            </List>
-          </Box>
-        )}
-
-        <Divider />
-
-        {/* Décisions terminées */}
-        {open && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Décisions terminées
-            </Typography>
-            <List dense>
-              {decisionsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : decisions.completedDecisions.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1, fontStyle: "italic" }}>
-                  Aucune décision terminée
-                </Typography>
-              ) : (
-                <>
-                  {decisions.completedDecisions.map((decision) => (
-                    <ListItem key={decision.id} disablePadding>
-                      <ListItemButton onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}>
-                        <ListItemIcon>
-                          <CheckCircle fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={decision.title}
-                          primaryTypographyProps={{ variant: "body2" }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                  {decisions.completedDecisionsTotal > 5 && (
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => router.push(`/organizations/${organization}/decisions`)}
-                        sx={{ justifyContent: "center", color: "primary.main" }}
-                      >
-                        <Add fontSize="small" />
-                        <Typography variant="body2" sx={{ ml: 0.5 }}>
-                          Voir toutes ({decisions.completedDecisionsTotal})
-                        </Typography>
-                      </ListItemButton>
-                    </ListItem>
-                  )}
-                </>
-              )}
-            </List>
-          </Box>
-        )}
-
-        {/* Spacer pour pousser les éléments suivants vers le bas */}
-        <Box sx={{ flexGrow: 1 }} />
 
         <Divider />
 

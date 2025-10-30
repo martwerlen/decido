@@ -86,6 +86,37 @@ The app uses dynamic routes extensively. Key patterns:
 API routes mirror this structure under `/api/organizations/[slug]/...` plus:
 - `/api/vote/[token]` - Public API for external participant voting (GET to fetch decision, POST to vote)
 
+### Sidebar Architecture
+
+The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions in two main categories:
+
+**1. En cours (Ongoing Decisions)** - All decisions with status `OPEN`
+   - Decisions are differentiated by icons based on user participation:
+     - **Horloge (AccessTime)** - User is invited but hasn't voted yet (participation required)
+     - **Pouce levé (ThumbUp)** - User has already voted
+     - **Œil (Visibility)** - User is not a participant (decision doesn't concern them)
+
+**2. Terminées (Completed Decisions)** - Decisions with status `CLOSED`, `IMPLEMENTED`, `ARCHIVED`, or `WITHDRAWN`
+   - Decisions are differentiated by icons based on their outcome:
+     - **Stop rouge (Cancel)** - Decision was withdrawn (`status = WITHDRAWN`)
+     - **Warning orange (ErrorOutline)** - Decision failed (`result = REJECTED` or `BLOCKED`)
+     - **Check vert (CheckCircle)** - Decision was approved (`result = APPROVED`)
+
+**Key Features:**
+- **Auto-refresh**: The sidebar automatically refreshes when a user votes or a decision status changes, using the `SidebarRefreshProvider` context
+- **Dynamic display**: Number of visible decisions is calculated dynamically based on available height to prevent scrolling within the sidebar
+- **Overflow indicator**: Shows "⋯" (MoreHoriz icon) when there are more decisions than can fit, clicking redirects to the organization home page
+- **Compact design**: Uses smaller font size (caption variant) and tighter spacing to fit more items
+- **Ordered by creation**: Decisions are ordered by `createdAt` (desc) in both categories
+
+**API Endpoint:**
+- `GET /api/organizations/[slug]/decisions/sidebar` - Returns decisions grouped by category with participation status
+
+**Refresh System:**
+- The `SidebarRefreshProvider` context (in `components/providers/SidebarRefreshProvider.tsx`) provides a `refreshSidebar()` function
+- This function is called after votes are submitted (in `VotePageClient.tsx`) to trigger an immediate sidebar update
+- The sidebar listens to the `refreshTrigger` state change to re-fetch decisions
+
 ## Critical Architecture Details
 
 ### Database Schema & Enums

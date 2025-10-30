@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/providers/SessionProvider";
 import ThemeProvider from "@/components/providers/ThemeProvider";
+import { SidebarRefreshProvider } from "@/components/providers/SidebarRefreshProvider";
 
 export const metadata: Metadata = {
   title: "Decidoo - Prise de décision collaborative",
@@ -18,7 +19,9 @@ export default function RootLayout({
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <SessionProvider>
-            {children}
+            <SidebarRefreshProvider>
+              {children}
+            </SidebarRefreshProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

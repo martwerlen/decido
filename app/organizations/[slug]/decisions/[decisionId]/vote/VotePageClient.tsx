@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
+import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 
 interface Proposal {
   id: string;
@@ -69,6 +70,7 @@ export default function VotePageClient({
   isCreator,
 }: Props) {
   const router = useRouter();
+  const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -120,6 +122,7 @@ export default function VotePageClient({
       }
 
       setSuccess('Votre vote a été enregistré !');
+      refreshSidebar();
       setTimeout(() => {
         router.refresh();
       }, 1500);
@@ -154,12 +157,14 @@ export default function VotePageClient({
 
       if (consensusReached) {
         setSuccess('Consensus atteint ! La décision est approuvée.');
+        refreshSidebar();
         setTimeout(() => {
           router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
         }, 2000);
       } else {
         setSuccess('Votre vote a été enregistré !');
         setConsensusVote(value);
+        refreshSidebar();
       }
 
       setTimeout(() => {
