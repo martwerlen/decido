@@ -39,29 +39,17 @@ export default async function OrganizationDashboard({
     redirect('/');
   }
 
-  // Récupérer les décisions en cours où l'utilisateur est invité OU créateur (max 5)
-  // Pour les décisions PUBLIC_LINK créées par l'utilisateur, on les inclut aussi
+  // Récupérer les décisions en cours où l'utilisateur est invité (mode INVITED uniquement)
   const myActiveDecisions = await prisma.decision.findMany({
     where: {
       organizationId: organization.id,
       status: 'OPEN',
-      OR: [
-        {
-          // Décisions où l'utilisateur est participant (INVITED mode)
-          participants: {
-            some: {
-              userId: session.user.id,
-            },
-          },
+      votingMode: 'INVITED',
+      participants: {
+        some: {
+          userId: session.user.id,
         },
-        {
-          // Décisions PUBLIC_LINK créées par l'utilisateur
-          AND: [
-            { creatorId: session.user.id },
-            { votingMode: 'PUBLIC_LINK' },
-          ],
-        },
-      ],
+      },
     },
     select: {
       id: true,
@@ -107,8 +95,51 @@ export default async function OrganizationDashboard({
     take: 5,
   });
 
-  // Récupérer les 10 dernières décisions closes
-  // Inclure les décisions PUBLIC_LINK créées par l'utilisateur
+  // Récupérer les décisions PUBLIC_LINK en cours créées par l'utilisateur
+  const publicLinkDecisions = await prisma.decision.findMany({
+    where: {
+      organizationId: organization.id,
+      status: 'OPEN',
+      votingMode: 'PUBLIC_LINK',
+      creatorId: session.user.id,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      decisionType: true,
+      status: true,
+      votingMode: true,
+      publicSlug: true,
+      endDate: true,
+      createdAt: true,
+      creator: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      team: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      _count: {
+        select: {
+          votes: true,
+          anonymousVoteLogs: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 5,
+  });
+
+  // Récupérer les 10 dernières décisions closes (INVITED et PUBLIC_LINK)
   const closedDecisions = await prisma.decision.findMany({
     where: {
       organizationId: organization.id,
@@ -117,7 +148,8 @@ export default async function OrganizationDashboard({
       },
       OR: [
         {
-          // Décisions où l'utilisateur est participant
+          // Décisions INVITED où l'utilisateur est participant
+          votingMode: 'INVITED',
           participants: {
             some: {
               userId: session.user.id,
@@ -126,10 +158,8 @@ export default async function OrganizationDashboard({
         },
         {
           // Décisions PUBLIC_LINK créées par l'utilisateur
-          AND: [
-            { creatorId: session.user.id },
-            { votingMode: 'PUBLIC_LINK' },
-          ],
+          votingMode: 'PUBLIC_LINK',
+          creatorId: session.user.id,
         },
       ],
     },
@@ -175,11 +205,11 @@ export default async function OrganizationDashboard({
         <p className="text-gray-600 mt-2">Actualités et décisions</p>
       </div>
 
-      {/* Décisions nécessitant votre participation */}
+      {/* Décisions en cours (INVITED mode) */}
       <section className="mb-8">
         <div className="mb-4">
           <h2 className="text-2xl font-semibold">
-            Participation attendue
+            En cours
             {myActiveDecisions.length > 0 && (
               <span className="ml-2 text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
                 {myActiveDecisions.length}
@@ -196,41 +226,29 @@ export default async function OrganizationDashboard({
           <div className="grid gap-4">
             {myActiveDecisions.map((decision) => {
               const hasVoted = decision.participants[0]?.hasVoted || false;
-              const isPublicLink = decision.votingMode === 'PUBLIC_LINK';
-              const isCreator = decision.creator.id === session.user.id;
-
-              // Pour PUBLIC_LINK, le créateur va vers /share, sinon vers /vote
-              const decisionUrl = isPublicLink && isCreator
-                ? `/organizations/${slug}/decisions/${decision.id}/share`
-                : `/organizations/${slug}/decisions/${decision.id}/vote`;
 
               return (
                 <div
                   key={decision.id}
                   className={`bg-white border-2 rounded-lg p-5 hover:shadow-md transition ${
-                    !hasVoted && !isPublicLink ? 'border-orange-300' : 'border-gray-200'
+                    !hasVoted ? 'border-orange-300' : 'border-gray-200'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Link
-                          href={decisionUrl}
+                          href={`/organizations/${slug}/decisions/${decision.id}/vote`}
                           className="text-lg font-semibold hover:text-blue-600"
                         >
                           {decision.title}
                         </Link>
-                        {isPublicLink && isCreator && (
-                          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">
-                            Vote anonyme
-                          </span>
-                        )}
-                        {!isPublicLink && !hasVoted && (
+                        {!hasVoted && (
                           <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium">
                             Action requise
                           </span>
                         )}
-                        {!isPublicLink && hasVoted && (
+                        {hasVoted && (
                           <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
                             ✓ Vous avez participé
                           </span>
@@ -256,31 +274,25 @@ export default async function OrganizationDashboard({
                       </div>
 
                       <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                        {isPublicLink ? (
-                          <span>{decision._count.votes} votes anonymes</span>
-                        ) : (
-                          <>
-                            <span>{decision._count.participants} participants</span>
-                            {decision.decisionType === 'CONSENSUS' && (
-                              <span>{decision._count.comments} commentaires</span>
-                            )}
-                            {decision._count.votes > 0 && (
-                              <span>{decision._count.votes} votes</span>
-                            )}
-                          </>
+                        <span>{decision._count.participants} participants</span>
+                        {decision.decisionType === 'CONSENSUS' && (
+                          <span>{decision._count.comments} commentaires</span>
+                        )}
+                        {decision._count.votes > 0 && (
+                          <span>{decision._count.votes} votes</span>
                         )}
                       </div>
                     </div>
 
                     <Link
-                      href={decisionUrl}
+                      href={`/organizations/${slug}/decisions/${decision.id}/vote`}
                       className={`px-4 py-2 rounded-lg font-medium text-sm ml-4 ${
-                        !hasVoted && !isPublicLink
+                        !hasVoted
                           ? 'bg-orange-600 text-white hover:bg-orange-700'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {isPublicLink && isCreator ? 'Gérer' : (!hasVoted ? 'Participer' : 'Voir')}
+                      {!hasVoted ? 'Participer' : 'Voir'}
                     </Link>
                   </div>
                 </div>
@@ -290,7 +302,84 @@ export default async function OrganizationDashboard({
         )}
       </section>
 
-      {/* Décisions closes récentes */}
+      {/* Décisions en cours via URL anonyme (PUBLIC_LINK) */}
+      <section className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-2xl font-semibold">
+            Décisions en cours via URL anonyme
+            {publicLinkDecisions.length > 0 && (
+              <span className="ml-2 text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                {publicLinkDecisions.length}
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {publicLinkDecisions.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-600">
+            Aucune décision avec vote anonyme en cours
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {publicLinkDecisions.map((decision) => (
+              <div
+                key={decision.id}
+                className="bg-white border-2 border-purple-200 rounded-lg p-5 hover:shadow-md transition"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Link
+                        href={`/organizations/${slug}/decisions/${decision.id}/share`}
+                        className="text-lg font-semibold hover:text-blue-600"
+                      >
+                        {decision.title}
+                      </Link>
+                      <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">
+                        Vote anonyme
+                      </span>
+                    </div>
+
+                    <p className="text-gray-600 text-sm mb-3">{decision.description}</p>
+
+                    <div className="flex gap-3 text-sm text-gray-500">
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+                      </span>
+                      {decision.team && (
+                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                          {decision.team.name}
+                        </span>
+                      )}
+                      {decision.endDate && (
+                        <span className="text-gray-600">
+                          Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                      <span>{decision._count.anonymousVoteLogs} votes anonymes</span>
+                      <span className="text-purple-600">
+                        URL : /public-vote/{slug}/{decision.publicSlug}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/organizations/${slug}/decisions/${decision.id}/share`}
+                    className="px-4 py-2 rounded-lg font-medium text-sm ml-4 bg-purple-600 text-white hover:bg-purple-700"
+                  >
+                    Gérer
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Décisions terminées */}
       <section>
         <h2 className="text-2xl font-semibold mb-4">Décisions terminées</h2>
 
