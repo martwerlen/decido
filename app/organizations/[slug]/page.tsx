@@ -56,12 +56,22 @@ export default async function OrganizationDashboard({
         },
         {
           // Décisions PUBLIC_LINK créées par l'utilisateur
-          creatorId: session.user.id,
-          votingMode: 'PUBLIC_LINK',
+          AND: [
+            { creatorId: session.user.id },
+            { votingMode: 'PUBLIC_LINK' },
+          ],
         },
       ],
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      decisionType: true,
+      status: true,
+      votingMode: true,
+      endDate: true,
+      createdAt: true,
       creator: {
         select: {
           id: true,
@@ -116,12 +126,22 @@ export default async function OrganizationDashboard({
         },
         {
           // Décisions PUBLIC_LINK créées par l'utilisateur
-          creatorId: session.user.id,
-          votingMode: 'PUBLIC_LINK',
+          AND: [
+            { creatorId: session.user.id },
+            { votingMode: 'PUBLIC_LINK' },
+          ],
         },
       ],
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      decisionType: true,
+      status: true,
+      votingMode: true,
+      result: true,
+      decidedAt: true,
       creator: {
         select: {
           id: true,
@@ -157,7 +177,7 @@ export default async function OrganizationDashboard({
 
       {/* Décisions nécessitant votre participation */}
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h2 className="text-2xl font-semibold">
             Participation attendue
             {myActiveDecisions.length > 0 && (
@@ -166,12 +186,6 @@ export default async function OrganizationDashboard({
               </span>
             )}
           </h2>
-          <Link
-            href={`/organizations/${slug}/decisions`}
-            className="text-blue-600 hover:underline text-sm"
-          >
-            Voir toutes les décisions
-          </Link>
         </div>
 
         {myActiveDecisions.length === 0 ? (
