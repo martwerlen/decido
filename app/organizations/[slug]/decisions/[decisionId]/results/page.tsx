@@ -142,8 +142,15 @@ export default async function ResultsPage({
   // Vérifier si le vote est terminé
   const now = new Date();
   const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
-  const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
-  const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
+
+  // Pour les décisions PUBLIC_LINK, seule la deadline peut fermer automatiquement la décision
+  // (le créateur doit fermer manuellement via la page /share)
+  // Pour les décisions INVITED, la deadline OU tous les participants ayant voté peut fermer la décision
+  let isVotingFinished = isDeadlinePassed;
+  if (decision.votingMode === 'INVITED') {
+    const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
+    isVotingFinished = isDeadlinePassed || allParticipantsVoted;
+  }
 
   // Mettre à jour le statut automatiquement si le vote est terminé
   if (decision.status === 'OPEN' && isVotingFinished) {
@@ -159,9 +166,14 @@ export default async function ResultsPage({
   }
 
   // Vérifier si l'utilisateur peut voir les résultats
+  // Pour PUBLIC_LINK : le créateur peut toujours voir les résultats (suivi en temps réel)
   // Pour CONSENSUS : accès libre à tout moment
-  // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé
-  const canSeeResults = decision.decisionType === 'CONSENSUS' || isVotingFinished;
+  // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé ou fermé manuellement
+  const isManuallyClosedOrFinished = ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'].includes(decision.status) || isVotingFinished;
+  const canSeeResults =
+    (decision.votingMode === 'PUBLIC_LINK' && isCreator) ||
+    decision.decisionType === 'CONSENSUS' ||
+    isManuallyClosedOrFinished;
 
   if (!canSeeResults) {
     return (

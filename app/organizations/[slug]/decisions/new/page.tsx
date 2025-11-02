@@ -7,6 +7,7 @@ import {
   DecisionTypeDescriptions,
   NuancedScaleLabels
 } from '@/types/enums';
+import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 
 type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
@@ -23,6 +24,7 @@ export default function NewDecisionPage({
 }) {
   const { slug } = use(params);
   const router = useRouter();
+  const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -172,6 +174,9 @@ export default function NewDecisionPage({
       }
 
       const { decision } = data;
+
+      // Actualiser la sidebar pour afficher la nouvelle décision
+      refreshSidebar();
 
       // Rediriger selon le mode de vote
       if (formData.votingMode === 'PUBLIC_LINK') {
