@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
+import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 
 interface SharePageClientProps {
   decision: {
@@ -24,6 +25,7 @@ export default function SharePageClient({
   voteCount: initialVoteCount,
 }: SharePageClientProps) {
   const router = useRouter();
+  const { refreshSidebar } = useSidebarRefresh();
   const [copied, setCopied] = useState(false);
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [closing, setClosing] = useState(false);
@@ -105,6 +107,8 @@ export default function SharePageClient({
       );
 
       if (response.ok) {
+        // Actualiser la sidebar pour refléter la fermeture de la décision
+        refreshSidebar();
         router.push(`/organizations/${organizationSlug}/decisions/${decision.id}/results`);
       } else {
         const data = await response.json();

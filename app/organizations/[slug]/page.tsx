@@ -39,16 +39,27 @@ export default async function OrganizationDashboard({
     redirect('/');
   }
 
-  // Récupérer les décisions en cours où l'utilisateur est invité (max 5)
+  // Récupérer les décisions en cours où l'utilisateur est invité OU créateur (max 5)
+  // Pour les décisions PUBLIC_LINK créées par l'utilisateur, on les inclut aussi
   const myActiveDecisions = await prisma.decision.findMany({
     where: {
       organizationId: organization.id,
       status: 'OPEN',
-      participants: {
-        some: {
-          userId: session.user.id,
+      OR: [
+        {
+          // Décisions où l'utilisateur est participant (INVITED mode)
+          participants: {
+            some: {
+              userId: session.user.id,
+            },
+          },
         },
-      },
+        {
+          // Décisions PUBLIC_LINK créées par l'utilisateur
+          creatorId: session.user.id,
+          votingMode: 'PUBLIC_LINK',
+        },
+      ],
     },
     include: {
       creator: {
@@ -87,12 +98,28 @@ export default async function OrganizationDashboard({
   });
 
   // Récupérer les 10 dernières décisions closes
+  // Inclure les décisions PUBLIC_LINK créées par l'utilisateur
   const closedDecisions = await prisma.decision.findMany({
     where: {
       organizationId: organization.id,
       status: {
         in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED'],
       },
+      OR: [
+        {
+          // Décisions où l'utilisateur est participant
+          participants: {
+            some: {
+              userId: session.user.id,
+            },
+          },
+        },
+        {
+          // Décisions PUBLIC_LINK créées par l'utilisateur
+          creatorId: session.user.id,
+          votingMode: 'PUBLIC_LINK',
+        },
+      ],
     },
     include: {
       creator: {
@@ -155,29 +182,41 @@ export default async function OrganizationDashboard({
           <div className="grid gap-4">
             {myActiveDecisions.map((decision) => {
               const hasVoted = decision.participants[0]?.hasVoted || false;
+              const isPublicLink = decision.votingMode === 'PUBLIC_LINK';
+              const isCreator = decision.creator.id === session.user.id;
+
+              // Pour PUBLIC_LINK, le créateur va vers /share, sinon vers /vote
+              const decisionUrl = isPublicLink && isCreator
+                ? `/organizations/${slug}/decisions/${decision.id}/share`
+                : `/organizations/${slug}/decisions/${decision.id}/vote`;
 
               return (
                 <div
                   key={decision.id}
                   className={`bg-white border-2 rounded-lg p-5 hover:shadow-md transition ${
-                    !hasVoted ? 'border-orange-300' : 'border-gray-200'
+                    !hasVoted && !isPublicLink ? 'border-orange-300' : 'border-gray-200'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Link
-                          href={`/organizations/${slug}/decisions/${decision.id}/vote`}
+                          href={decisionUrl}
                           className="text-lg font-semibold hover:text-blue-600"
                         >
                           {decision.title}
                         </Link>
-                        {!hasVoted && (
+                        {isPublicLink && isCreator && (
+                          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">
+                            Vote anonyme
+                          </span>
+                        )}
+                        {!isPublicLink && !hasVoted && (
                           <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium">
                             Action requise
                           </span>
                         )}
-                        {hasVoted && (
+                        {!isPublicLink && hasVoted && (
                           <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
                             ✓ Vous avez participé
                           </span>
@@ -203,25 +242,31 @@ export default async function OrganizationDashboard({
                       </div>
 
                       <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                        <span>{decision._count.participants} participants</span>
-                        {decision.decisionType === 'CONSENSUS' && (
-                          <span>{decision._count.comments} commentaires</span>
-                        )}
-                        {decision._count.votes > 0 && (
-                          <span>{decision._count.votes} votes</span>
+                        {isPublicLink ? (
+                          <span>{decision._count.votes} votes anonymes</span>
+                        ) : (
+                          <>
+                            <span>{decision._count.participants} participants</span>
+                            {decision.decisionType === 'CONSENSUS' && (
+                              <span>{decision._count.comments} commentaires</span>
+                            )}
+                            {decision._count.votes > 0 && (
+                              <span>{decision._count.votes} votes</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
 
                     <Link
-                      href={`/organizations/${slug}/decisions/${decision.id}/vote`}
+                      href={decisionUrl}
                       className={`px-4 py-2 rounded-lg font-medium text-sm ml-4 ${
-                        !hasVoted
+                        !hasVoted && !isPublicLink
                           ? 'bg-orange-600 text-white hover:bg-orange-700'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {!hasVoted ? 'Participer' : 'Voir'}
+                      {isPublicLink && isCreator ? 'Gérer' : (!hasVoted ? 'Participer' : 'Voir')}
                     </Link>
                   </div>
                 </div>

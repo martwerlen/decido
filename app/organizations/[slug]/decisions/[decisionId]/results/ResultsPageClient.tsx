@@ -586,7 +586,8 @@ export default function ResultsPageClient({
         >
           Retour aux décisions
         </Link>
-        {decision.status === 'OPEN' && (
+        {/* Bouton "Retour au vote" uniquement pour les décisions INVITED avec status OPEN */}
+        {decision.status === 'OPEN' && votingMode !== 'PUBLIC_LINK' && (
           <Link
             href={`/organizations/${slug}/decisions/${decision.id}/vote`}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
