@@ -289,7 +289,7 @@ export default function NewDecisionPage({
               <div>
                 <div className="font-medium">Sur invitation</div>
                 <div className="text-sm text-gray-600">
-                  Vous invitez spécifiquement les participants. Vous gérez la liste des votants.
+                  Vous invitez spécifiquement les participants (internes ou externes). Vous gérez la liste des votants.
                 </div>
               </div>
             </label>
@@ -306,7 +306,7 @@ export default function NewDecisionPage({
               <div>
                 <div className="font-medium">Vote anonyme via URL</div>
                 <div className="text-sm text-gray-600">
-                  Créez un lien public que vous pouvez partager. Les votes sont anonymes et aucune invitation n'est nécessaire.
+                  Créez un lien public que vous pouvez partager. Les votes sont anonymes.
                 </div>
               </div>
             </label>
