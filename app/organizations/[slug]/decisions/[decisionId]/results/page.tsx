@@ -166,9 +166,14 @@ export default async function ResultsPage({
   }
 
   // Vérifier si l'utilisateur peut voir les résultats
+  // Pour PUBLIC_LINK : le créateur peut toujours voir les résultats (suivi en temps réel)
   // Pour CONSENSUS : accès libre à tout moment
-  // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé
-  const canSeeResults = decision.decisionType === 'CONSENSUS' || isVotingFinished;
+  // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé ou fermé manuellement
+  const isManuallyClosedOrFinished = ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'].includes(decision.status) || isVotingFinished;
+  const canSeeResults =
+    (decision.votingMode === 'PUBLIC_LINK' && isCreator) ||
+    decision.decisionType === 'CONSENSUS' ||
+    isManuallyClosedOrFinished;
 
   if (!canSeeResults) {
     return (
