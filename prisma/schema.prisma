@@ -205,7 +205,9 @@ model Decision {
   // Pour le vote nuancé (jugement majoritaire)
   nuancedScale        String?   // 3_LEVELS, 5_LEVELS, 7_LEVELS
   nuancedWinnerCount  Int?      // Nombre de propositions gagnantes
-  nuancedSlug         String?   // Slug pour l'URL publique (si PUBLIC_LINK)
+
+  // Slug pour l'URL publique (tous types de décisions si PUBLIC_LINK)
+  publicSlug          String?   // Slug unique par organisation pour accès public
 
   // Résultat de la décision
   result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN
@@ -234,7 +236,9 @@ model Decision {
   nuancedProposals  NuancedProposal[]     // Pour vote nuancé (jugement majoritaire)
   participants      DecisionParticipant[] // Qui peut voter
   logs              DecisionLog[]         // Historique des événements
+  anonymousVoteLogs AnonymousVoteLog[]    // Logs des votes anonymes (tracking IP)
 
+  @@unique([organizationId, publicSlug])
   @@map("decisions")
 }
 
@@ -457,4 +461,21 @@ model DecisionLog {
   actor    User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@map("decision_logs")
+}
+
+// ============================================
+// VOTES ANONYMES (TRACKING IP)
+// ============================================
+
+model AnonymousVoteLog {
+  id         String   @id @default(cuid())
+  decisionId String
+  ipHash     String   // Hash SHA-256 de l'IP pour anonymat
+  votedAt    DateTime @default(now())
+
+  // Relations
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionId, ipHash])
+  @@map("anonymous_vote_logs")
 }

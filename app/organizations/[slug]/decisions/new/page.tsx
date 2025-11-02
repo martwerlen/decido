@@ -32,10 +32,12 @@ export default function NewDecisionPage({
     decisionType: 'MAJORITY' as DecisionType,
     initialProposal: '',
     endDate: '',
+    // Mode de vote
+    votingMode: 'INVITED' as 'INVITED' | 'PUBLIC_LINK',
+    publicSlug: '',
     // Pour le vote nuancé
     nuancedScale: '5_LEVELS' as NuancedScale,
     nuancedWinnerCount: 1,
-    nuancedSlug: '',
   });
 
   const [nuancedProposals, setNuancedProposals] = useState<NuancedProposal[]>([
@@ -48,12 +50,61 @@ export default function NewDecisionPage({
     { title: '', description: '' },
   ]);
 
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
+
+  // Normaliser et valider le slug
+  const normalizeSlug = (input: string): string => {
+    return input
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 50);
+  };
+
+  // Vérifier la disponibilité du slug
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) {
+      setSlugAvailable(null);
+      return;
+    }
+
+    setCheckingSlug(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/check-public-slug?slug=${encodeURIComponent(formData.publicSlug)}`
+      );
+      const data = await response.json();
+      setSlugAvailable(data.available);
+    } catch (err) {
+      console.error('Error checking slug:', err);
+      setSlugAvailable(null);
+    } finally {
+      setCheckingSlug(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Validation du mode PUBLIC_LINK
+      if (formData.votingMode === 'PUBLIC_LINK') {
+        if (!formData.publicSlug || formData.publicSlug.length < 3) {
+          setError('Le slug doit contenir au moins 3 caractères');
+          setLoading(false);
+          return;
+        }
+        if (slugAvailable === false) {
+          setError('Ce slug est déjà utilisé. Veuillez en choisir un autre.');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Vérifier que endDate est au moins 24h dans le futur
       if (formData.endDate) {
         const endDate = new Date(formData.endDate);
@@ -121,10 +172,15 @@ export default function NewDecisionPage({
       }
 
       const { decision } = data;
-      console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/admin`);
 
-      // Rediriger vers la page d'administration pour finaliser la configuration
-      router.push(`/organizations/${slug}/decisions/${decision.id}/admin`);
+      // Rediriger selon le mode de vote
+      if (formData.votingMode === 'PUBLIC_LINK') {
+        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/share`);
+        router.push(`/organizations/${slug}/decisions/${decision.id}/share`);
+      } else {
+        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/admin`);
+        router.push(`/organizations/${slug}/decisions/${decision.id}/admin`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
       setLoading(false);
@@ -213,6 +269,93 @@ export default function NewDecisionPage({
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Décrivez le contexte et l'objet de la décision..."
           />
+        </div>
+
+        {/* Mode de vote */}
+        <div className="border-t pt-6">
+          <label className="block font-medium mb-3">
+            Mode de participation *
+          </label>
+          <div className="space-y-3">
+            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="radio"
+                name="votingMode"
+                value="INVITED"
+                checked={formData.votingMode === 'INVITED'}
+                onChange={(e) => setFormData({ ...formData, votingMode: 'INVITED', publicSlug: '' })}
+                className="mt-1 mr-3"
+              />
+              <div>
+                <div className="font-medium">Sur invitation</div>
+                <div className="text-sm text-gray-600">
+                  Vous invitez spécifiquement les participants. Vous gérez la liste des votants.
+                </div>
+              </div>
+            </label>
+
+            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="radio"
+                name="votingMode"
+                value="PUBLIC_LINK"
+                checked={formData.votingMode === 'PUBLIC_LINK'}
+                onChange={(e) => setFormData({ ...formData, votingMode: 'PUBLIC_LINK' })}
+                className="mt-1 mr-3"
+              />
+              <div>
+                <div className="font-medium">Vote anonyme via URL</div>
+                <div className="text-sm text-gray-600">
+                  Créez un lien public que vous pouvez partager. Les votes sont anonymes et aucune invitation n'est nécessaire.
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {/* Champ publicSlug si mode PUBLIC_LINK */}
+          {formData.votingMode === 'PUBLIC_LINK' && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <label htmlFor="publicSlug" className="block font-medium mb-2">
+                Slug pour l'URL publique *
+              </label>
+              <input
+                type="text"
+                id="publicSlug"
+                required
+                value={formData.publicSlug}
+                onChange={(e) => {
+                  const normalized = normalizeSlug(e.target.value);
+                  setFormData({ ...formData, publicSlug: normalized });
+                  if (normalized.length >= 3) {
+                    checkSlugAvailability(normalized);
+                  } else {
+                    setSlugAvailable(null);
+                  }
+                }}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="mon-vote-2024"
+                minLength={3}
+                maxLength={50}
+              />
+              <p className="text-sm text-gray-600 mt-1">
+                Le slug doit contenir entre 3 et 50 caractères (lettres, chiffres, tirets uniquement).
+              </p>
+              {formData.publicSlug && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium">
+                    Aperçu de l'URL : <span className="text-blue-600">/public-vote/{slug}/{formData.publicSlug}</span>
+                  </p>
+                  {checkingSlug && <p className="text-sm text-gray-500 mt-1">Vérification...</p>}
+                  {!checkingSlug && slugAvailable === true && (
+                    <p className="text-sm text-green-600 mt-1">✓ Ce slug est disponible</p>
+                  )}
+                  {!checkingSlug && slugAvailable === false && (
+                    <p className="text-sm text-red-600 mt-1">✗ Ce slug est déjà utilisé</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Type de décision */}
@@ -384,24 +527,6 @@ export default function NewDecisionPage({
               </p>
             </div>
 
-            {/* Slug (optionnel, pour lien public) */}
-            <div>
-              <label htmlFor="nuancedSlug" className="block font-medium mb-2">
-                Slug pour URL publique (optionnel)
-              </label>
-              <input
-                type="text"
-                id="nuancedSlug"
-                value={formData.nuancedSlug}
-                onChange={(e) => setFormData({ ...formData, nuancedSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="mon-vote-2024"
-              />
-              <p className="text-sm text-gray-600 mt-1">
-                Si vous souhaitez partager ce vote via un lien public, définissez un slug unique.
-                Sinon, laissez vide pour un vote sur invitation uniquement.
-              </p>
-            </div>
 
             {/* Propositions */}
             <div>
@@ -494,12 +619,9 @@ export default function NewDecisionPage({
         </div>
 
         <p className="text-sm text-gray-600">
-          {formData.decisionType === 'MAJORITY' &&
-            'Après la création, vous pourrez ajouter des propositions et configurer les participants avant de lancer la décision.'}
-          {formData.decisionType === 'CONSENSUS' &&
-            'Après la création, vous pourrez configurer les participants et lancer la décision.'}
-          {formData.decisionType === 'NUANCED_VOTE' &&
-            'Après la création, vous pourrez configurer les participants (invitations ou lien public) et lancer la décision.'}
+          {formData.votingMode === 'PUBLIC_LINK'
+            ? 'Après la création, vous accéderez à la page de partage avec le lien et le QR code à diffuser.'
+            : 'Après la création, vous pourrez configurer les participants avant de lancer la décision.'}
         </p>
       </form>
     </div>

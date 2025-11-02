@@ -40,6 +40,7 @@ import {
   Cancel,
   ErrorOutline,
   MoreHoriz,
+  QrCode2,
 } from "@mui/icons-material"
 import { signOut } from "next-auth/react"
 import { useSidebarRefresh } from "@/components/providers/SidebarRefreshProvider"
@@ -50,6 +51,8 @@ interface OngoingDecision {
   id: string
   title: string
   status: string
+  votingMode: string
+  isCreator: boolean
   isParticipant: boolean
   hasVoted: boolean
 }
@@ -59,6 +62,8 @@ interface CompletedDecision {
   title: string
   status: string
   result: string | null
+  votingMode: string
+  isCreator: boolean
 }
 
 interface SidebarDecisions {
@@ -85,6 +90,10 @@ interface SidebarProps {
 
 // Helper pour obtenir l'icône et la couleur des décisions en cours
 const getOngoingIcon = (decision: OngoingDecision) => {
+  // Décision PUBLIC_LINK dont l'utilisateur est le créateur
+  if (decision.votingMode === 'PUBLIC_LINK' && decision.isCreator) {
+    return { Icon: QrCode2, color: "primary.main" }
+  }
   if (!decision.isParticipant) {
     return { Icon: Visibility, color: "action.active" }
   }
@@ -486,10 +495,15 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                   <>
                     {decisions.ongoing.slice(0, maxDecisions.ongoing).map((decision) => {
                       const { Icon, color } = getOngoingIcon(decision)
+                      // Déterminer l'URL de destination
+                      const targetUrl = decision.votingMode === 'PUBLIC_LINK' && decision.isCreator
+                        ? `/organizations/${organization}/decisions/${decision.id}/share`
+                        : `/organizations/${organization}/decisions/${decision.id}/vote`
+
                       return (
                         <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
                           <ListItemButton
-                            onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/vote`)}
+                            onClick={() => router.push(targetUrl)}
                             sx={{
                               py: 0.5,
                               px: 1,

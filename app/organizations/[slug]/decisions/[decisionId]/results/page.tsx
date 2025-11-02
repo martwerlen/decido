@@ -242,6 +242,7 @@ export default async function ResultsPage({
       consensusReached={consensusReached}
       slug={slug}
       isCreator={isCreator}
+      votingMode={decision.votingMode}
     />
   );
 }
