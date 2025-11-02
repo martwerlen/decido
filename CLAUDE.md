@@ -100,7 +100,7 @@ The app uses dynamic routes extensively. Key patterns:
 
 **Public routes (no authentication required):**
 - `/vote/[token]` - External participant voting page (token-based, for INVITED mode with external participants)
-- `/vote/[orgSlug]/[publicSlug]` - **Anonymous public voting page** (for PUBLIC_LINK mode)
+- `/public-vote/[orgSlug]/[publicSlug]` - **Anonymous public voting page** (for PUBLIC_LINK mode)
 
 **API routes:**
 
@@ -113,8 +113,8 @@ Authenticated APIs (under `/api/organizations/[slug]/...`):
 Public APIs:
 - `GET /api/vote/[token]` - Fetch decision data for external participant (token-based)
 - `POST /api/vote/[token]` - Submit vote for external participant (token-based)
-- `GET /api/vote/[orgSlug]/[publicSlug]` - Fetch decision data for anonymous voting
-- `POST /api/vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
+- `GET /api/public-vote/[orgSlug]/[publicSlug]` - Fetch decision data for anonymous voting
+- `POST /api/public-vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
 
 ### Sidebar Architecture
 
@@ -260,12 +260,12 @@ The anonymous voting system allows organizations to create public decision votes
    - No participants are added to the decision (unlike INVITED mode)
 
 2. **Sharing**: After creation, user is redirected to `/organizations/[slug]/decisions/[decisionId]/share`
-   - Page displays the public vote URL: `/vote/{organizationSlug}/{publicSlug}`
+   - Page displays the public vote URL: `/public-vote/{organizationSlug}/{publicSlug}`
    - Provides a QR code for easy sharing (generated with qrcode.react)
    - Shows real-time statistics (number of votes received)
    - Creator can close the decision manually or view results at any time
 
-3. **Voting**: Anonymous voters access `/vote/{orgSlug}/{publicSlug}`
+3. **Voting**: Anonymous voters access `/public-vote/{orgSlug}/{publicSlug}`
    - No authentication required, minimal UI (no sidebar, no organization branding)
    - Vote interface adapts to decision type (CONSENSUS, MAJORITY, NUANCED_VOTE)
    - IP address is hashed (SHA-256) and stored in `AnonymousVoteLog` table
@@ -289,13 +289,13 @@ The anonymous voting system allows organizations to create public decision votes
 
 **Public voting URL structure:**
 ```
-/vote/{organizationSlug}/{publicSlug}
+/public-vote/{organizationSlug}/{publicSlug}
 ```
 
 **API endpoints:**
 - `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
-- `GET /api/vote/[orgSlug]/[publicSlug]` - Fetch decision data for public voting (optional)
-- `POST /api/vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
+- `GET /api/public-vote/[orgSlug]/[publicSlug]` - Fetch decision data for public voting (optional)
+- `POST /api/public-vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
 - `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Real-time statistics (creator only)
 - `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Manually close decision (creator only)
 

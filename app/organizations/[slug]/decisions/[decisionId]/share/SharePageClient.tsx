@@ -32,7 +32,7 @@ export default function SharePageClient({
   const baseUrl = typeof window !== 'undefined'
     ? window.location.origin
     : process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const publicUrl = `${baseUrl}/vote/${organizationSlug}/${decision.publicSlug}`;
+  const publicUrl = `${baseUrl}/public-vote/${organizationSlug}/${decision.publicSlug}`;
 
   // Rafraîchir les statistiques toutes les 10 secondes
   useEffect(() => {

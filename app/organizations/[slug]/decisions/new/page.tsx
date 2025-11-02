@@ -343,7 +343,7 @@ export default function NewDecisionPage({
               {formData.publicSlug && (
                 <div className="mt-2">
                   <p className="text-sm font-medium">
-                    Aperçu de l'URL : <span className="text-blue-600">/vote/{slug}/{formData.publicSlug}</span>
+                    Aperçu de l'URL : <span className="text-blue-600">/public-vote/{slug}/{formData.publicSlug}</span>
                   </p>
                   {checkingSlug && <p className="text-sm text-gray-500 mt-1">Vérification...</p>}
                   {!checkingSlug && slugAvailable === true && (

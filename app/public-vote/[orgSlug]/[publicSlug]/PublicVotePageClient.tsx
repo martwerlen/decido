@@ -123,7 +123,7 @@ export default function PublicVotePageClient({
       }
 
       // Envoyer le vote à l'API
-      const response = await fetch(`/api/vote/${orgSlug}/${publicSlug}`, {
+      const response = await fetch(`/api/public-vote/${orgSlug}/${publicSlug}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
