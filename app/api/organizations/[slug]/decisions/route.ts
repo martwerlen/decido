@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidDecisionType } from '@/types/enums';
 import { logDecisionCreated } from '@/lib/decision-logger';
+import crypto from 'crypto';
 
 // GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
 export async function GET(
@@ -225,6 +226,32 @@ export async function POST(
       }
     }
 
+    // Validation du mode PUBLIC_LINK
+    const votingMode = body.votingMode || 'INVITED';
+    if (votingMode === 'PUBLIC_LINK') {
+      if (!body.publicSlug || body.publicSlug.length < 3) {
+        return Response.json(
+          { error: 'Le slug public doit contenir au moins 3 caractères' },
+          { status: 400 }
+        );
+      }
+
+      // Vérifier l'unicité du slug dans l'organisation
+      const existingSlug = await prisma.decision.findFirst({
+        where: {
+          organizationId: organization.id,
+          publicSlug: body.publicSlug,
+        },
+      });
+
+      if (existingSlug) {
+        return Response.json(
+          { error: 'Ce slug est déjà utilisé dans cette organisation' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Préparer les données de la décision
     const decisionData: any = {
       title,
@@ -236,20 +263,27 @@ export async function POST(
       teamId: teamId || null,
       endDate: endDate ? new Date(endDate) : null,
       initialProposal: body.initialProposal || null,
-      votingMode: body.votingMode || 'INVITED',
-      participants: {
+      votingMode,
+      publicSlug: votingMode === 'PUBLIC_LINK' ? body.publicSlug : null,
+    };
+
+    // Ajouter le créateur comme participant uniquement en mode INVITED
+    if (votingMode === 'INVITED') {
+      decisionData.participants = {
         create: {
           userId: session.user.id,
           invitedVia: 'MANUAL',
         },
-      },
-    };
+      };
+    } else if (votingMode === 'PUBLIC_LINK') {
+      // Générer un token public unique pour les votes anonymes
+      decisionData.publicToken = crypto.randomBytes(32).toString('hex');
+    }
 
     // Pour le vote nuancé, ajouter les champs spécifiques
     if (decisionType === 'NUANCED_VOTE') {
       decisionData.nuancedScale = body.nuancedScale;
       decisionData.nuancedWinnerCount = body.nuancedWinnerCount;
-      decisionData.nuancedSlug = body.nuancedSlug || null;
 
       // Créer les propositions nuancées
       decisionData.nuancedProposals = {

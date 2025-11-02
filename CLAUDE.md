@@ -34,8 +34,18 @@ npm run db:studio          # Open Prisma Studio (database GUI)
 ### Key Directories
 ```
 app/                      # Next.js App Router
-├── api/                  # API routes (auth, organizations, invitations)
-│   └── vote/[token]/    # Public voting API for external participants
+├── api/                  # API routes
+│   ├── organizations/   # Organization-scoped APIs
+│   │   └── [slug]/
+│   │       └── decisions/
+│   │           ├── route.ts                    # Create decision
+│   │           ├── check-public-slug/          # Check slug availability
+│   │           └── [decisionId]/
+│   │               ├── stats/                  # Vote statistics
+│   │               └── close/                  # Close decision
+│   └── vote/             # Public voting APIs (no auth)
+│       ├── [token]/      # Token-based voting (external participants)
+│       └── [orgSlug]/[publicSlug]/  # Anonymous voting (PUBLIC_LINK mode)
 ├── auth/                 # Auth pages (signin, signup)
 ├── organizations/        # Organization management pages
 │   ├── [slug]/          # Dynamic organization routes
@@ -43,14 +53,17 @@ app/                      # Next.js App Router
 │   │   │   ├── [decisionId]/
 │   │   │   │   ├── vote/     # Voting interface (authenticated)
 │   │   │   │   ├── results/  # Results display
-│   │   │   │   └── admin/    # Decision administration
+│   │   │   │   ├── admin/    # Decision administration (INVITED mode)
+│   │   │   │   └── share/    # Share page with link/QR code (PUBLIC_LINK mode)
 │   │   │   └── new/          # Create new decision
 │   │   ├── members/     # Member management
 │   │   ├── teams/       # Team management
 │   │   └── settings/    # Organization settings
 │   └── new/             # Create new organization
 ├── invitations/          # Invitation acceptance pages
-└── vote/[token]/         # Public voting page for external participants (no auth)
+└── vote/                 # Public voting pages (no auth)
+    ├── [token]/          # Token-based voting for external participants
+    └── [orgSlug]/[publicSlug]/  # Anonymous voting (PUBLIC_LINK mode)
 
 lib/                      # Core business logic
 ├── auth.ts              # NextAuth configuration
@@ -76,15 +89,32 @@ prisma/
 
 The app uses dynamic routes extensively. Key patterns:
 
+**Authenticated routes (requires login):**
 - `/organizations/[slug]` - Organization by slug (e.g., `/organizations/acme-corp`)
 - `/organizations/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
-- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision (requires authentication)
+- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision (authenticated members)
 - `/organizations/[slug]/decisions/[decisionId]/results` - View results
 - `/organizations/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
-- `/vote/[token]` - **Public voting page** for external participants (no authentication required)
+- `/organizations/[slug]/decisions/[decisionId]/share` - Share page with public link and QR code (creator only, PUBLIC_LINK mode)
+- `/organizations/[slug]/decisions/new` - Create new decision
 
-API routes mirror this structure under `/api/organizations/[slug]/...` plus:
-- `/api/vote/[token]` - Public API for external participant voting (GET to fetch decision, POST to vote)
+**Public routes (no authentication required):**
+- `/vote/[token]` - External participant voting page (token-based, for INVITED mode with external participants)
+- `/vote/[orgSlug]/[publicSlug]` - **Anonymous public voting page** (for PUBLIC_LINK mode)
+
+**API routes:**
+
+Authenticated APIs (under `/api/organizations/[slug]/...`):
+- `POST /api/organizations/[slug]/decisions` - Create new decision
+- `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
+- `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Get vote statistics (creator only)
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Close decision manually (creator only)
+
+Public APIs:
+- `GET /api/vote/[token]` - Fetch decision data for external participant (token-based)
+- `POST /api/vote/[token]` - Submit vote for external participant (token-based)
+- `GET /api/vote/[orgSlug]/[publicSlug]` - Fetch decision data for anonymous voting
+- `POST /api/vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
 
 ### Sidebar Architecture
 
@@ -206,10 +236,99 @@ Each decision has two possible voting modes (`votingMode` field):
 - Participants can be added via team membership (`invitedVia: 'TEAM'`), manually (`'MANUAL'`), or as external users (`'EXTERNAL'`)
 - Only invited participants can vote
 
-**PUBLIC_LINK**: Open voting via shareable URL
-- Decision has a unique `publicToken` for URL access
-- Anyone with the link can vote (for anonymous/public decisions)
-- Used for broader consultations
+**PUBLIC_LINK**: Anonymous voting via shareable public URL
+- Decision has a unique `publicSlug` (3-50 characters, unique per organization)
+- Decision has a unique `publicToken` (64-character hex string for security)
+- Anyone with the link can vote anonymously (no authentication required)
+- Votes are tracked by IP address (hashed with SHA-256 for anonymity)
+- Used for broader consultations, surveys, and public decision-making
+
+**Key differences between INVITED and PUBLIC_LINK modes:**
+- **INVITED**: Requires participant management, authenticated votes, full tracking of who voted
+- **PUBLIC_LINK**: No participant management, anonymous votes, IP-based rate limiting
+
+### Anonymous Voting System (PUBLIC_LINK Mode)
+
+The anonymous voting system allows organizations to create public decision votes accessible via a simple URL without requiring authentication.
+
+**How it works:**
+
+1. **Creation**: When creating a decision, users can choose "Vote anonyme via URL" mode
+   - Must provide a `publicSlug` (3-50 chars, lowercase, numbers, hyphens only)
+   - Slug is validated for uniqueness within the organization
+   - A `publicToken` is automatically generated for security
+   - No participants are added to the decision (unlike INVITED mode)
+
+2. **Sharing**: After creation, user is redirected to `/organizations/[slug]/decisions/[decisionId]/share`
+   - Page displays the public vote URL: `/vote/{organizationSlug}/{publicSlug}`
+   - Provides a QR code for easy sharing (generated with qrcode.react)
+   - Shows real-time statistics (number of votes received)
+   - Creator can close the decision manually or view results at any time
+
+3. **Voting**: Anonymous voters access `/vote/{orgSlug}/{publicSlug}`
+   - No authentication required, minimal UI (no sidebar, no organization branding)
+   - Vote interface adapts to decision type (CONSENSUS, MAJORITY, NUANCED_VOTE)
+   - IP address is hashed (SHA-256) and stored in `AnonymousVoteLog` table
+   - One vote per IP address (can be updated before deadline)
+   - Vote data stored in `Vote`, `ProposalVote`, or `NuancedVote` tables with `userId = null` and `externalParticipantId = null`
+
+4. **Results**: Calculated the same way as INVITED mode decisions
+   - Anonymous votes are counted alongside authenticated votes
+   - Results visible to creator at any time
+   - Public can view results if decision is closed (depending on settings)
+
+**Database schema:**
+- `Decision.publicSlug`: Human-readable slug for URL (unique per organization)
+- `Decision.publicToken`: Random token for additional security
+- `Decision.votingMode`: 'INVITED' or 'PUBLIC_LINK'
+- `AnonymousVoteLog`: Tracks IP hashes to prevent duplicate voting
+  - `decisionId`: Links to Decision
+  - `ipHash`: SHA-256 hash of voter's IP address
+  - `votedAt`: Timestamp of vote
+  - Unique constraint on `(decisionId, ipHash)`
+
+**Public voting URL structure:**
+```
+/vote/{organizationSlug}/{publicSlug}
+```
+
+**API endpoints:**
+- `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
+- `GET /api/vote/[orgSlug]/[publicSlug]` - Fetch decision data for public voting (optional)
+- `POST /api/vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
+- `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Real-time statistics (creator only)
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Manually close decision (creator only)
+
+**Share page features** (`/organizations/[slug]/decisions/[decisionId]/share`):
+- Display public vote URL with copy button
+- Generate and download QR code
+- Real-time vote count (refreshes every 10 seconds)
+- Manual close button (closes voting immediately)
+- View results button
+- Only accessible to decision creator
+- Only shown for PUBLIC_LINK decisions
+
+**Security and rate limiting:**
+- IP address is hashed before storage (SHA-256)
+- One vote per IP address per decision
+- IP hash prevents tracking individual voters
+- Votes can be modified before deadline
+- No CAPTCHA (can be added later if needed)
+- Client IP extracted from `x-forwarded-for` or `x-real-ip` headers
+
+**Frontend validation:**
+- Slug format: lowercase, numbers, hyphens only, 3-50 characters
+- Real-time slug availability check as user types
+- Visual feedback (✓ available / ✗ already used)
+- Preview of final URL before creation
+
+**Creator capabilities for PUBLIC_LINK decisions:**
+- Cannot add/remove participants (no participant management)
+- Can manually close the decision at any time
+- Can view results at any time (even during voting)
+- Can share the link and QR code
+- Sees real-time vote count statistics
+- Cannot see individual voter information (votes are anonymous)
 
 ### External Participant Voting (Guest Voting)
 
