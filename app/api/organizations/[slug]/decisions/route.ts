@@ -257,7 +257,9 @@ export async function POST(
       title,
       description,
       decisionType,
-      status: 'DRAFT',
+      // En mode PUBLIC_LINK, lancer immédiatement (pas besoin de configuration)
+      status: votingMode === 'PUBLIC_LINK' ? 'OPEN' : 'DRAFT',
+      startDate: votingMode === 'PUBLIC_LINK' ? new Date() : null,
       organizationId: organization.id,
       creatorId: session.user.id,
       teamId: teamId || null,
@@ -344,6 +346,19 @@ export async function POST(
 
     // Logger la création de la décision
     await logDecisionCreated(decision.id, session.user.id);
+
+    // Si PUBLIC_LINK, logger aussi le lancement automatique
+    if (votingMode === 'PUBLIC_LINK') {
+      await prisma.decisionLog.create({
+        data: {
+          decisionId: decision.id,
+          eventType: 'LAUNCHED',
+          actorId: session.user.id,
+          oldValue: 'DRAFT',
+          newValue: 'OPEN',
+        },
+      });
+    }
 
     return Response.json({ decision }, { status: 201 });
   } catch (error) {

@@ -51,6 +51,8 @@ export async function GET(
           id: true,
           title: true,
           status: true,
+          votingMode: true,
+          creatorId: true,
           participants: {
             where: {
               userId: session.user.id,
@@ -72,6 +74,8 @@ export async function GET(
       id: decision.id,
       title: decision.title,
       status: decision.status,
+      votingMode: decision.votingMode,
+      isCreator: decision.creatorId === session.user.id,
       isParticipant: decision.participants.length > 0,
       hasVoted: decision.participants.length > 0 ? decision.participants[0].hasVoted : false,
     }));
@@ -92,6 +96,8 @@ export async function GET(
           title: true,
           status: true,
           result: true,
+          votingMode: true,
+          creatorId: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -100,10 +106,20 @@ export async function GET(
       prisma.decision.count({ where: completedWhere }),
     ]);
 
+    // Enrichir les décisions terminées avec isCreator
+    const enrichedCompleted = completedDecisions.map((decision) => ({
+      id: decision.id,
+      title: decision.title,
+      status: decision.status,
+      result: decision.result,
+      votingMode: decision.votingMode,
+      isCreator: decision.creatorId === session.user.id,
+    }));
+
     return Response.json({
       ongoing: enrichedOngoing,
       ongoingTotal,
-      completed: completedDecisions,
+      completed: enrichedCompleted,
       completedTotal,
     });
   } catch (error) {

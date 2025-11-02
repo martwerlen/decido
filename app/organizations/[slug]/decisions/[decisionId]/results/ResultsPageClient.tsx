@@ -76,6 +76,7 @@ interface Props {
   consensusReached: boolean;
   slug: string;
   isCreator: boolean;
+  votingMode: string;
 }
 
 export default function ResultsPageClient({
@@ -87,6 +88,7 @@ export default function ResultsPageClient({
   consensusReached,
   slug,
   isCreator,
+  votingMode,
 }: Props) {
   const totalVotes = proposalResults.reduce((sum, r) => sum + r.voteCount, 0);
   const totalConsensusVotes = agreeCount + disagreeCount;
@@ -594,10 +596,14 @@ export default function ResultsPageClient({
         )}
         {isCreator && (
           <Link
-            href={`/organizations/${slug}/decisions/${decision.id}/admin`}
+            href={
+              votingMode === 'PUBLIC_LINK'
+                ? `/organizations/${slug}/decisions/${decision.id}/share`
+                : `/organizations/${slug}/decisions/${decision.id}/admin`
+            }
             className="px-6 py-2 border rounded-lg hover:bg-gray-50"
           >
-            Administrer
+            {votingMode === 'PUBLIC_LINK' ? 'Retour au partage' : 'Administrer'}
           </Link>
         )}
       </div>

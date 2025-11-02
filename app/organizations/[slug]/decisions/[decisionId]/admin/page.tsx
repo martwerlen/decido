@@ -86,6 +86,11 @@ export default async function DecisionAdminPage({
     redirect(`/organizations/${slug}/decisions/${decisionId}/vote`);
   }
 
+  // Si décision PUBLIC_LINK, rediriger vers la page de partage (pas de gestion de participants)
+  if (decision.votingMode === 'PUBLIC_LINK') {
+    redirect(`/organizations/${slug}/decisions/${decisionId}/share`);
+  }
+
   // Récupérer les équipes de l'organisation
   const teams = await prisma.team.findMany({
     where: {
