@@ -2,6 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Box,
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  Alert,
+  CircularProgress,
+  Chip,
+  Paper,
+} from '@mui/material';
+import { CheckCircle } from '@mui/icons-material';
 
 interface Proposal {
   id: string;
@@ -27,30 +44,30 @@ interface PublicVotePageClientProps {
   publicSlug: string;
 }
 
-// Mentions pour vote nuancé
+// Mentions pour vote nuancé avec couleurs Material-UI
 const NUANCED_MENTIONS = {
   '3_LEVELS': [
-    { value: 'GOOD', label: 'Bon', color: 'bg-green-100 text-green-800' },
-    { value: 'PASSABLE', label: 'Passable', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'bg-red-100 text-red-800' },
+    { value: 'GOOD', label: 'Bon', color: 'success' },
+    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
+    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'error' },
   ],
   '5_LEVELS': [
-    { value: 'EXCELLENT', label: 'Excellent', color: 'bg-green-500 text-white' },
-    { value: 'GOOD', label: 'Bien', color: 'bg-green-300 text-gray-800' },
-    { value: 'PASSABLE', label: 'Passable', color: 'bg-yellow-300 text-gray-800' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'bg-orange-300 text-gray-800' },
-    { value: 'TO_REJECT', label: 'À rejeter', color: 'bg-red-500 text-white' },
+    { value: 'EXCELLENT', label: 'Excellent', color: 'success' },
+    { value: 'GOOD', label: 'Bien', color: 'success' },
+    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
+    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'warning' },
+    { value: 'TO_REJECT', label: 'À rejeter', color: 'error' },
   ],
   '7_LEVELS': [
-    { value: 'EXCELLENT', label: 'Excellent', color: 'bg-green-600 text-white' },
-    { value: 'VERY_GOOD', label: 'Très bien', color: 'bg-green-400 text-white' },
-    { value: 'GOOD', label: 'Bien', color: 'bg-green-200 text-gray-800' },
-    { value: 'FAIRLY_GOOD', label: 'Assez bien', color: 'bg-yellow-200 text-gray-800' },
-    { value: 'PASSABLE', label: 'Passable', color: 'bg-yellow-300 text-gray-800' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'bg-orange-400 text-white' },
-    { value: 'TO_REJECT', label: 'À rejeter', color: 'bg-red-600 text-white' },
+    { value: 'EXCELLENT', label: 'Excellent', color: 'success' },
+    { value: 'VERY_GOOD', label: 'Très bien', color: 'success' },
+    { value: 'GOOD', label: 'Bien', color: 'success' },
+    { value: 'FAIRLY_GOOD', label: 'Assez bien', color: 'warning' },
+    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
+    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'error' },
+    { value: 'TO_REJECT', label: 'À rejeter', color: 'error' },
   ],
-};
+} as const;
 
 export default function PublicVotePageClient({
   decision,
@@ -151,177 +168,284 @@ export default function PublicVotePageClient({
   // Afficher le message de confirmation
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Vote enregistré !</h1>
-          <p className="text-gray-600 mb-6">
-            Merci pour votre participation. Votre vote a été enregistré avec succès.
-          </p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="text-blue-600 hover:underline"
-          >
-            Modifier mon vote
-          </button>
-        </div>
-      </div>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default',
+          p: 3,
+        }}
+      >
+        <Card sx={{ maxWidth: 500, width: '100%' }}>
+          <CardContent sx={{ textAlign: 'center', py: 4 }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                bgcolor: 'success.light',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              <CheckCircle color="success" sx={{ fontSize: 32 }} />
+            </Box>
+            <Typography variant="h5" gutterBottom fontWeight="bold">
+              Vote enregistré !
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Merci pour votre participation. Votre vote a été enregistré avec succès.
+            </Typography>
+            <Button
+              onClick={() => setSubmitted(false)}
+              color="primary"
+              sx={{ mt: 2 }}
+            >
+              Modifier mon vote
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-2xl">
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+      <Container maxWidth="md">
         {/* En-tête */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-4">{decision.title}</h1>
-          <p className="text-gray-600 mb-4">{decision.description}</p>
-          {decision.endDate && (
-            <p className="text-sm text-gray-500">
-              Date limite : {new Date(decision.endDate).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
-          )}
-        </div>
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h4" gutterBottom fontWeight="bold">
+              {decision.title}
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              {decision.description}
+            </Typography>
+            {decision.endDate && (
+              <Typography variant="body2" color="text.secondary">
+                Date limite : {new Date(decision.endDate).toLocaleDateString('fr-FR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Formulaire de vote */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Votre vote</h2>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom fontWeight="600">
+              Votre vote
+            </Typography>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Vote CONSENSUS */}
-            {decision.decisionType === 'CONSENSUS' && (
-              <div>
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-medium mb-2">Proposition :</h3>
-                  <p className="text-gray-700 whitespace-pre-wrap">
-                    {decision.proposal || decision.initialProposal}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="consensus"
-                      value="AGREE"
-                      checked={consensusVote === 'AGREE'}
-                      onChange={() => setConsensusVote('AGREE')}
-                      className="mr-3"
-                    />
-                    <div>
-                      <div className="font-medium">D'accord</div>
-                      <div className="text-sm text-gray-600">J'approuve cette proposition</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="consensus"
-                      value="DISAGREE"
-                      checked={consensusVote === 'DISAGREE'}
-                      onChange={() => setConsensusVote('DISAGREE')}
-                      className="mr-3"
-                    />
-                    <div>
-                      <div className="font-medium">Pas d'accord</div>
-                      <div className="text-sm text-gray-600">Je n'approuve pas cette proposition</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
             )}
 
-            {/* Vote MAJORITY */}
-            {decision.decisionType === 'MAJORITY' && (
-              <div className="space-y-3">
-                {decision.proposals.map((proposal) => (
-                  <label
-                    key={proposal.id}
-                    className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50"
+            <Box component="form" onSubmit={handleSubmit}>
+              {/* Vote CONSENSUS */}
+              {decision.decisionType === 'CONSENSUS' && (
+                <Box sx={{ mb: 3 }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      mb: 3,
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
                   >
-                    <input
-                      type="radio"
-                      name="majority"
-                      value={proposal.id}
-                      checked={majorityVote === proposal.id}
-                      onChange={() => setMajorityVote(proposal.id)}
-                      className="mt-1 mr-3"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium">{proposal.title}</div>
-                      {proposal.description && (
-                        <div className="text-sm text-gray-600 mt-1">{proposal.description}</div>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+                    <Typography variant="subtitle2" fontWeight="600" gutterBottom>
+                      Proposition :
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {decision.proposal || decision.initialProposal}
+                    </Typography>
+                  </Paper>
 
-            {/* Vote NUANCED_VOTE */}
-            {decision.decisionType === 'NUANCED_VOTE' && decision.nuancedScale && (
-              <div className="space-y-6">
-                {decision.nuancedProposals.map((proposal) => {
-                  const mentions = NUANCED_MENTIONS[decision.nuancedScale as keyof typeof NUANCED_MENTIONS] || [];
-                  return (
-                    <div key={proposal.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium mb-2">{proposal.title}</h3>
-                      {proposal.description && (
-                        <p className="text-sm text-gray-600 mb-3">{proposal.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        {mentions.map((mention) => (
-                          <button
-                            key={mention.value}
-                            type="button"
-                            onClick={() => setNuancedVotes({ ...nuancedVotes, [proposal.id]: mention.value })}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              nuancedVotes[proposal.id] === mention.value
-                                ? mention.color + ' ring-2 ring-offset-2 ring-blue-500'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {mention.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                  <FormControl component="fieldset" fullWidth>
+                    <RadioGroup
+                      value={consensusVote || ''}
+                      onChange={(e) => setConsensusVote(e.target.value as 'AGREE' | 'DISAGREE')}
+                    >
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          mb: 2,
+                          border: 2,
+                          borderColor: consensusVote === 'AGREE' ? 'primary.main' : 'divider',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        onClick={() => setConsensusVote('AGREE')}
+                      >
+                        <FormControlLabel
+                          value="AGREE"
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body1" fontWeight="500">
+                                D'accord
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                J'approuve cette proposition
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Paper>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {loading ? 'Enregistrement...' : 'Enregistrer mon vote'}
-            </button>
-          </form>
-        </div>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          border: 2,
+                          borderColor: consensusVote === 'DISAGREE' ? 'primary.main' : 'divider',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        onClick={() => setConsensusVote('DISAGREE')}
+                      >
+                        <FormControlLabel
+                          value="DISAGREE"
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body1" fontWeight="500">
+                                Pas d'accord
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Je n'approuve pas cette proposition
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Paper>
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+              )}
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Vote anonyme et sécurisé</p>
-        </div>
-      </div>
-    </div>
+              {/* Vote MAJORITY */}
+              {decision.decisionType === 'MAJORITY' && (
+                <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                  <RadioGroup
+                    value={majorityVote || ''}
+                    onChange={(e) => setMajorityVote(e.target.value)}
+                  >
+                    {decision.proposals.map((proposal) => (
+                      <Paper
+                        key={proposal.id}
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          mb: 2,
+                          border: 2,
+                          borderColor: majorityVote === proposal.id ? 'primary.main' : 'divider',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        onClick={() => setMajorityVote(proposal.id)}
+                      >
+                        <FormControlLabel
+                          value={proposal.id}
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body1" fontWeight="500">
+                                {proposal.title}
+                              </Typography>
+                              {proposal.description && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                  {proposal.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </Paper>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+              )}
+
+              {/* Vote NUANCED_VOTE */}
+              {decision.decisionType === 'NUANCED_VOTE' && decision.nuancedScale && (
+                <Box sx={{ mb: 3 }}>
+                  {decision.nuancedProposals.map((proposal) => {
+                    const mentions = NUANCED_MENTIONS[decision.nuancedScale as keyof typeof NUANCED_MENTIONS] || [];
+                    return (
+                      <Paper
+                        key={proposal.id}
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          mb: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                          {proposal.title}
+                        </Typography>
+                        {proposal.description && (
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {proposal.description}
+                          </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {mentions.map((mention) => (
+                            <Chip
+                              key={mention.value}
+                              label={mention.label}
+                              color={mention.color as any}
+                              variant={nuancedVotes[proposal.id] === mention.value ? 'filled' : 'outlined'}
+                              onClick={() =>
+                                setNuancedVotes({ ...nuancedVotes, [proposal.id]: mention.value })
+                              }
+                              sx={{ cursor: 'pointer' }}
+                            />
+                          ))}
+                        </Box>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              )}
+
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+              >
+                {loading ? 'Enregistrement...' : 'Enregistrer mon vote'}
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary">
+            Vote anonyme et sécurisé
+          </Typography>
+        </Box>
+      </Container>
+    </Box>
   );
 }

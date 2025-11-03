@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PublicVotePageClient from './PublicVotePageClient';
+import { Box, Container, Card, CardContent, Typography } from '@mui/material';
 
 export default async function PublicVotePage({
   params,
@@ -42,41 +43,59 @@ export default async function PublicVotePage({
   // Vérifier que la décision est ouverte
   if (decision.status === 'DRAFT') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
-          <h1 className="text-2xl font-bold mb-4">Vote non encore ouvert</h1>
-          <p className="text-gray-600">
-            Cette décision n'est pas encore ouverte au vote. Veuillez réessayer plus tard.
-          </p>
-        </div>
-      </div>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 3 }}>
+        <Container maxWidth="sm">
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Vote non encore ouvert
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Cette décision n'est pas encore ouverte au vote. Veuillez réessayer plus tard.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
     );
   }
 
   if (decision.status === 'CLOSED') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
-          <h1 className="text-2xl font-bold mb-4">Vote terminé</h1>
-          <p className="text-gray-600">
-            Cette décision est maintenant fermée et n'accepte plus de votes.
-          </p>
-        </div>
-      </div>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 3 }}>
+        <Container maxWidth="sm">
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Vote terminé
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Cette décision est maintenant fermée et n'accepte plus de votes.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
     );
   }
 
   // Vérifier si la deadline est dépassée
   if (decision.endDate && new Date(decision.endDate) < new Date()) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
-          <h1 className="text-2xl font-bold mb-4">Vote expiré</h1>
-          <p className="text-gray-600">
-            La date limite pour voter sur cette décision est dépassée.
-          </p>
-        </div>
-      </div>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 3 }}>
+        <Container maxWidth="sm">
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Vote expiré
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                La date limite pour voter sur cette décision est dépassée.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
     );
   }
 

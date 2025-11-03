@@ -245,7 +245,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          bgcolor: '#f5f5f5',
+          bgcolor: 'background.default',
         }}
       >
         <CircularProgress />
@@ -261,7 +261,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          bgcolor: '#f5f5f5',
+          bgcolor: 'background.default',
           p: 3,
         }}
       >
@@ -287,7 +287,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          bgcolor: '#f5f5f5',
+          bgcolor: 'background.default',
           p: 3,
         }}
       >
@@ -348,7 +348,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#f5f5f5',
+        bgcolor: 'background.default',
         py: 4,
       }}
     >
@@ -392,7 +392,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                   <Typography variant="h6" gutterBottom>
                     Proposition initiale
                   </Typography>
-                  <Paper elevation={0} sx={{ bgcolor: '#f9f9f9', p: 2 }}>
+                  <Paper elevation={0} sx={{ bgcolor: 'background.paper', p: 2, border: '1px solid', borderColor: 'divider' }}>
                     <Typography sx={{ whiteSpace: 'pre-wrap' }}>
                       {decision.initialProposal}
                     </Typography>
@@ -405,7 +405,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                   <Typography variant="h6" gutterBottom>
                     Proposition amendée
                   </Typography>
-                  <Paper elevation={0} sx={{ bgcolor: '#e3f2fd', p: 2 }}>
+                  <Paper elevation={0} sx={{ bgcolor: 'info.light', color: 'info.contrastText', p: 2, border: '1px solid', borderColor: 'info.main' }}>
                     <Typography sx={{ whiteSpace: 'pre-wrap' }}>
                       {decision.amendedProposal}
                     </Typography>
@@ -425,7 +425,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
               </Typography>
               {decision.comments.map((comment) => (
                 <Box key={comment.id} sx={{ mb: 2 }}>
-                  <Paper elevation={0} sx={{ bgcolor: '#f9f9f9', p: 2 }}>
+                  <Paper elevation={0} sx={{ bgcolor: 'background.paper', p: 2, border: '1px solid', borderColor: 'divider' }}>
                     <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>
                       {comment.content}
                     </Typography>
@@ -436,7 +436,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                     {comment.replies && comment.replies.length > 0 && (
                       <Box sx={{ ml: 3, mt: 2 }}>
                         {comment.replies.map((reply) => (
-                          <Paper key={reply.id} elevation={0} sx={{ bgcolor: 'white', p: 1.5, mb: 1 }}>
+                          <Paper key={reply.id} elevation={0} sx={{ bgcolor: 'background.default', p: 1.5, mb: 1, border: '1px solid', borderColor: 'divider' }}>
                             <Typography variant="body2" sx={{ mb: 0.5, whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>
                               {reply.content}
                             </Typography>
