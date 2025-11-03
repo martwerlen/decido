@@ -217,35 +217,76 @@ export function calculateMentionProfile(
 }
 
 /**
- * Calcule un score de départage pour les propositions avec la même mention majoritaire
- * Le score est calculé en retirant progressivement les votes médians
- * Plus le score est élevé, meilleure est la proposition
+ * Détermine si une mention est positive, neutre ou négative
+ */
+function getMentionType(scale: string, mention: string): 'positive' | 'neutral' | 'negative' {
+  const allMentions = getMentionsForScale(scale)
+  const rank = getMentionRank(scale, mention)
+  const neutralRank = Math.floor(allMentions.length / 2)
+
+  if (rank < neutralRank) return 'positive'
+  if (rank === neutralRank) return 'neutral'
+  return 'negative'
+}
+
+/**
+ * Calcule un score de départage pour les propositions
+ * Le gagnant a le plus de mentions positives et le moins de mentions négatives
+ * En cas d'égalité, on départage par les mentions les plus extrêmes
  */
 export function calculateTiebreakerScore(
   mentions: string[],
   scale: string,
   depth: number = 0
 ): number {
-  if (mentions.length === 0 || depth > 10) {
+  if (mentions.length === 0) {
     return 0
   }
 
-  const majorityMention = calculateMajorityMention(mentions, scale)
-  const mentionRank = getMentionRank(scale, majorityMention)
-
-  // Le score de base est inversé : meilleure mention = score plus élevé
   const allMentions = getMentionsForScale(scale)
-  const baseScore = (allMentions.length - mentionRank) * Math.pow(100, 10 - depth)
+  const mentionProfile = calculateMentionProfile(mentions, scale)
 
-  // Retirer toutes les occurrences de la mention majoritaire
-  const remainingMentions = mentions.filter(m => m !== majorityMention)
+  // Compter les mentions positives et négatives
+  let positiveCount = 0
+  let negativeCount = 0
 
-  // Calculer récursivement le score pour les mentions restantes
-  if (remainingMentions.length > 0) {
-    return baseScore + calculateTiebreakerScore(remainingMentions, scale, depth + 1)
+  allMentions.forEach(mention => {
+    const type = getMentionType(scale, mention)
+    const count = mentionProfile[mention] || 0
+
+    if (type === 'positive') {
+      positiveCount += count
+    } else if (type === 'negative') {
+      negativeCount += count
+    }
+  })
+
+  // Score principal : différence entre positifs et négatifs (multiplié par un grand facteur)
+  let score = (positiveCount - negativeCount) * 1000000
+
+  // Départage par mentions extrêmes (des plus extrêmes vers les plus centrales)
+  // Pour chaque niveau de mention (du plus extrême au plus central)
+  const neutralRank = Math.floor(allMentions.length / 2)
+
+  for (let distance = 0; distance < neutralRank; distance++) {
+    const positiveRank = distance
+    const negativeRank = allMentions.length - 1 - distance
+
+    if (positiveRank < allMentions.length && negativeRank >= 0) {
+      const positiveMention = allMentions[positiveRank]
+      const negativeMention = allMentions[negativeRank]
+
+      const positiveVotes = mentionProfile[positiveMention] || 0
+      const negativeVotes = mentionProfile[negativeMention] || 0
+
+      // Plus il y a de votes positifs extrêmes, mieux c'est
+      // Plus il y a de votes négatifs extrêmes, moins bien c'est
+      const levelScore = (positiveVotes - negativeVotes) * Math.pow(100, neutralRank - distance)
+      score += levelScore
+    }
   }
 
-  return baseScore
+  return score
 }
 
 /**
@@ -270,17 +311,10 @@ export function calculateNuancedVoteResults(
     score: calculateTiebreakerScore(proposal.mentions, scale),
   }))
 
-  // Trier par mention majoritaire (meilleure mention d'abord), puis par score
+  // Trier par score (basé sur mentions positives/négatives et départage)
+  // Score plus élevé = meilleure proposition
   results.sort((a, b) => {
-    const rankA = getMentionRank(scale, a.majorityMention)
-    const rankB = getMentionRank(scale, b.majorityMention)
-
-    if (rankA !== rankB) {
-      return rankA - rankB // Rang plus petit = meilleure mention
-    }
-
-    // En cas d'égalité, utiliser le score de départage
-    return b.score - a.score // Score plus élevé = meilleur
+    return b.score - a.score
   })
 
   // Attribuer les rangs
@@ -302,7 +336,7 @@ function getMentionsForScale(scale: string): string[] {
     case '5_LEVELS':
       return ['EXCELLENT', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
     case '7_LEVELS':
-      return ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'FAIRLY_GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
+      return ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'VERY_INSUFFICIENT', 'TO_REJECT']
     default:
       return []
   }

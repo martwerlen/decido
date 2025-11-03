@@ -312,15 +312,15 @@ export type NuancedMention3 = 'GOOD' | 'PASSABLE' | 'INSUFFICIENT';
 export const NUANCED_MENTIONS_3: NuancedMention3[] = ['GOOD', 'PASSABLE', 'INSUFFICIENT'];
 
 export const NuancedMention3Labels: Record<NuancedMention3, string> = {
-  GOOD: 'Bon',
-  PASSABLE: 'Passable',
-  INSUFFICIENT: 'Insuffisant',
+  GOOD: 'Pour',
+  PASSABLE: 'Sans avis',
+  INSUFFICIENT: 'Contre',
 };
 
 export const NuancedMention3Colors: Record<NuancedMention3, string> = {
-  GOOD: '#10b981',      // green-500
-  PASSABLE: '#f59e0b',  // amber-500
-  INSUFFICIENT: '#ef4444', // red-500
+  GOOD: '#10b981',      // green-500 - Pour (positif)
+  PASSABLE: '#fbbf24',  // amber-400 - Sans avis (neutre)
+  INSUFFICIENT: '#ef4444', // red-500 - Contre (négatif)
 };
 
 // Mentions pour l'échelle à 5 niveaux
@@ -335,19 +335,19 @@ export const NUANCED_MENTIONS_5: NuancedMention5[] = [
 ];
 
 export const NuancedMention5Labels: Record<NuancedMention5, string> = {
-  EXCELLENT: 'Excellent',
-  GOOD: 'Bien',
-  PASSABLE: 'Passable',
-  INSUFFICIENT: 'Insuffisant',
-  TO_REJECT: 'À rejeter',
+  EXCELLENT: 'Franchement pour',
+  GOOD: 'Pour',
+  PASSABLE: 'Sans avis',
+  INSUFFICIENT: 'Contre',
+  TO_REJECT: 'Franchement contre',
 };
 
 export const NuancedMention5Colors: Record<NuancedMention5, string> = {
-  EXCELLENT: '#10b981',   // green-500
-  GOOD: '#84cc16',        // lime-500
-  PASSABLE: '#f59e0b',    // amber-500
-  INSUFFICIENT: '#f97316', // orange-500
-  TO_REJECT: '#ef4444',   // red-500
+  EXCELLENT: '#059669',   // green-600 - Franchement pour (vert foncé)
+  GOOD: '#10b981',        // green-500 - Pour (vert clair)
+  PASSABLE: '#fbbf24',    // amber-400 - Sans avis (jaune)
+  INSUFFICIENT: '#f97316', // orange-500 - Contre (orange)
+  TO_REJECT: '#ef4444',   // red-500 - Franchement contre (rouge)
 };
 
 // Mentions pour l'échelle à 7 niveaux
@@ -355,39 +355,42 @@ export type NuancedMention7 =
   | 'EXCELLENT'
   | 'VERY_GOOD'
   | 'GOOD'
-  | 'FAIRLY_GOOD'
+  | 'FAIRLY_GOOD'         // DEPRECATED - conservé pour compatibilité
   | 'PASSABLE'
   | 'INSUFFICIENT'
+  | 'VERY_INSUFFICIENT'   // NOUVEAU
   | 'TO_REJECT';
 
 export const NUANCED_MENTIONS_7: NuancedMention7[] = [
   'EXCELLENT',
   'VERY_GOOD',
   'GOOD',
-  'FAIRLY_GOOD',
   'PASSABLE',
   'INSUFFICIENT',
+  'VERY_INSUFFICIENT',
   'TO_REJECT',
 ];
 
 export const NuancedMention7Labels: Record<NuancedMention7, string> = {
-  EXCELLENT: 'Excellent',
-  VERY_GOOD: 'Très bien',
-  GOOD: 'Bien',
-  FAIRLY_GOOD: 'Assez bien',
-  PASSABLE: 'Passable',
-  INSUFFICIENT: 'Insuffisant',
-  TO_REJECT: 'À rejeter',
+  EXCELLENT: 'Absolument pour',
+  VERY_GOOD: 'Franchement pour',
+  GOOD: 'Pour',
+  FAIRLY_GOOD: 'Assez bien',  // DEPRECATED - ne devrait plus être utilisé
+  PASSABLE: 'Sans avis',
+  INSUFFICIENT: 'Contre',
+  VERY_INSUFFICIENT: 'Franchement contre',
+  TO_REJECT: 'Absolument contre',
 };
 
 export const NuancedMention7Colors: Record<NuancedMention7, string> = {
-  EXCELLENT: '#10b981',    // green-500
-  VERY_GOOD: '#22c55e',    // green-400
-  GOOD: '#84cc16',         // lime-500
-  FAIRLY_GOOD: '#eab308',  // yellow-500
-  PASSABLE: '#f59e0b',     // amber-500
-  INSUFFICIENT: '#f97316', // orange-500
-  TO_REJECT: '#ef4444',    // red-500
+  EXCELLENT: '#047857',        // green-700 - Absolument pour (vert très foncé)
+  VERY_GOOD: '#059669',        // green-600 - Franchement pour (vert foncé)
+  GOOD: '#10b981',             // green-500 - Pour (vert moyen)
+  FAIRLY_GOOD: '#eab308',      // yellow-500 - DEPRECATED
+  PASSABLE: '#fbbf24',         // amber-400 - Sans avis (jaune)
+  INSUFFICIENT: '#fb923c',     // orange-400 - Contre (orange clair)
+  VERY_INSUFFICIENT: '#f97316', // orange-500 - Franchement contre (orange foncé)
+  TO_REJECT: '#dc2626',        // red-600 - Absolument contre (rouge foncé)
 };
 
 // Type union pour toutes les mentions

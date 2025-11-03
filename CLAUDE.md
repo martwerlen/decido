@@ -216,13 +216,17 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 Type-safe enums are defined in `types/enums.ts` with corresponding validation helpers:
 - `MemberRole`: 'OWNER' | 'ADMIN' | 'MEMBER'
 - `InvitationStatus`: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
-- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'ADVISORY'
+- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'NUANCED_VOTE' | 'ADVISORY'
 - `DecisionStatus`: 'DRAFT' | 'OPEN' | 'CLOSED' | 'IMPLEMENTED' | 'ARCHIVED'
 - `DecisionResult`: 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN'
 - `VoteValue`: 'STRONG_SUPPORT' | 'SUPPORT' | 'WEAK_SUPPORT' | 'ABSTAIN' | 'WEAK_OPPOSE' | 'OPPOSE' | 'STRONG_OPPOSE' | 'BLOCK'
 - `VotingMode`: 'INVITED' | 'PUBLIC_LINK'
 - `ParticipantInvitedVia`: 'TEAM' | 'MANUAL' | 'EXTERNAL'
 - `ConsensusVoteValue`: 'AGREE' | 'DISAGREE'
+- `NuancedScale`: '3_LEVELS' | '5_LEVELS' | '7_LEVELS' (échelles pour le vote nuancé)
+- `NuancedMention3`: 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' (mentions pour 3 niveaux)
+- `NuancedMention5`: 'EXCELLENT' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'TO_REJECT' (mentions pour 5 niveaux)
+- `NuancedMention7`: 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'VERY_INSUFFICIENT' | 'TO_REJECT' (mentions pour 7 niveaux)
 
 When working with these values:
 1. Import types from `types/enums.ts`, NOT from `@prisma/client`
@@ -246,6 +250,18 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 **SUPERMAJORITY**: Requires 2/3 of votes to be supportive → APPROVED if (support votes ≥ 2/3 total)
 
 **WEIGHTED_VOTE**: Calculates weighted score using vote weights (-3 to +3) → APPROVED if score > 0
+
+**NUANCED_VOTE** (Jugement Majoritaire): Each participant evaluates all proposals with a mention from a predefined scale
+- Three scales available: 3, 5, or 7 levels
+- **3 levels**: "Pour" (For), "Sans avis" (Neutral), "Contre" (Against)
+- **5 levels**: "Franchement pour" (Strongly for), "Pour" (For), "Sans avis" (Neutral), "Contre" (Against), "Franchement contre" (Strongly against)
+- **7 levels**: "Absolument pour" (Absolutely for), "Franchement pour" (Strongly for), "Pour" (For), "Sans avis" (Neutral), "Contre" (Against), "Franchement contre" (Strongly against), "Absolument contre" (Absolutely against)
+- Each scale has a symmetric structure: N positive mentions, 1 neutral mention, N negative mentions
+- The median mention (mention médiane) is calculated for each proposal
+- **Winner determination**: The winner is the proposal with the most positive mentions and fewest negative mentions
+- **Tie-breaking**: If tied, compare extreme mentions first (absolutely for/against), then progressively move to central mentions
+- **Multiple winners**: The creator can specify how many winning proposals they want (e.g., top 3)
+- Results are displayed with a segmented horizontal bar showing the distribution of all mentions with color gradients (green for positive, yellow for neutral, orange/red for negative)
 
 **ADVISORY**: Always returns APPROVED (informational only)
 

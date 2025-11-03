@@ -510,9 +510,9 @@ export default function NewDecisionPage({
                 onChange={(e) => setFormData({ ...formData, nuancedScale: e.target.value as NuancedScale })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Bon / Passable / Insuffisant)</option>
-                <option value="5_LEVELS">{NuancedScaleLabels['5_LEVELS']} (Excellent / Bien / Passable / Insuffisant / À rejeter)</option>
-                <option value="7_LEVELS">{NuancedScaleLabels['7_LEVELS']} (Excellent / Très bien / Bien / Assez bien / Passable / Insuffisant / À rejeter)</option>
+                <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Pour / Sans avis / Contre)</option>
+                <option value="5_LEVELS">{NuancedScaleLabels['5_LEVELS']} (Franchement pour / Pour / Sans avis / Contre / Franchement contre)</option>
+                <option value="7_LEVELS">{NuancedScaleLabels['7_LEVELS']} (Absolument pour / Franchement pour / Pour / Sans avis / Contre / Franchement contre / Absolument contre)</option>
               </select>
             </div>
 

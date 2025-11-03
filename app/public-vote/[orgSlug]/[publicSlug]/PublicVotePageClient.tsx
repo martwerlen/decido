@@ -19,6 +19,12 @@ import {
   Paper,
 } from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
+import {
+  getMentionsForScale,
+  getMentionLabel,
+  getMentionColor,
+  NuancedScaleLabels,
+} from '@/types/enums';
 
 interface Proposal {
   id: string;
@@ -43,31 +49,6 @@ interface PublicVotePageClientProps {
   orgSlug: string;
   publicSlug: string;
 }
-
-// Mentions pour vote nuancé avec couleurs Material-UI
-const NUANCED_MENTIONS = {
-  '3_LEVELS': [
-    { value: 'GOOD', label: 'Bon', color: 'success' },
-    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'error' },
-  ],
-  '5_LEVELS': [
-    { value: 'EXCELLENT', label: 'Excellent', color: 'success' },
-    { value: 'GOOD', label: 'Bien', color: 'success' },
-    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'warning' },
-    { value: 'TO_REJECT', label: 'À rejeter', color: 'error' },
-  ],
-  '7_LEVELS': [
-    { value: 'EXCELLENT', label: 'Excellent', color: 'success' },
-    { value: 'VERY_GOOD', label: 'Très bien', color: 'success' },
-    { value: 'GOOD', label: 'Bien', color: 'success' },
-    { value: 'FAIRLY_GOOD', label: 'Assez bien', color: 'warning' },
-    { value: 'PASSABLE', label: 'Passable', color: 'warning' },
-    { value: 'INSUFFICIENT', label: 'Insuffisant', color: 'error' },
-    { value: 'TO_REJECT', label: 'À rejeter', color: 'error' },
-  ],
-} as const;
 
 export default function PublicVotePageClient({
   decision,
@@ -216,7 +197,7 @@ export default function PublicVotePageClient({
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         {/* En-tête */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -386,7 +367,7 @@ export default function PublicVotePageClient({
               {decision.decisionType === 'NUANCED_VOTE' && decision.nuancedScale && (
                 <Box sx={{ mb: 3 }}>
                   {decision.nuancedProposals.map((proposal) => {
-                    const mentions = NUANCED_MENTIONS[decision.nuancedScale as keyof typeof NUANCED_MENTIONS] || [];
+                    const mentionValues = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
                     return (
                       <Paper
                         key={proposal.id}
@@ -407,18 +388,33 @@ export default function PublicVotePageClient({
                           </Typography>
                         )}
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {mentions.map((mention) => (
-                            <Chip
-                              key={mention.value}
-                              label={mention.label}
-                              color={mention.color as any}
-                              variant={nuancedVotes[proposal.id] === mention.value ? 'filled' : 'outlined'}
-                              onClick={() =>
-                                setNuancedVotes({ ...nuancedVotes, [proposal.id]: mention.value })
-                              }
-                              sx={{ cursor: 'pointer' }}
-                            />
-                          ))}
+                          {mentionValues.map((mentionValue) => {
+                            const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mentionValue);
+                            const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mentionValue);
+                            const isSelected = nuancedVotes[proposal.id] === mentionValue;
+
+                            return (
+                              <Chip
+                                key={mentionValue}
+                                label={label}
+                                variant={isSelected ? 'filled' : 'outlined'}
+                                onClick={() =>
+                                  setNuancedVotes({ ...nuancedVotes, [proposal.id]: mentionValue })
+                                }
+                                sx={{
+                                  cursor: 'pointer',
+                                  backgroundColor: isSelected ? color : 'transparent',
+                                  borderColor: color,
+                                  color: isSelected ? '#fff' : color,
+                                  fontWeight: isSelected ? 600 : 400,
+                                  '&:hover': {
+                                    backgroundColor: isSelected ? color : `${color}22`,
+                                    opacity: 0.9,
+                                  },
+                                }}
+                              />
+                            );
+                          })}
                         </Box>
                       </Paper>
                     );
