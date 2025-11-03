@@ -230,6 +230,7 @@ export function isValidConsensusVoteValue(value: string): value is ConsensusVote
 export type DecisionLogEventType =
   // Cycle de vie
   | 'CREATED'                 // Décision créée
+  | 'LAUNCHED'                // Décision lancée
   | 'STATUS_CHANGED'          // Changement de statut
   | 'CLOSED'                  // Décision fermée
   | 'REOPENED'                // Décision rouverte
@@ -253,6 +254,7 @@ export type DecisionLogEventType =
 
 export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'CREATED',
+  'LAUNCHED',
   'STATUS_CHANGED',
   'CLOSED',
   'REOPENED',
@@ -271,6 +273,7 @@ export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
 
 export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = {
   CREATED: 'Décision créée',
+  LAUNCHED: 'Décision lancée',
   STATUS_CHANGED: 'Statut modifié',
   CLOSED: 'Décision fermée',
   REOPENED: 'Décision rouverte',

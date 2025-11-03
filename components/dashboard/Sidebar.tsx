@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import {
   Box,
   Drawer,
@@ -83,6 +84,10 @@ interface Organization {
     members: number
     decisions: number
   }
+  members?: Array<{
+    role: string
+    userId: string
+  }>
 }
 
 interface SidebarProps {
@@ -121,6 +126,7 @@ const getCompletedIcon = (decision: CompletedDecision) => {
 export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [open, setOpen] = useState(true)
   const [organization, setOrganization] = useState(currentOrgSlug || "")
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -134,6 +140,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
   const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const { refreshTrigger } = useSidebarRefresh()
   const decisionsContainerRef = useRef<HTMLDivElement>(null)
   const [maxDecisions, setMaxDecisions] = useState({ ongoing: 10, completed: 10 })
@@ -197,6 +204,23 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }, [refreshTrigger, organization, fetchDecisions])
 
+  // Mettre à jour le rôle de l'utilisateur dans l'organisation courante
+  useEffect(() => {
+    if (!organization || !session?.user?.id || organizations.length === 0) {
+      setCurrentUserRole(null)
+      return
+    }
+
+    const currentOrg = organizations.find((org) => org.slug === organization)
+    if (!currentOrg?.members) {
+      setCurrentUserRole(null)
+      return
+    }
+
+    const membership = currentOrg.members.find((m) => m.userId === session.user.id)
+    setCurrentUserRole(membership?.role || null)
+  }, [organization, session?.user?.id, organizations])
+
   // Calculer le nombre max de décisions affichables
   useEffect(() => {
     const calculateMaxDecisions = () => {
@@ -230,12 +254,8 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
     setOrganization(selectedSlug)
 
-    // Rediriger vers le dashboard si on change d'organisation
-    if (pathname === "/") {
-      // On est déjà sur le dashboard, pas besoin de rediriger
-    } else {
-      router.push("/")
-    }
+    // Rediriger vers la page de l'organisation pour forcer le rafraîchissement
+    router.push(`/organizations/${selectedSlug}`)
   }
 
   const handleLogout = () => {
@@ -642,12 +662,14 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             </ListItemIcon>
             <ListItemText>Modifier mon profil</ListItemText>
           </MenuItem>
-          <MenuItem onClick={handleOrganizationSettings} disabled={!organization}>
-            <ListItemIcon>
-              <AdminPanelSettings fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Paramètres de l&apos;organisation</ListItemText>
-          </MenuItem>
+          {(currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && (
+            <MenuItem onClick={handleOrganizationSettings} disabled={!organization}>
+              <ListItemIcon>
+                <AdminPanelSettings fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Paramètres de l&apos;organisation</ListItemText>
+            </MenuItem>
+          )}
           <MenuItem onClick={handleMembers} disabled={!organization}>
             <ListItemIcon>
               <Group fontSize="small" />

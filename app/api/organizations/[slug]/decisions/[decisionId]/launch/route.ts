@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import { logDecisionLaunched } from '@/lib/decision-logger';
 
 // POST /api/organizations/[slug]/decisions/[decisionId]/launch - Lance une décision
 export async function POST(
@@ -112,6 +113,9 @@ export async function POST(
         publicToken,
       },
     });
+
+    // Logger le lancement
+    await logDecisionLaunched(decisionId, session.user.id);
 
     // Mettre à jour tokenExpiresAt pour tous les participants externes
     await prisma.decisionParticipant.updateMany({

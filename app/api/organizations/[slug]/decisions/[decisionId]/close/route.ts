@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logDecisionClosed } from '@/lib/decision-logger';
 
 /**
  * PATCH /api/organizations/[slug]/decisions/[decisionId]/close
@@ -67,6 +68,9 @@ export async function PATCH(
         decidedAt: new Date(),
       },
     });
+
+    // Logger la clôture manuelle
+    await logDecisionClosed(decisionId, session.user.id, 'manual');
 
     return NextResponse.json({
       decision: updatedDecision,

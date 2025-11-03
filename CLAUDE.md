@@ -207,6 +207,11 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - This function is called after votes are submitted (in `VotePageClient.tsx`) to trigger an immediate sidebar update
 - The sidebar listens to the `refreshTrigger` state change to re-fetch decisions
 
+**Navigation & Permissions:**
+- Changing organization from the dropdown always redirects to `/organizations/[slug]` to ensure proper page refresh
+- The "Paramètres de l'organisation" menu option is only visible to users with OWNER or ADMIN role
+- User role is determined by checking the `OrganizationMember` relationship with the current organization
+
 ## Critical Architecture Details
 
 ### Database Schema & Enums
@@ -227,6 +232,7 @@ Type-safe enums are defined in `types/enums.ts` with corresponding validation he
 - `NuancedMention3`: 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' (mentions pour 3 niveaux)
 - `NuancedMention5`: 'EXCELLENT' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'TO_REJECT' (mentions pour 5 niveaux)
 - `NuancedMention7`: 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'VERY_INSUFFICIENT' | 'TO_REJECT' (mentions pour 7 niveaux)
+- `DecisionLogEventType`: 'CREATED' | 'LAUNCHED' | 'STATUS_CHANGED' | 'CLOSED' | 'REOPENED' | 'TITLE_UPDATED' | 'DESCRIPTION_UPDATED' | 'CONTEXT_UPDATED' | 'DEADLINE_UPDATED' | 'PROPOSAL_AMENDED' | 'CONCLUSION_ADDED' | 'PARTICIPANT_ADDED' | 'PARTICIPANT_REMOVED' | 'VOTE_RECORDED' | 'VOTE_UPDATED' | 'COMMENT_ADDED' (types d'événements pour l'historique des décisions)
 
 When working with these values:
 1. Import types from `types/enums.ts`, NOT from `@prisma/client`
@@ -270,6 +276,45 @@ Vote weights are defined in `getVoteWeight()`:
 - ABSTAIN: 0
 - WEAK_OPPOSE: -1, OPPOSE: -2, STRONG_OPPOSE: -3
 - BLOCK: -10 (only valid in CONSENT decisions)
+
+### Decision Audit Trail (DecisionLog)
+
+The application maintains a comprehensive audit trail of all decision-related events in the `DecisionLog` table. Logging is handled by the `lib/decision-logger.ts` module.
+
+**Events Currently Logged:**
+
+| Event Category | Event Type | When Logged | Includes Actor Info |
+|----------------|------------|-------------|---------------------|
+| **Lifecycle** | CREATED | Decision creation | ✓ Yes |
+| | LAUNCHED | Decision launched (manual or auto) | ✓ Yes |
+| | CLOSED | Decision closed (manual or automatic) | ✓ Yes (+ reason in metadata) |
+| **Modifications** | TITLE_UPDATED | Title changed | ✓ Yes (+ old/new values) |
+| | DESCRIPTION_UPDATED | Description changed | ✓ Yes |
+| | DEADLINE_UPDATED | End date changed | ✓ Yes (+ old/new values) |
+| | PROPOSAL_AMENDED | Proposal amended (CONSENSUS only) | ✓ Yes |
+| | CONCLUSION_ADDED | Conclusion added | ✓ Yes |
+| **Votes** | VOTE_RECORDED | New vote submitted | Depends on decision type* |
+| | VOTE_UPDATED | Vote modified | Depends on decision type* |
+| **Comments** | COMMENT_ADDED | Comment posted | ✓ Yes (authenticated users only) |
+
+**Vote Logging by Decision Type & Voting Mode:**
+- **CONSENSUS** (authenticated): Logs actor name, email, and vote value (AGREE/DISAGREE) in metadata
+- **MAJORITY/NUANCED_VOTE** (authenticated): Logs anonymously (no actor information, for privacy)
+- **PUBLIC_LINK** (anonymous voting): Logs anonymously with message "Un vote a été enregistré" (no IP or user data)
+- **INVITED with external participants**: Not currently logged (see DECISIONLOG_ANALYSIS.md for improvement recommendations)
+
+**Automatic Closure Logging:**
+When a decision is automatically closed (via results page access), the `reason` is stored in metadata:
+- `'deadline_reached'`: The end date was reached
+- `'all_voted'`: All participants have voted
+- `'manual'`: Creator manually closed the decision
+
+**Access to Logs:**
+- Logs are accessible via `GET /api/organizations/[slug]/decisions/[decisionId]/history`
+- Only organization members can access decision history
+- Logs are displayed in reverse chronological order (most recent first)
+
+**Note:** See `/DECISIONLOG_ANALYSIS.md` for a comprehensive analysis of logging coverage and recommendations for future improvements.
 
 ### Authentication Flow
 

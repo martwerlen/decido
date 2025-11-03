@@ -64,9 +64,9 @@ export default function LoginPage() {
           </Typography>
           <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
             Ou{" "}
-            <Link href="/auth/signup" passHref legacyBehavior>
-              <MuiLink>créez un nouveau compte</MuiLink>
-            </Link>
+            <MuiLink component={Link} href="/auth/signup">
+              créez un nouveau compte
+            </MuiLink>
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
