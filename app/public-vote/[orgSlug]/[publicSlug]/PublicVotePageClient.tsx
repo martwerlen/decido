@@ -197,7 +197,7 @@ export default function PublicVotePageClient({
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         {/* En-tête */}
         <Card sx={{ mb: 3 }}>
           <CardContent>

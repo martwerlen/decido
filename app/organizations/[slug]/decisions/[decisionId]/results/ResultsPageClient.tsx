@@ -393,10 +393,26 @@ export default function ResultsPageClient({
                                 );
                               })}
                           </div>
-                          {/* Ligne verticale médiane à 50% */}
+                          {/* Lignes verticales médianes à 50% avec gap */}
+                          {/* Ligne du haut */}
                           <div
-                            className="absolute top-0 h-full w-0.5"
+                            className="absolute w-0.5"
                             style={{
+                              top: '-3px',
+                              height: '6px',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              borderLeft: '2px dashed #000',
+                              opacity: 0.3,
+                              pointerEvents: 'none',
+                            }}
+                          />
+                          {/* Ligne du bas */}
+                          <div
+                            className="absolute w-0.5"
+                            style={{
+                              top: 'calc(100% - 3px)',
+                              height: '6px',
                               left: '50%',
                               transform: 'translateX(-50%)',
                               borderLeft: '2px dashed #000',
@@ -409,6 +425,11 @@ export default function ResultsPageClient({
                         {/* Légende détaillée */}
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           {Object.entries(result.mentionProfile)
+                            .filter(([mention]) => {
+                              // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
+                              const validMentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                              return validMentions.includes(mention);
+                            })
                             .sort((a, b) => {
                               const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
                               return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
@@ -515,10 +536,26 @@ export default function ResultsPageClient({
                             );
                           })}
                       </div>
-                      {/* Ligne verticale médiane à 50% */}
+                      {/* Lignes verticales médianes à 50% avec gap */}
+                      {/* Ligne du haut */}
                       <div
-                        className="absolute top-0 h-full w-0.5"
+                        className="absolute w-0.5"
                         style={{
+                          top: '-3px',
+                          height: '6px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          borderLeft: '2px dashed #000',
+                          opacity: 0.3,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                      {/* Ligne du bas */}
+                      <div
+                        className="absolute w-0.5"
+                        style={{
+                          top: 'calc(100% - 3px)',
+                          height: '6px',
                           left: '50%',
                           transform: 'translateX(-50%)',
                           borderLeft: '2px dashed #000',
@@ -531,6 +568,11 @@ export default function ResultsPageClient({
                     {/* Légende détaillée */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {Object.entries(result.mentionProfile)
+                        .filter(([mention]) => {
+                          // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
+                          const validMentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                          return validMentions.includes(mention);
+                        })
                         .sort((a, b) => {
                           const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
                           return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
