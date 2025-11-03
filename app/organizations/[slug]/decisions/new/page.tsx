@@ -238,7 +238,7 @@ export default function NewDecisionPage({
       <h1 className="text-3xl font-bold mb-6">Nouvelle décision</h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="px-4 py-3 rounded mb-4" style={{ backgroundColor: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)' }}>
           {error}
         </div>
       )}
@@ -319,7 +319,7 @@ export default function NewDecisionPage({
 
           {/* Champ publicSlug si mode PUBLIC_LINK */}
           {formData.votingMode === 'PUBLIC_LINK' && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-primary-lighter)', border: '1px solid var(--color-primary-light)' }}>
               <label htmlFor="publicSlug" className="block font-medium mb-2">
                 Slug pour l'URL publique *
               </label>
@@ -464,7 +464,10 @@ export default function NewDecisionPage({
                 <button
                   type="button"
                   onClick={addMajorityProposal}
-                  className="mt-3 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                  className="mt-3 px-4 py-2 border rounded-lg"
+                  style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   + Ajouter une proposition
                 </button>
@@ -577,7 +580,10 @@ export default function NewDecisionPage({
                 <button
                   type="button"
                   onClick={addNuancedProposal}
-                  className="mt-3 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                  className="mt-3 px-4 py-2 border rounded-lg"
+                  style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   + Ajouter une proposition
                 </button>
@@ -617,7 +623,10 @@ export default function NewDecisionPage({
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+            onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
           >
             {loading ? 'Création...' : 'Créer et configurer'}
           </button>

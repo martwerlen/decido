@@ -211,7 +211,7 @@ export default async function OrganizationDashboard({
           <h2 className="text-2xl font-semibold">
             En cours
             {myActiveDecisions.length > 0 && (
-              <span className="ml-2 text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
+              <span className="ml-2 text-sm px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--color-accent-light)', color: 'var(--color-accent)' }}>
                 {myActiveDecisions.length}
               </span>
             )}
@@ -244,12 +244,12 @@ export default async function OrganizationDashboard({
                           {decision.title}
                         </Link>
                         {!hasVoted && (
-                          <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium">
+                          <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }}>
                             Action requise
                           </span>
                         )}
                         {hasVoted && (
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
+                          <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}>
                             ✓ Vous avez participé
                           </span>
                         )}
@@ -258,7 +258,7 @@ export default async function OrganizationDashboard({
                       <p className="text-gray-600 text-sm mb-3">{decision.description}</p>
 
                       <div className="flex gap-3 text-sm text-gray-500">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
                           {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
                         </span>
                         {decision.team && (
@@ -343,7 +343,7 @@ export default async function OrganizationDashboard({
                     <p className="text-gray-600 text-sm mb-3">{decision.description}</p>
 
                     <div className="flex gap-3 text-sm text-gray-500">
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
                         {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
                       </span>
                       {decision.team && (
@@ -404,19 +404,19 @@ export default async function OrganizationDashboard({
                     </Link>
 
                     <div className="flex gap-2 mt-2 text-xs">
-                      <span className="bg-gray-100 px-2 py-1 rounded">
+                      <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
                         {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
                       </span>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
                         {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
                       </span>
                       {decision.result && (
                         <span
-                          className={`px-2 py-1 rounded font-medium ${
-                            decision.result === 'APPROVED'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                          className="px-2 py-1 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: decision.result === 'APPROVED' ? 'var(--color-success)' : 'var(--color-error)',
+                            color: 'white'
+                          }}
                         >
                           {decision.result === 'APPROVED' ? 'Approuvée' : 'Rejetée'}
                         </span>

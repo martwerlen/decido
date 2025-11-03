@@ -367,7 +367,10 @@ export default function DecisionAdminClient({
                   <button
                     onClick={handleUpdateAmendedProposal}
                     disabled={loading}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
                   >
                     Mettre à jour la proposition amendée
                   </button>
@@ -543,7 +546,10 @@ export default function DecisionAdminClient({
             <button
               onClick={handleAddParticipants}
               disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
             >
               Ajouter les participants
             </button>
@@ -570,7 +576,10 @@ export default function DecisionAdminClient({
             <button
               onClick={handleUpdateConclusion}
               disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
             >
               Enregistrer la conclusion
             </button>
