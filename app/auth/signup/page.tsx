@@ -1,26 +1,39 @@
 import Link from "next/link"
 import SignUpForm from "@/components/auth/SignUpForm"
+import { Box, Container, Typography, Card, CardContent, Link as MuiLink } from "@mui/material"
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        py: 6,
+        px: 2,
+      }}
+    >
+      <Container maxWidth="sm">
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h2" fontWeight="bold" gutterBottom>
             Créer un compte Decidoo
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
             Ou{" "}
-            <Link href="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500">
+            <MuiLink component={Link} href="/auth/signin" color="primary" fontWeight="500">
               connectez-vous à votre compte existant
-            </Link>
-          </p>
-        </div>
+            </MuiLink>
+          </Typography>
+        </Box>
 
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <SignUpForm />
-        </div>
-      </div>
-    </div>
+        <Card>
+          <CardContent sx={{ p: 4 }}>
+            <SignUpForm />
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   )
 }

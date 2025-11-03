@@ -81,7 +81,10 @@ export default async function DecisionsPage({
         </div>
         <Link
           href={`/organizations/${slug}/decisions/new`}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="text-white px-4 py-2 rounded-lg"
+          style={{ backgroundColor: 'var(--color-primary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
         >
           Nouvelle décision
         </Link>

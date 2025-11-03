@@ -42,6 +42,7 @@ import {
   MoreHoriz,
   QrCode2,
 } from "@mui/icons-material"
+import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { useSidebarRefresh } from "@/components/providers/SidebarRefreshProvider"
 
@@ -315,18 +316,16 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
         >
           {open ? (
             <>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                DECIDOO
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", height: 40 }}>
+                <Image
+                  src="/logo.svg"
+                  alt="Decidoo"
+                  width={150}
+                  height={40}
+                  style={{ objectFit: "contain" }}
+                  priority
+                />
+              </Box>
               <IconButton onClick={(e) => {
                 e.stopPropagation();
                 handleDrawerToggle();

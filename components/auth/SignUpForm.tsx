@@ -2,6 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import {
+  Box,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Typography,
+} from "@mui/material"
 
 export default function SignUpForm() {
   const router = useRouter()
@@ -57,82 +65,73 @@ export default function SignUpForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <Alert severity="error">
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-          Nom
-        </label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isLoading}
-        />
-      </div>
+      <TextField
+        id="name"
+        label="Nom"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        fullWidth
+        disabled={isLoading}
+      />
 
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isLoading}
-        />
-      </div>
+      <TextField
+        id="email"
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        fullWidth
+        disabled={isLoading}
+      />
 
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Mot de passe
-        </label>
-        <input
+      <Box>
+        <TextField
           id="password"
+          label="Mot de passe"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={8}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          fullWidth
           disabled={isLoading}
+          inputProps={{ minLength: 8 }}
         />
-        <p className="text-xs text-gray-500 mt-1">Au moins 8 caractères</p>
-      </div>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Au moins 8 caractères
+        </Typography>
+      </Box>
 
-      <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-          Confirmer le mot de passe
-        </label>
-        <input
-          id="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isLoading}
-        />
-      </div>
-
-      <button
-        type="submit"
+      <TextField
+        id="confirmPassword"
+        label="Confirmer le mot de passe"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+        fullWidth
         disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+
+      <Button
+        type="submit"
+        variant="contained"
+        size="large"
+        fullWidth
+        disabled={isLoading}
+        startIcon={isLoading ? <CircularProgress size={20} /> : null}
       >
         {isLoading ? "Inscription..." : "S'inscrire"}
-      </button>
-    </form>
+      </Button>
+    </Box>
   )
 }

@@ -31,6 +31,66 @@ npm run db:studio          # Open Prisma Studio (database GUI)
 - **Auth**: NextAuth.js v5 (beta) with JWT strategy
 - **Email**: Resend (for invitations)
 
+### Visual Identity & Design System
+
+**Brand Assets:**
+- Logo: `/public/logo.svg` (Decidoo logo with the two "o"s in brand colors)
+- Favicon: `/public/favicon.png`
+
+**Typography:**
+- Font family: Poppins (via Next.js Font Optimization)
+- Weights: 300 (Light), 400 (Regular), 500 (Medium), 600 (SemiBold), 700 (Bold)
+- Font variable: `--font-poppins` (configured in `app/layout.tsx`)
+
+**Color Palette (Light Mode):**
+- **Primary (Vert Nature):** `#4a7c59` - Main brand color for CTAs, logos
+- **Secondary (Orange Terre):** `#d4896b` - Warm accents
+- **Accent (Rouge Doux):** `#cb6e5e` - Priority decisions, soft alerts
+- **Text Primary:** `#2d3a2d` - Main text (dark green)
+- **Text Secondary:** `#5a6d5a` - Secondary text
+- **Background Primary:** `#ffffff` - Main background
+- **Background Secondary:** `#f9faf9` - Cards, paper
+- **Borders:** `#e5ebe5` (light), `#d0d8d0` (medium)
+
+**Color Palette (Dark Mode):**
+- **Primary:** `#5da370` - Slightly brighter green for dark backgrounds
+- **Secondary:** `#e5a484` - Warmer orange for better contrast
+- **Accent:** `#d88777` - Soft red adapted for dark mode
+- **Text Primary:** `#e8ede8` - Light text
+- **Text Secondary:** `#b8c4b8` - Muted light text
+- **Background Primary:** `#1a2520` - Deep green-tinted dark background
+- **Background Secondary:** `#243329` - Slightly lighter dark surface
+- **Borders:** `#3d4f45` (light), `#4a5d52` (medium)
+
+**Design System Implementation:**
+1. **CSS Variables:** All colors are defined as CSS custom properties in `app/globals.css`
+   - Light mode: `:root { --color-primary: #4a7c59; ... }`
+   - Dark mode: `[data-theme="dark"] { --color-primary: #5da370; ... }`
+
+2. **Tailwind Configuration:** Colors exposed via Tailwind classes in `tailwind.config.ts`
+   - Usage: `bg-primary`, `text-primary`, `border-light`, etc.
+
+3. **Material-UI Theme:** Complete theme configuration in `components/providers/ThemeProvider.tsx`
+   - Customized components: Button, Card, Paper, TextField, Chip
+   - Typography variants with Poppins font
+   - Automatic dark mode support via `DarkModeProvider`
+
+**Dark Mode System:**
+- Provider: `components/providers/DarkModeProvider.tsx`
+- Hook: `useDarkMode()` - provides `{ isDarkMode, toggleDarkMode, setDarkMode }`
+- Storage: User preference saved in localStorage
+- Toggle: Available in user profile settings (`/settings/profile`)
+- Theme attribute: `data-theme="dark"` applied to `<html>` element
+
+**Component Styling Best Practices:**
+- Use Material-UI components for consistency (Button, Card, TextField, etc.)
+- Prefer MUI theme colors over hardcoded values
+- For custom components, use Tailwind with theme colors
+- Typography: Use MUI Typography component with proper variants
+- Buttons: Primary (contained), Secondary (outlined), Accent (for important actions)
+- Cards: 12px border-radius, 2px solid border, subtle shadow
+- Spacing: Consistent use of MUI spacing units (multiples of 8px)
+
 ### Key Directories
 ```
 app/                      # Next.js App Router

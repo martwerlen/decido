@@ -3,21 +3,98 @@
 @tailwind utilities;
 
 :root {
+  /* Decidoo Brand Colors - Light Mode */
+
+  /* Primary Colors */
+  --color-primary: #4a7c59;
+  --color-primary-light: #5da370;
+  --color-primary-lighter: #a8c9a8;
+  --color-primary-dark: #3d6449;
+
+  /* Secondary Colors */
+  --color-secondary: #d4896b;
+  --color-secondary-light: #efb49a;
+
+  /* Accent Colors */
+  --color-accent: #cb6e5e;
+  --color-accent-light: #eac5be;
+
+  /* Neutral Colors */
+  --color-text-primary: #2d3a2d;
+  --color-text-secondary: #5a6d5a;
+  --color-text-tertiary: #7a8a7a;
+  --color-text-light: #9a9a9a;
+
+  /* Background Colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9faf9;
+  --color-bg-tertiary: #f5f7f5;
+  --color-bg-accent: #e8ede8;
+
+  /* Border Colors */
+  --color-border-light: #e5ebe5;
+  --color-border-medium: #d0d8d0;
+
+  /* Semantic Colors */
+  --color-success: #4a7c59;
+  --color-warning: #d4896b;
+  --color-error: #cb6e5e;
+  --color-info: #5a6d5a;
+
+  /* Base variables for compatibility */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #2d3a2d;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="dark"] {
+  /* Decidoo Brand Colors - Dark Mode */
+
+  /* Primary Colors */
+  --color-primary: #5da370;
+  --color-primary-light: #72b585;
+  --color-primary-lighter: #6b9474;
+  --color-primary-dark: #4a7c59;
+
+  /* Secondary Colors */
+  --color-secondary: #e5a484;
+  --color-secondary-light: #f0c0a8;
+
+  /* Accent Colors */
+  --color-accent: #d88777;
+  --color-accent-light: #e0a79c;
+
+  /* Neutral Colors */
+  --color-text-primary: #e8ede8;
+  --color-text-secondary: #b8c4b8;
+  --color-text-tertiary: #8a9a8a;
+  --color-text-light: #6a7a6a;
+
+  /* Background Colors */
+  --color-bg-primary: #1a2520;
+  --color-bg-secondary: #243329;
+  --color-bg-tertiary: #2d3f35;
+  --color-bg-accent: #354740;
+
+  /* Border Colors */
+  --color-border-light: #3d4f45;
+  --color-border-medium: #4a5d52;
+
+  /* Semantic Colors */
+  --color-success: #5da370;
+  --color-warning: #e5a484;
+  --color-error: #d88777;
+  --color-info: #8a9a8a;
+
+  /* Base variables for compatibility */
+  --background: #1a2520;
+  --foreground: #e8ede8;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @layer utilities {

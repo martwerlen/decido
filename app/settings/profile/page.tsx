@@ -13,11 +13,16 @@ import {
   Alert,
   CircularProgress,
   IconButton,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   PhotoCamera,
   Person as PersonIcon,
+  Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
+import { useDarkMode } from '@/components/providers/DarkModeProvider';
 
 interface UserProfile {
   id: string;
@@ -30,6 +35,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { data: session, update } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -343,6 +349,27 @@ export default function ProfilePage() {
             disabled
             helperText="L'email ne peut pas être modifié"
           />
+
+          {/* Dark Mode Toggle */}
+          <Box sx={{ mt: 3, mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {isDarkMode ? <DarkModeIcon /> : <LightModeIcon />}
+              Apparence
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isDarkMode}
+                  onChange={toggleDarkMode}
+                  color="primary"
+                />
+              }
+              label={isDarkMode ? "Mode sombre activé" : "Mode clair activé"}
+            />
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+              Changez l&apos;apparence de l&apos;interface selon vos préférences
+            </Typography>
+          </Box>
 
           <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
             <Button

@@ -181,7 +181,7 @@ export default function ResultsPageClient({
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-2xl">🏆</span>
                           <span className="font-bold text-lg">{result.proposal.title}</span>
-                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                          <span className="text-white px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-success)' }}>
                             GAGNANT
                           </span>
                         </div>
@@ -198,7 +198,8 @@ export default function ResultsPageClient({
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
                       <div
-                        className="h-3 rounded-full bg-green-600 transition-all"
+                        className="h-3 rounded-full transition-all"
+                        style={{ backgroundColor: 'var(--color-success)' }}
                         style={{ width: `${result.percentage}%` }}
                       />
                     </div>
@@ -281,7 +282,8 @@ export default function ResultsPageClient({
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
                         <div
-                          className="h-3 rounded-full bg-blue-600 transition-all"
+                          className="h-3 rounded-full transition-all"
+                          style={{ backgroundColor: 'var(--color-primary)' }}
                           style={{ width: `${result.percentage}%` }}
                         />
                       </div>
@@ -513,7 +515,7 @@ export default function ResultsPageClient({
             <h2 className="text-xl font-semibold mb-4">Résultat du vote</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <div className="rounded-lg p-4 text-center" style={{ backgroundColor: 'var(--color-success)', opacity: 0.1, border: '1px solid var(--color-success)' }}>
                 <div className="text-3xl font-bold text-green-700">{agreeCount}</div>
                 <div className="text-sm text-green-600">D'accord</div>
               </div>
