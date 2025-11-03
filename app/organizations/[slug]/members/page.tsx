@@ -37,6 +37,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import UserAvatar from '@/components/common/UserAvatar';
 
 interface Member {
   id: string;
@@ -46,6 +47,7 @@ interface Member {
     id: string;
     name: string;
     email: string;
+    image?: string | null;
   };
 }
 
@@ -347,7 +349,12 @@ export default function OrganizationMembersPage() {
             <TableBody>
               {data?.members.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell>{member.user.name}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <UserAvatar user={member.user} size="small" />
+                      <span>{member.user.name}</span>
+                    </Box>
+                  </TableCell>
                   <TableCell>{member.user.email}</TableCell>
                   <TableCell>
                     <Chip

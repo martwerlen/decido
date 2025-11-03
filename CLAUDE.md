@@ -541,6 +541,80 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
 
+### Draft Auto-Save System
+
+The application supports automatic saving of decision drafts to prevent data loss and allow users to work on decisions over multiple sessions.
+
+**Key Features:**
+- **Auto-save on blur**: All form fields automatically save 500ms after the user leaves the field (onBlur event)
+- **Manual save button**: "Enregistrer en brouillon" button allows explicit saves
+- **Visual feedback**: Real-time save indicator showing "Sauvegarde..." during save and "Sauvegardé automatiquement à [time]" after completion
+- **Multiple drafts**: Users can have multiple draft decisions simultaneously
+- **Navigation warning**: Browser prompts user before leaving page if there are unsaved changes
+- **Dashboard section**: "Brouillons" section displays all user's drafts with Continue and Delete actions
+
+**Technical Implementation:**
+
+1. **API Endpoints:**
+   - `POST /api/organizations/[slug]/decisions` - Creates a new draft with `status='DRAFT'` (unless `votingMode='PUBLIC_LINK'`)
+   - `PATCH /api/organizations/[slug]/decisions/[decisionId]` - Updates an existing draft
+     - Only works for decisions with `status='DRAFT'`
+     - Only the creator can update their draft
+     - Supports `autoSave` flag to skip audit logging for auto-saves
+     - Can update all decision fields: title, description, context, decisionType, endDate, votingMode, publicSlug, etc.
+
+2. **Creation Page (`app/organizations/[slug]/decisions/new/page.tsx`):**
+   - State tracking:
+     - `draftId`: ID of the created draft (null until first save)
+     - `lastSavedAt`: Timestamp of last successful save
+     - `isSaving`: Boolean flag during save operations
+     - `hasUnsavedChanges`: Tracks if changes exist since last save
+   - Auto-save logic:
+     - Triggered by `onBlur` events on all input fields
+     - Debounced with 500ms delay to avoid excessive API calls
+     - First save creates a new draft, subsequent saves update the existing draft
+   - Form submission:
+     - If `draftId` exists: Saves any pending changes and redirects to admin/share page
+     - If no `draftId`: Creates new decision (normal flow)
+
+3. **Dashboard Integration (`app/organizations/[slug]/page.tsx`):**
+   - Query fetches all drafts where:
+     - `organizationId` matches current organization
+     - `status = 'DRAFT'`
+     - `creatorId` matches current user
+   - Drafts displayed in dedicated "Brouillons" section (before "En cours" section)
+   - Each draft shows:
+     - Title (or "Brouillon sans titre" if empty)
+     - Description preview (truncated)
+     - Decision type and voting mode
+     - Last modification time ("Modifié il y a X")
+     - **Continue** button → redirects to `/organizations/[slug]/decisions/[draftId]/admin`
+     - **Delete** button → calls `DELETE /api/organizations/[slug]/decisions/[draftId]`
+
+4. **Draft Card Component (`components/dashboard/DraftCard.tsx`):**
+   - Client component handling delete functionality
+   - Confirmation dialog before deletion
+   - Automatic page refresh after successful deletion
+   - Time-ago display helper for showing relative modification time
+
+**User Workflow:**
+1. User navigates to "Nouvelle décision" page
+2. User starts filling in decision details
+3. Upon leaving any field (onBlur), auto-save creates/updates draft after 500ms
+4. Visual indicator shows "Sauvegardé automatiquement à [time]"
+5. User can:
+   - Click "Enregistrer en brouillon" to save explicitly
+   - Click "Créer et configurer" to finalize and proceed
+   - Navigate away (browser warns if unsaved changes)
+   - Return later from dashboard's "Brouillons" section
+
+**Important Notes:**
+- Drafts are automatically created on first field blur (requires at least a title)
+- Only the decision creator can see and manage their drafts
+- Drafts can only be deleted if `status='DRAFT'` (enforced by API)
+- Auto-saves use `autoSave: true` flag to prevent audit log clutter
+- Manual saves and form submission trigger full audit logging
+
 ### Invitation System
 
 Members are invited via email using Resend:

@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
+import UserAvatar from '@/components/common/UserAvatar';
+import DraftCard from '@/components/dashboard/DraftCard';
 
 export default async function OrganizationDashboard({
   params,
@@ -39,6 +41,27 @@ export default async function OrganizationDashboard({
     redirect('/');
   }
 
+  // Récupérer les brouillons créés par l'utilisateur
+  const draftDecisions = await prisma.decision.findMany({
+    where: {
+      organizationId: organization.id,
+      status: 'DRAFT',
+      creatorId: session.user.id,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      decisionType: true,
+      votingMode: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: {
+      updatedAt: 'desc',
+    },
+  });
+
   // Récupérer les décisions en cours où l'utilisateur est invité (mode INVITED uniquement)
   const myActiveDecisions = await prisma.decision.findMany({
     where: {
@@ -65,6 +88,7 @@ export default async function OrganizationDashboard({
           id: true,
           name: true,
           email: true,
+          image: true,
         },
       },
       team: {
@@ -118,6 +142,7 @@ export default async function OrganizationDashboard({
           id: true,
           name: true,
           email: true,
+          image: true,
         },
       },
       team: {
@@ -177,6 +202,7 @@ export default async function OrganizationDashboard({
           id: true,
           name: true,
           email: true,
+          image: true,
         },
       },
       team: {
@@ -204,6 +230,29 @@ export default async function OrganizationDashboard({
         <h1 className="text-3xl font-bold">{organization.name}</h1>
         <p className="text-gray-600 mt-2">Actualités et décisions</p>
       </div>
+
+      {/* Brouillons */}
+      {draftDecisions.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-2xl font-semibold">
+              Brouillons
+              <span className="ml-2 text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                {draftDecisions.length}
+              </span>
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Décisions en cours de création que vous pourrez finaliser et lancer
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            {draftDecisions.map((draft) => (
+              <DraftCard key={draft.id} draft={draft} orgSlug={slug} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Décisions en cours (INVITED mode) */}
       <section className="mb-8">
@@ -281,6 +330,12 @@ export default async function OrganizationDashboard({
                         {decision._count.votes > 0 && (
                           <span>{decision._count.votes} votes</span>
                         )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                        <span>Créée par</span>
+                        <UserAvatar user={decision.creator} size="small" />
+                        <span>{decision.creator.name}</span>
                       </div>
                     </div>
 
@@ -364,6 +419,12 @@ export default async function OrganizationDashboard({
                         URL : /public-vote/{slug}/{decision.publicSlug}
                       </span>
                     </div>
+
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <span>Créée par</span>
+                      <UserAvatar user={decision.creator} size="small" />
+                      <span>{decision.creator.name}</span>
+                    </div>
                   </div>
 
                   <Link
@@ -421,6 +482,12 @@ export default async function OrganizationDashboard({
                           {decision.result === 'APPROVED' ? 'Approuvée' : 'Rejetée'}
                         </span>
                       )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <span>Créée par</span>
+                      <UserAvatar user={decision.creator} size="small" />
+                      <span>{decision.creator.name}</span>
                     </div>
                   </div>
 

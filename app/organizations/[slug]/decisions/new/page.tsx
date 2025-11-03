@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   DecisionTypeLabels,
@@ -8,9 +8,18 @@ import {
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
+import { Tooltip, IconButton, CircularProgress } from '@mui/material';
+import { InfoOutlined, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 
 type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
+
+// Descriptions courtes pour les tooltips
+const DecisionTypeTooltips: Record<DecisionType, string> = {
+  CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
+  MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
+  NUANCED_VOTE: "Voter chacun pour toutes les propositions et la proposition avec le plus de partisans l'emporte",
+};
 
 interface NuancedProposal {
   title: string;
@@ -55,6 +64,13 @@ export default function NewDecisionPage({
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
 
+  // Auto-save state
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Normaliser et valider le slug
   const normalizeSlug = (input: string): string => {
     return input
@@ -87,12 +103,121 @@ export default function NewDecisionPage({
     }
   };
 
+  // Auto-save draft
+  const saveDraft = async (isManual = false) => {
+    // Ne sauvegarder que si on a au moins un titre
+    if (!formData.title.trim()) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (!draftId) {
+        // Créer un nouveau brouillon
+        const body: any = { ...formData };
+        if (formData.decisionType === 'NUANCED_VOTE') {
+          body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
+        } else if (formData.decisionType === 'MAJORITY') {
+          body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
+        }
+
+        const response = await fetch(`/api/organizations/${slug}/decisions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setDraftId(data.decision.id);
+          setLastSavedAt(new Date());
+          setHasUnsavedChanges(false);
+        }
+      } else {
+        // Mettre à jour le brouillon existant
+        const body: any = {
+          ...formData,
+          autoSave: !isManual, // Permet de désactiver le logging pour l'auto-save
+        };
+
+        const response = await fetch(`/api/organizations/${slug}/decisions/${draftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (response.ok) {
+          setLastSavedAt(new Date());
+          setHasUnsavedChanges(false);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving draft:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Sauvegarder manuellement
+  const handleManualSave = async () => {
+    await saveDraft(true);
+  };
+
+  // Auto-save onBlur avec debounce
+  const handleFieldBlur = () => {
+    setHasUnsavedChanges(true);
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save (500ms debounce)
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft(false);
+    }, 500);
+  };
+
+  // Warning avant de quitter si modifications non sauvegardées
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Si un brouillon existe déjà, sauvegarder les dernières modifications et rediriger
+      if (draftId) {
+        // Sauvegarder d'abord si nécessaire
+        if (hasUnsavedChanges) {
+          await saveDraft(true);
+        }
+
+        // Actualiser la sidebar
+        refreshSidebar();
+
+        // Rediriger selon le mode de vote
+        if (formData.votingMode === 'PUBLIC_LINK') {
+          router.push(`/organizations/${slug}/decisions/${draftId}/share`);
+        } else {
+          router.push(`/organizations/${slug}/decisions/${draftId}/admin`);
+        }
+        return;
+      }
+
+      // Sinon, créer une nouvelle décision (comportement normal)
+
       // Validation du mode PUBLIC_LINK
       if (formData.votingMode === 'PUBLIC_LINK') {
         if (!formData.publicSlug || formData.publicSlug.length < 3) {
@@ -235,7 +360,25 @@ export default function NewDecisionPage({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6">Nouvelle décision</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Nouvelle décision</h1>
+
+        {/* Indicateur de sauvegarde */}
+        <div className="flex items-center gap-2">
+          {isSaving && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <CircularProgress size={16} />
+              <span>Sauvegarde...</span>
+            </div>
+          )}
+          {!isSaving && lastSavedAt && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircleIcon fontSize="small" />
+              <span>Sauvegardé automatiquement à {lastSavedAt.toLocaleTimeString()}</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="px-4 py-3 rounded mb-4" style={{ backgroundColor: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)' }}>
@@ -255,6 +398,7 @@ export default function NewDecisionPage({
             required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ex: Choix du nouveau logo"
           />
@@ -271,6 +415,7 @@ export default function NewDecisionPage({
             rows={4}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Décrivez le contexte et l'objet de la décision..."
           />
@@ -337,6 +482,7 @@ export default function NewDecisionPage({
                     setSlugAvailable(null);
                   }
                 }}
+                onBlur={handleFieldBlur}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="mon-vote-2024"
                 minLength={3}
@@ -365,9 +511,20 @@ export default function NewDecisionPage({
 
         {/* Type de décision */}
         <div>
-          <label className="block font-medium mb-2">
-            Modalité décisionnelle *
-          </label>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="block font-medium">
+              Modalité décisionnelle *
+            </label>
+            <Tooltip
+              title={`Les modalités disponibles : ${Object.entries(DecisionTypeTooltips).map(([key, value]) => `${DecisionTypeLabels[key as DecisionType]}: ${value}`).join(' • ')}`}
+              arrow
+              placement="right"
+            >
+              <IconButton size="small" sx={{ p: 0.5 }}>
+                <InfoOutlined fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </div>
           <div className="space-y-3">
             <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
               <input
@@ -445,6 +602,7 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateMajorityProposal(index, 'title', e.target.value)}
+                        onBlur={handleFieldBlur}
                         placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
@@ -452,6 +610,7 @@ export default function NewDecisionPage({
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateMajorityProposal(index, 'description', e.target.value)}
+                        onBlur={handleFieldBlur}
                         placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -488,6 +647,7 @@ export default function NewDecisionPage({
               rows={4}
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
+              onBlur={handleFieldBlur}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Décrivez votre proposition initiale pour le consensus..."
             />
@@ -508,6 +668,7 @@ export default function NewDecisionPage({
                 id="nuancedScale"
                 value={formData.nuancedScale}
                 onChange={(e) => setFormData({ ...formData, nuancedScale: e.target.value as NuancedScale })}
+                onBlur={handleFieldBlur}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Pour / Sans avis / Contre)</option>
@@ -528,6 +689,7 @@ export default function NewDecisionPage({
                 max="25"
                 value={formData.nuancedWinnerCount}
                 onChange={(e) => setFormData({ ...formData, nuancedWinnerCount: parseInt(e.target.value) || 1 })}
+                onBlur={handleFieldBlur}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-600 mt-1">
@@ -561,6 +723,7 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateNuancedProposal(index, 'title', e.target.value)}
+                        onBlur={handleFieldBlur}
                         placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
@@ -568,6 +731,7 @@ export default function NewDecisionPage({
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateNuancedProposal(index, 'description', e.target.value)}
+                        onBlur={handleFieldBlur}
                         placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -604,6 +768,7 @@ export default function NewDecisionPage({
             min={minDateString}
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-sm text-gray-600 mt-1">
@@ -621,11 +786,23 @@ export default function NewDecisionPage({
             Annuler
           </button>
           <button
+            type="button"
+            onClick={handleManualSave}
+            disabled={isSaving || !formData.title.trim()}
+            className="px-6 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+            onMouseEnter={(e) => !isSaving && formData.title.trim() && (e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)')}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <SaveIcon fontSize="small" />
+            {isSaving ? 'Sauvegarde...' : 'Enregistrer en brouillon'}
+          </button>
+          <button
             type="submit"
             disabled={loading}
             className="px-6 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'var(--color-primary)' }}
-            onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
           >
             {loading ? 'Création...' : 'Créer et configurer'}

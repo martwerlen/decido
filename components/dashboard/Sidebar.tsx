@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useDarkMode } from "@/components/providers/DarkModeProvider"
 import {
   Box,
   Drawer,
@@ -127,6 +128,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { isDarkMode } = useDarkMode()
   const [open, setOpen] = useState(true)
   const [organization, setOrganization] = useState(currentOrgSlug || "")
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -336,9 +338,9 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
         >
           {open ? (
             <>
-              <Box sx={{ display: "flex", alignItems: "center", height: 40 }}>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 40, width: "100%" }}>
                 <Image
-                  src="/logo.svg"
+                  src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
                   alt="Decidoo"
                   width={150}
                   height={40}

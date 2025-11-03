@@ -14,6 +14,7 @@ import {
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
+import UserAvatar from '@/components/common/UserAvatar';
 
 interface Proposal {
   id: string;
@@ -74,6 +75,12 @@ interface Decision {
   nuancedProposals?: NuancedProposal[];
   comments: Comment[];
   participants: any[];
+  creator: {
+    id: string;
+    name: string | null;
+    email: string;
+    image?: string | null;
+  };
 }
 
 interface Props {
@@ -349,6 +356,11 @@ export default function VotePageClient({
 
       {/* En-tête */}
       <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
+          <span>Créée par</span>
+          <UserAvatar user={decision.creator} size="small" />
+          <span className="font-medium">{decision.creator.name}</span>
+        </div>
         <h1 className="text-3xl font-bold">{decision.title}</h1>
         <p className="text-gray-600 mt-2">{decision.description}</p>
         <div className="flex gap-2 mt-4">
