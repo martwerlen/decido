@@ -330,27 +330,108 @@ export default function ResultsPageClient({
                 {nuancedResults.slice(0, decision.nuancedWinnerCount).map((result) => {
                   const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
                   const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+                  const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
 
                   return (
                     <div
                       key={result.proposalId}
                       className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">🏆</span>
-                        <span className="font-bold text-lg">{result.rank}. {result.title}</span>
-                        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
-                          GAGNANT
-                        </span>
+                      {/* En-tête */}
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-2xl">🏆</span>
+                          <span className="font-bold text-lg">{result.rank}. {result.title}</span>
+                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                            GAGNANT
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Mention médiane :</span>
+                          <span
+                            className="px-3 py-1 rounded-lg text-sm font-semibold text-white"
+                            style={{ backgroundColor: mentionColor }}
+                          >
+                            {mentionLabel}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">Mention médiane :</span>
-                        <span
-                          className="px-3 py-1 rounded-lg text-sm font-semibold text-white"
-                          style={{ backgroundColor: mentionColor }}
-                        >
-                          {mentionLabel}
-                        </span>
+
+                      {/* Barre de distribution unique segmentée */}
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">
+                          Distribution des mentions ({totalMentions} vote{totalMentions > 1 ? 's' : ''})
+                        </p>
+
+                        {/* Barre segmentée avec ligne médiane */}
+                        <div className="relative">
+                          <div className="w-full h-10 flex rounded-lg overflow-hidden border border-gray-300">
+                            {Object.entries(result.mentionProfile)
+                              .sort((a, b) => {
+                                // Trier par ordre des mentions (meilleure en premier)
+                                const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                                return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
+                              })
+                              .map(([mention, count]) => {
+                                const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
+                                const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+
+                                if (count === 0) return null;
+
+                                return (
+                                  <div
+                                    key={mention}
+                                    className="flex items-center justify-center text-xs font-medium text-white transition-all hover:opacity-90"
+                                    style={{
+                                      width: `${percentage}%`,
+                                      backgroundColor: color,
+                                    }}
+                                    title={`${getMentionLabel(decision.nuancedScale || '5_LEVELS', mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
+                                  >
+                                    {percentage >= 8 && <span>{count}</span>}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                          {/* Ligne verticale médiane à 50% */}
+                          <div
+                            className="absolute top-0 h-full w-0.5"
+                            style={{
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              borderLeft: '2px dashed #000',
+                              opacity: 0.3,
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        </div>
+
+                        {/* Légende détaillée */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {Object.entries(result.mentionProfile)
+                            .sort((a, b) => {
+                              const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                              return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
+                            })
+                            .map(([mention, count]) => {
+                              const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
+                              const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                              const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+
+                              return (
+                                <div key={mention} className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-sm flex-shrink-0"
+                                    style={{ backgroundColor: color }}
+                                  />
+                                  <span className="text-gray-700 flex-1">{label}</span>
+                                  <span className="font-medium text-gray-900">
+                                    {count} <span className="text-gray-500">({percentage.toFixed(0)}%)</span>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
                       </div>
                     </div>
                   );
@@ -404,34 +485,47 @@ export default function ResultsPageClient({
                       Distribution des mentions ({totalMentions} vote{totalMentions > 1 ? 's' : ''})
                     </p>
 
-                    {/* Barre segmentée */}
-                    <div className="w-full h-10 flex rounded-lg overflow-hidden border border-gray-300">
-                      {Object.entries(result.mentionProfile)
-                        .sort((a, b) => {
-                          // Trier par ordre des mentions (meilleure en premier)
-                          const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
-                          return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
-                        })
-                        .map(([mention, count]) => {
-                          const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
-                          const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                    {/* Barre segmentée avec ligne médiane */}
+                    <div className="relative">
+                      <div className="w-full h-10 flex rounded-lg overflow-hidden border border-gray-300">
+                        {Object.entries(result.mentionProfile)
+                          .sort((a, b) => {
+                            // Trier par ordre des mentions (meilleure en premier)
+                            const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                            return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
+                          })
+                          .map(([mention, count]) => {
+                            const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
+                            const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
 
-                          if (count === 0) return null;
+                            if (count === 0) return null;
 
-                          return (
-                            <div
-                              key={mention}
-                              className="flex items-center justify-center text-xs font-medium text-white transition-all hover:opacity-90"
-                              style={{
-                                width: `${percentage}%`,
-                                backgroundColor: color,
-                              }}
-                              title={`${getMentionLabel(decision.nuancedScale || '5_LEVELS', mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
-                            >
-                              {percentage >= 8 && <span>{count}</span>}
-                            </div>
-                          );
-                        })}
+                            return (
+                              <div
+                                key={mention}
+                                className="flex items-center justify-center text-xs font-medium text-white transition-all hover:opacity-90"
+                                style={{
+                                  width: `${percentage}%`,
+                                  backgroundColor: color,
+                                }}
+                                title={`${getMentionLabel(decision.nuancedScale || '5_LEVELS', mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
+                              >
+                                {percentage >= 8 && <span>{count}</span>}
+                              </div>
+                            );
+                          })}
+                      </div>
+                      {/* Ligne verticale médiane à 50% */}
+                      <div
+                        className="absolute top-0 h-full w-0.5"
+                        style={{
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          borderLeft: '2px dashed #000',
+                          opacity: 0.3,
+                          pointerEvents: 'none',
+                        }}
+                      />
                     </div>
 
                     {/* Légende détaillée */}
