@@ -336,7 +336,7 @@ function getMentionsForScale(scale: string): string[] {
     case '5_LEVELS':
       return ['EXCELLENT', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
     case '7_LEVELS':
-      return ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'FAIRLY_GOOD', 'PASSABLE', 'INSUFFICIENT', 'TO_REJECT']
+      return ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'PASSABLE', 'INSUFFICIENT', 'VERY_INSUFFICIENT', 'TO_REJECT']
     default:
       return []
   }
