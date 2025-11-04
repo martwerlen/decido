@@ -395,26 +395,10 @@ export default function NewDecisionPage({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold">
           {draftId ? 'Continuer le brouillon' : 'Nouvelle décision'}
         </h1>
-
-        {/* Indicateur de sauvegarde */}
-        <div className="flex items-center gap-2">
-          {isSaving && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <CircularProgress size={16} />
-              <span>Sauvegarde...</span>
-            </div>
-          )}
-          {!isSaving && lastSavedAt && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
-              <CheckCircleIcon fontSize="small" />
-              <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
-            </div>
-          )}
-        </div>
       </div>
 
       {error && (
@@ -800,6 +784,14 @@ export default function NewDecisionPage({
           </p>
         </div>
 
+        {/* Indicateur de sauvegarde */}
+        {!isSaving && lastSavedAt && (
+          <div className="flex items-center gap-2 text-sm text-green-600 pt-4">
+            <CheckCircleIcon fontSize="small" />
+            <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
+          </div>
+        )}
+
         {/* Boutons */}
         <div className="flex gap-4 pt-4">
           <button
@@ -818,7 +810,7 @@ export default function NewDecisionPage({
             onMouseEnter={(e) => !isSaving && formData.title.trim() && (e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)')}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <SaveIcon fontSize="small" />
+            {isSaving ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
             {isSaving ? 'Sauvegarde...' : 'Enregistrer en brouillon'}
           </button>
           <button
