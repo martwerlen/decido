@@ -231,10 +231,11 @@ model Decision {
   organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   team              Team?                 @relation(fields: [teamId], references: [id], onDelete: SetNull)
   votes             Vote[]
+  opinionResponses  OpinionResponse[]     // Avis pour sollicitation d'avis
   comments          Comment[]
   tags              DecisionTag[]
   proposals         Proposal[]            // Pour vote à la majorité
-  nuancedProposals  NuancedProposal[]     // Pour vote nuancé 
+  nuancedProposals  NuancedProposal[]     // Pour vote nuancé
   participants      DecisionParticipant[] // Qui peut voter
   logs              DecisionLog[]         // Historique des événements
   anonymousVoteLogs AnonymousVoteLog[]    // Logs des votes anonymes (tracking IP)
@@ -307,12 +308,13 @@ model DecisionParticipant {
 
   createdAt      DateTime @default(now())
 
-  decision      Decision       @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes         Vote[]
-  proposalVotes ProposalVote[]
-  nuancedVotes  NuancedVote[]
-  comments      Comment[]
+  decision         Decision          @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes            Vote[]
+  proposalVotes    ProposalVote[]
+  nuancedVotes     NuancedVote[]
+  opinionResponses OpinionResponse[]
+  comments         Comment[]
 
   @@unique([decisionId, userId])
   @@unique([decisionId, externalEmail])
