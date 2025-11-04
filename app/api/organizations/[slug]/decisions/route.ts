@@ -267,7 +267,6 @@ export async function POST(
     }
 
     // Validation du mode PUBLIC_LINK
-    const votingMode = body.votingMode || 'INVITED';
     if (votingMode === 'PUBLIC_LINK') {
       if (!body.publicSlug || body.publicSlug.length < 3) {
         return Response.json(

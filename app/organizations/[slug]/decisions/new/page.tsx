@@ -7,8 +7,8 @@ import {
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
-import { Tooltip, IconButton, CircularProgress } from '@mui/material';
-import { InfoOutlined, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Tooltip, CircularProgress } from '@mui/material';
+import { Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 
 type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
@@ -65,12 +65,10 @@ export default function NewDecisionPage({
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
 
-  // Auto-save state
+  // Draft state
   const [draftId, setDraftId] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Normaliser et valider le slug
   const normalizeSlug = (input: string): string => {
@@ -104,14 +102,17 @@ export default function NewDecisionPage({
     }
   };
 
-  // Auto-save draft
-  const saveDraft = async (isManual = false) => {
+  // Sauvegarder manuellement le brouillon
+  const handleManualSave = async () => {
     // Ne sauvegarder que si on a au moins un titre
     if (!formData.title.trim()) {
+      setError('Le titre est requis pour sauvegarder un brouillon');
       return;
     }
 
     setIsSaving(true);
+    setError('');
+
     try {
       if (!draftId) {
         // Créer un nouveau brouillon
@@ -132,14 +133,13 @@ export default function NewDecisionPage({
           const data = await response.json();
           setDraftId(data.decision.id);
           setLastSavedAt(new Date());
-          setHasUnsavedChanges(false);
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la sauvegarde');
         }
       } else {
         // Mettre à jour le brouillon existant
-        const body: any = {
-          ...formData,
-          autoSave: !isManual, // Permet de désactiver le logging pour l'auto-save
-        };
+        const body: any = { ...formData };
 
         const response = await fetch(`/api/organizations/${slug}/decisions/${draftId}`, {
           method: 'PATCH',
@@ -149,34 +149,17 @@ export default function NewDecisionPage({
 
         if (response.ok) {
           setLastSavedAt(new Date());
-          setHasUnsavedChanges(false);
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la sauvegarde');
         }
       }
     } catch (err) {
       console.error('Error saving draft:', err);
+      setError('Erreur lors de la sauvegarde du brouillon');
     } finally {
       setIsSaving(false);
     }
-  };
-
-  // Sauvegarder manuellement
-  const handleManualSave = async () => {
-    await saveDraft(true);
-  };
-
-  // Auto-save onBlur avec debounce
-  const handleFieldBlur = () => {
-    setHasUnsavedChanges(true);
-
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    // Set new timeout for auto-save (500ms debounce)
-    saveTimeoutRef.current = setTimeout(() => {
-      saveDraft(false);
-    }, 500);
   };
 
   // Charger le brouillon si paramètre draft présent
@@ -236,32 +219,14 @@ export default function NewDecisionPage({
     }
   }, [searchParams, slug]);
 
-  // Warning avant de quitter si modifications non sauvegardées
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Si un brouillon existe déjà, sauvegarder les dernières modifications et rediriger
+      // Si un brouillon existe déjà, rediriger vers la page d'administration
       if (draftId) {
-        // Sauvegarder d'abord si nécessaire
-        if (hasUnsavedChanges) {
-          await saveDraft(true);
-        }
-
         // Actualiser la sidebar
         refreshSidebar();
 
@@ -446,7 +411,7 @@ export default function NewDecisionPage({
           {!isSaving && lastSavedAt && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircleIcon fontSize="small" />
-              <span>Sauvegardé automatiquement à {lastSavedAt.toLocaleTimeString()}</span>
+              <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
             </div>
           )}
         </div>
@@ -470,7 +435,6 @@ export default function NewDecisionPage({
             required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ex: Choix du nouveau logo"
           />
@@ -487,7 +451,6 @@ export default function NewDecisionPage({
             rows={4}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Décrivez le contexte et l'objet de la décision..."
           />
@@ -554,8 +517,7 @@ export default function NewDecisionPage({
                     setSlugAvailable(null);
                   }
                 }}
-                onBlur={handleFieldBlur}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="mon-vote-2024"
                 minLength={3}
                 maxLength={50}
@@ -672,16 +634,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateMajorityProposal(index, 'title', e.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="Titre de la proposition"
+                                    placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateMajorityProposal(index, 'description', e.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="Description (optionnelle)"
+                                    placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -717,8 +677,7 @@ export default function NewDecisionPage({
               rows={4}
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
-              onBlur={handleFieldBlur}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Décrivez votre proposition initiale pour le consensus..."
             />
           </div>
@@ -738,8 +697,7 @@ export default function NewDecisionPage({
                 id="nuancedScale"
                 value={formData.nuancedScale}
                 onChange={(e) => setFormData({ ...formData, nuancedScale: e.target.value as NuancedScale })}
-                onBlur={handleFieldBlur}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Pour / Sans avis / Contre)</option>
                 <option value="5_LEVELS">{NuancedScaleLabels['5_LEVELS']} (Franchement pour / Pour / Sans avis / Contre / Franchement contre)</option>
@@ -759,8 +717,7 @@ export default function NewDecisionPage({
                 max="25"
                 value={formData.nuancedWinnerCount}
                 onChange={(e) => setFormData({ ...formData, nuancedWinnerCount: parseInt(e.target.value) || 1 })}
-                onBlur={handleFieldBlur}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-600 mt-1">
                 Combien de propositions souhaitez-vous désigner comme gagnantes ?
@@ -793,16 +750,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateNuancedProposal(index, 'title', e.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="Titre de la proposition"
+                                    placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateNuancedProposal(index, 'description', e.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="Description (optionnelle)"
+                                    placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -838,7 +793,6 @@ export default function NewDecisionPage({
             min={minDateString}
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            onBlur={handleFieldBlur}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-sm text-gray-600 mt-1">
