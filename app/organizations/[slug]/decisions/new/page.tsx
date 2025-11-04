@@ -1,10 +1,9 @@
 'use client';
 
 import { use, useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DecisionTypeLabels,
-  DecisionTypeDescriptions,
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
@@ -33,8 +32,10 @@ export default function NewDecisionPage({
 }) {
   const { slug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
@@ -177,6 +178,63 @@ export default function NewDecisionPage({
       saveDraft(false);
     }, 500);
   };
+
+  // Charger le brouillon si paramètre draft présent
+  useEffect(() => {
+    const draftId = searchParams.get('draft');
+    if (draftId) {
+      setLoadingDraft(true);
+      fetch(`/api/organizations/${slug}/decisions/${draftId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.decision) {
+            const decision = data.decision;
+
+            // Pré-remplir le formulaire
+            setFormData({
+              title: decision.title || '',
+              description: decision.description || '',
+              decisionType: decision.decisionType || 'MAJORITY',
+              initialProposal: decision.initialProposal || '',
+              endDate: decision.endDate ? new Date(decision.endDate).toISOString().slice(0, 16) : '',
+              votingMode: decision.votingMode || 'INVITED',
+              publicSlug: decision.publicSlug || '',
+              nuancedScale: decision.nuancedScale || '5_LEVELS',
+              nuancedWinnerCount: decision.nuancedWinnerCount || 1,
+            });
+
+            // Charger les propositions si MAJORITY
+            if (decision.decisionType === 'MAJORITY' && decision.proposals && decision.proposals.length > 0) {
+              const sortedProposals = [...decision.proposals].sort((a: any, b: any) => a.order - b.order);
+              setMajorityProposals(sortedProposals.map((p: any) => ({
+                title: p.title || '',
+                description: p.description || '',
+              })));
+            }
+
+            // Charger les propositions si NUANCED_VOTE
+            if (decision.decisionType === 'NUANCED_VOTE' && decision.nuancedProposals && decision.nuancedProposals.length > 0) {
+              const sortedProposals = [...decision.nuancedProposals].sort((a: any, b: any) => a.order - b.order);
+              setNuancedProposals(sortedProposals.map((p: any) => ({
+                title: p.title || '',
+                description: p.description || '',
+              })));
+            }
+
+            // Définir le draftId pour l'auto-save
+            setDraftId(draftId);
+            setLastSavedAt(new Date(decision.updatedAt));
+          }
+        })
+        .catch(err => {
+          console.error('Error loading draft:', err);
+          setError('Impossible de charger le brouillon');
+        })
+        .finally(() => {
+          setLoadingDraft(false);
+        });
+    }
+  }, [searchParams, slug]);
 
   // Warning avant de quitter si modifications non sauvegardées
   useEffect(() => {
@@ -358,10 +416,24 @@ export default function NewDecisionPage({
   minDate.setHours(minDate.getHours() + 24);
   const minDateString = minDate.toISOString().slice(0, 16);
 
+  // Afficher un spinner pendant le chargement du brouillon
+  if (loadingDraft) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-2xl flex justify-center items-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <CircularProgress />
+          <p className="text-gray-600">Chargement du brouillon...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Nouvelle décision</h1>
+        <h1 className="text-3xl font-bold">
+          {draftId ? 'Continuer le brouillon' : 'Nouvelle décision'}
+        </h1>
 
         {/* Indicateur de sauvegarde */}
         <div className="flex items-center gap-2">
@@ -511,65 +583,63 @@ export default function NewDecisionPage({
 
         {/* Type de décision */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <label className="block font-medium">
-              Modalité décisionnelle *
-            </label>
+          <label className="block font-medium mb-2">
+            Modalité décisionnelle *
+          </label>
+          <div className="space-y-3">
             <Tooltip
-              title={`Les modalités disponibles : ${Object.entries(DecisionTypeTooltips).map(([key, value]) => `${DecisionTypeLabels[key as DecisionType]}: ${value}`).join(' • ')}`}
+              title={DecisionTypeTooltips.MAJORITY}
               arrow
               placement="right"
             >
-              <IconButton size="small" sx={{ p: 0.5 }}>
-                <InfoOutlined fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <div className="space-y-3">
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="MAJORITY"
-                checked={formData.decisionType === 'MAJORITY'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'MAJORITY' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="MAJORITY"
+                  checked={formData.decisionType === 'MAJORITY'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'MAJORITY' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.MAJORITY}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.MAJORITY}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
 
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="CONSENSUS"
-                checked={formData.decisionType === 'CONSENSUS'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'CONSENSUS' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+            <Tooltip
+              title={DecisionTypeTooltips.CONSENSUS}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="CONSENSUS"
+                  checked={formData.decisionType === 'CONSENSUS'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'CONSENSUS' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.CONSENSUS}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.CONSENSUS}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
 
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="NUANCED_VOTE"
-                checked={formData.decisionType === 'NUANCED_VOTE'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'NUANCED_VOTE' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+            <Tooltip
+              title={DecisionTypeTooltips.NUANCED_VOTE}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="NUANCED_VOTE"
+                  checked={formData.decisionType === 'NUANCED_VOTE'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'NUANCED_VOTE' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.NUANCED_VOTE}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.NUANCED_VOTE}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
           </div>
         </div>
 
