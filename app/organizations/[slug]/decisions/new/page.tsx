@@ -17,7 +17,7 @@ type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
 const DecisionTypeTooltips: Record<DecisionType, string> = {
   CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
   MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
-  NUANCED_VOTE: "Voter chacun pour toutes les propositions et la proposition avec le plus de partisans l'emporte",
+  NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l'emporte",
 };
 
 interface NuancedProposal {

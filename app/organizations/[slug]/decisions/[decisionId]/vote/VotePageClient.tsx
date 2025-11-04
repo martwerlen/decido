@@ -468,10 +468,10 @@ export default function VotePageClient({
         </div>
       )}
 
-      {/* Vote nuancé (jugement majoritaire) */}
+      {/* Vote nuancé */}
       {decision.decisionType === 'NUANCED_VOTE' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Vote nuancé (Jugement majoritaire)</h2>
+          <h2 className="text-xl font-semibold mb-4">Vote nuancé</h2>
           <p className="text-gray-600 mb-2">
             Évaluez chaque proposition en lui attribuant une mention.
           </p>

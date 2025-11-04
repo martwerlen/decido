@@ -49,12 +49,12 @@ export const DECISION_TYPES: DecisionType[] = [
 ];
 
 export const DecisionTypeLabels: Record<DecisionType, string> = {
-  CONSENSUS: 'Consensus (unanimité)',
+  CONSENSUS: 'Consensus',
   CONSENT: 'Consentement (pas d\'objection)',
   MAJORITY: 'Majorité simple',
   SUPERMAJORITY: 'Super-majorité (2/3)',
   WEIGHTED_VOTE: 'Vote nuancé',
-  NUANCED_VOTE: 'Vote nuancé (jugement majoritaire)',
+  NUANCED_VOTE: 'Vote nuancé',
   ADVISORY: 'Consultatif',
 };
 
@@ -295,7 +295,7 @@ export function isValidDecisionLogEventType(type: string): type is DecisionLogEv
 }
 
 // ============================================
-// VOTE NUANCÉ (JUGEMENT MAJORITAIRE)
+// VOTE NUANCÉ 
 // ============================================
 
 // Échelles de mentions disponibles
