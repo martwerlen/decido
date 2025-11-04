@@ -124,6 +124,8 @@ export default async function VotePage({
   let userVote = null;
   let userProposalVote = null;
   let userNuancedVotes = null;
+  let userOpinion = null;
+  let allOpinions = null;
 
   if (decision.decisionType === 'CONSENSUS') {
     userVote = await prisma.vote.findUnique({
@@ -154,6 +156,40 @@ export default async function VotePage({
         proposal: true,
       },
     });
+  } else if (decision.decisionType === 'ADVICE_SOLICITATION') {
+    // Récupérer l'avis de l'utilisateur
+    userOpinion = await prisma.opinionResponse.findFirst({
+      where: {
+        userId: session.user.id,
+        decisionId,
+      },
+    });
+
+    // Récupérer tous les avis
+    allOpinions = await prisma.opinionResponse.findMany({
+      where: {
+        decisionId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        externalParticipant: {
+          select: {
+            id: true,
+            externalName: true,
+            externalEmail: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
   }
 
   return (
@@ -162,6 +198,8 @@ export default async function VotePage({
       userVote={userVote}
       userProposalVote={userProposalVote}
       userNuancedVotes={userNuancedVotes}
+      userOpinion={userOpinion}
+      allOpinions={allOpinions}
       slug={slug}
       userId={session.user.id}
       isCreator={decision.creatorId === session.user.id}
