@@ -10,7 +10,7 @@ import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider
 import { Tooltip, CircularProgress } from '@mui/material';
 import { Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 
-type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE';
+type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE' | 'ADVICE_SOLICITATION';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
 
 // Descriptions courtes pour les tooltips
@@ -18,6 +18,7 @@ const DecisionTypeTooltips: Record<DecisionType, string> = {
   CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
   MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
   NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l'emporte",
+  ADVICE_SOLICITATION: "Solliciter l'avis de personnes compétentes avant de décider en autonomie",
 };
 
 interface NuancedProposal {
@@ -440,46 +441,47 @@ export default function NewDecisionPage({
           />
         </div>
 
-        {/* Mode de vote */}
-        <div className="border-t pt-6">
-          <label className="block font-medium mb-3">
-            Mode de participation *
-          </label>
-          <div className="space-y-3">
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="votingMode"
-                value="INVITED"
-                checked={formData.votingMode === 'INVITED'}
-                onChange={(e) => setFormData({ ...formData, votingMode: 'INVITED', publicSlug: '' })}
-                className="mt-1 mr-3"
-              />
-              <div>
-                <div className="font-medium">Sur invitation</div>
-                <div className="text-sm text-gray-600">
-                  Vous invitez spécifiquement les participants (internes ou externes). Vous gérez la liste des votants.
-                </div>
-              </div>
+        {/* Mode de vote - masqué pour ADVICE_SOLICITATION */}
+        {formData.decisionType !== 'ADVICE_SOLICITATION' && (
+          <div className="border-t pt-6">
+            <label className="block font-medium mb-3">
+              Mode de participation *
             </label>
+            <div className="space-y-3">
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="votingMode"
+                  value="INVITED"
+                  checked={formData.votingMode === 'INVITED'}
+                  onChange={(e) => setFormData({ ...formData, votingMode: 'INVITED', publicSlug: '' })}
+                  className="mt-1 mr-3"
+                />
+                <div>
+                  <div className="font-medium">Sur invitation</div>
+                  <div className="text-sm text-gray-600">
+                    Vous invitez spécifiquement les participants (internes ou externes). Vous gérez la liste des votants.
+                  </div>
+                </div>
+              </label>
 
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="votingMode"
-                value="PUBLIC_LINK"
-                checked={formData.votingMode === 'PUBLIC_LINK'}
-                onChange={(e) => setFormData({ ...formData, votingMode: 'PUBLIC_LINK' })}
-                className="mt-1 mr-3"
-              />
-              <div>
-                <div className="font-medium">Vote anonyme via URL</div>
-                <div className="text-sm text-gray-600">
-                  Créez un lien public que vous pouvez partager. Les votes sont anonymes.
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="votingMode"
+                  value="PUBLIC_LINK"
+                  checked={formData.votingMode === 'PUBLIC_LINK'}
+                  onChange={(e) => setFormData({ ...formData, votingMode: 'PUBLIC_LINK' })}
+                  className="mt-1 mr-3"
+                />
+                <div>
+                  <div className="font-medium">Vote anonyme via URL</div>
+                  <div className="text-sm text-gray-600">
+                    Créez un lien public que vous pouvez partager. Les votes sont anonymes.
+                  </div>
                 </div>
-              </div>
-            </label>
-          </div>
+              </label>
+            </div>
 
           {/* Champ publicSlug si mode PUBLIC_LINK */}
           {formData.votingMode === 'PUBLIC_LINK' && (
@@ -524,8 +526,8 @@ export default function NewDecisionPage({
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Type de décision */}
         <div>
@@ -584,6 +586,24 @@ export default function NewDecisionPage({
                   className="mt-1 mr-3"
                 />
                 <div className="font-medium">{DecisionTypeLabels.NUANCED_VOTE}</div>
+              </label>
+            </Tooltip>
+
+            <Tooltip
+              title={DecisionTypeTooltips.ADVICE_SOLICITATION}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="ADVICE_SOLICITATION"
+                  checked={formData.decisionType === 'ADVICE_SOLICITATION'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'ADVICE_SOLICITATION', votingMode: 'INVITED' })}
+                  className="mt-1 mr-3"
+                />
+                <div className="font-medium">{DecisionTypeLabels.ADVICE_SOLICITATION}</div>
               </label>
             </Tooltip>
           </div>
@@ -664,6 +684,27 @@ export default function NewDecisionPage({
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Décrivez votre proposition initiale pour le consensus..."
             />
+          </div>
+        )}
+
+        {/* Proposition de décision (uniquement pour ADVICE_SOLICITATION) */}
+        {formData.decisionType === 'ADVICE_SOLICITATION' && (
+          <div>
+            <label htmlFor="initialProposal" className="block font-medium mb-2">
+              Proposition de décision *
+            </label>
+            <textarea
+              id="initialProposal"
+              required
+              rows={6}
+              value={formData.initialProposal}
+              onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Partagez votre intention de décision avant de solliciter l'avis de personnes compétentes..."
+            />
+            <p className="text-sm text-gray-600 mt-1">
+              Décrivez clairement votre intention afin que les personnes sollicitées puissent vous donner un avis éclairé.
+            </p>
           </div>
         )}
 
@@ -765,24 +806,26 @@ export default function NewDecisionPage({
           </div>
         )}
 
-        {/* Date de fin */}
-        <div>
-          <label htmlFor="endDate" className="block font-medium mb-2">
-            Date de fin {formData.decisionType === 'CONSENSUS' ? 'prévisionnelle' : ''} *
-          </label>
-          <input
-            type="datetime-local"
-            id="endDate"
-            required
-            min={minDateString}
-            value={formData.endDate}
-            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-sm text-gray-600 mt-1">
-            Doit être au moins 24h dans le futur
-          </p>
-        </div>
+        {/* Date de fin - masquée pour ADVICE_SOLICITATION */}
+        {formData.decisionType !== 'ADVICE_SOLICITATION' && (
+          <div>
+            <label htmlFor="endDate" className="block font-medium mb-2">
+              Date de fin {formData.decisionType === 'CONSENSUS' ? 'prévisionnelle' : ''} *
+            </label>
+            <input
+              type="datetime-local"
+              id="endDate"
+              required
+              min={minDateString}
+              value={formData.endDate}
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-sm text-gray-600 mt-1">
+              Doit être au moins 24h dans le futur
+            </p>
+          </div>
+        )}
 
         {/* Indicateur de sauvegarde */}
         {!isSaving && lastSavedAt && (
@@ -826,7 +869,9 @@ export default function NewDecisionPage({
         </div>
 
         <p className="text-sm text-gray-600">
-          {formData.votingMode === 'PUBLIC_LINK'
+          {formData.decisionType === 'ADVICE_SOLICITATION'
+            ? 'Après la création, vous devrez solliciter au moins 3 personnes compétentes et/ou impactées pour donner leur avis.'
+            : formData.votingMode === 'PUBLIC_LINK'
             ? 'Après la création, vous accéderez à la page de partage avec le lien et le QR code à diffuser.'
             : 'Après la création, vous pourrez configurer les participants avant de lancer la décision.'}
         </p>
