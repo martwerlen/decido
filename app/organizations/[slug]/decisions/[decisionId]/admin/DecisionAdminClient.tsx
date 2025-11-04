@@ -119,6 +119,22 @@ export default function DecisionAdminClient({
   const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
   const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
 
+  // Pour ADVICE_SOLICITATION: calculer le minimum de participants requis
+  const getMinimumParticipants = (): number => {
+    if (decision.decisionType !== 'ADVICE_SOLICITATION') return 1;
+
+    const memberCount = members.length;
+    if (memberCount === 1) return 1; // 1 membre = 1 externe minimum
+    if (memberCount >= 2 && memberCount <= 4) return 1; // 2-4 membres = 1 min
+    if (memberCount >= 5) return 3; // 5+ membres = 3 min
+    return 1;
+  };
+
+  const minimumParticipants = getMinimumParticipants();
+
+  // Calculer combien d'avis ont été donnés (pour ADVICE_SOLICITATION)
+  const opinionsReceived = decision.participants.filter(p => p.hasVoted).length;
+
   // Mettre à jour la proposition amendée (CONSENSUS)
   const handleUpdateAmendedProposal = async () => {
     setLoading(true);
@@ -313,6 +329,84 @@ export default function DecisionAdminClient({
     }
   };
 
+  // Retirer la décision (ADVICE_SOLICITATION)
+  const handleWithdrawDecision = async () => {
+    if (!confirm('Voulez-vous vraiment retirer cette décision ? Cette action est irréversible.')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/withdraw`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      const { decision: updated } = await response.json();
+      setDecision({ ...decision, status: updated.status, result: updated.result });
+      setSuccess('Décision retirée avec succès');
+      setTimeout(() => {
+        router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Valider la décision finale (ADVICE_SOLICITATION)
+  const handleValidateFinalDecision = async () => {
+    if (!conclusion || conclusion.trim() === '') {
+      setError('Vous devez rédiger une décision finale avant de valider');
+      return;
+    }
+
+    if (!confirm('Voulez-vous vraiment valider la décision finale ? Cette action clôturera définitivement la décision.')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/validate`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conclusion }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      const { decision: updated } = await response.json();
+      setDecision({ ...decision, status: updated.status, result: updated.result, conclusion: updated.conclusion });
+      setSuccess('Décision finale validée avec succès');
+      setTimeout(() => {
+        router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
@@ -387,11 +481,73 @@ export default function DecisionAdminClient({
         </div>
       )}
 
+      {/* Section Intention de décision (ADVICE_SOLICITATION) */}
+      {decision.decisionType === 'ADVICE_SOLICITATION' && (
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
+
+          <div className="mb-4">
+            <h3 className="font-medium mb-2">Intention de décision</h3>
+            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
+              {decision.initialProposal || decision.proposal}
+            </div>
+          </div>
+
+          {isOpen && opinionsReceived === 0 && (
+            <div>
+              <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+                ⚠️ Vous pouvez modifier votre intention uniquement tant qu'aucun avis n'a été donné.
+              </p>
+              <div className="space-y-3">
+                <textarea
+                  value={proposal}
+                  onChange={(e) => setAmendedProposal(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Modifiez votre intention de décision si nécessaire..."
+                />
+                <button
+                  onClick={handleUpdateAmendedProposal}
+                  disabled={loading}
+                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                >
+                  Mettre à jour l'intention
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isOpen && opinionsReceived > 0 && (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
+              ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre intention de décision.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Section Participants */}
       <div className="bg-white border rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">
-          Participants ({decision.participants.length})
+          {decision.decisionType === 'ADVICE_SOLICITATION'
+            ? `Personnes sollicitées pour avis (${decision.participants.length})`
+            : `Participants (${decision.participants.length})`}
         </h2>
+
+        {decision.decisionType === 'ADVICE_SOLICITATION' && isDraft && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded mb-4">
+            <p className="font-medium text-blue-900 mb-2">
+              💡 Conseil : Sélectionnez au moins {minimumParticipants} {minimumParticipants > 1 ? 'personnes compétentes et/ou impactées' : 'personne compétente et/ou impactée'}
+            </p>
+            <p className="text-sm text-blue-800">
+              {members.length === 1 && 'Votre organisation ne compte qu\'un membre. Vous devez inviter au moins 1 personne externe.'}
+              {members.length >= 2 && members.length <= 4 && 'Votre organisation compte 2 à 4 membres. Sollicitez au moins 1 personne (membre interne ou externe).'}
+              {members.length >= 5 && 'Votre organisation compte 5 membres ou plus. Sollicitez au moins 3 personnes (membres internes ou externes).'}
+            </p>
+          </div>
+        )}
 
         {decision.participants.length > 0 && (
           <div className="space-y-2 mb-4">
@@ -557,35 +713,50 @@ export default function DecisionAdminClient({
         )}
       </div>
 
-      {/* Section Conclusion - uniquement si le vote est terminé */}
-      {isVotingFinished && (
+      {/* Section Conclusion/Décision finale */}
+      {decision.decisionType === 'ADVICE_SOLICITATION' && isOpen && opinionsReceived === decision.participants.length && decision.participants.length > 0 ? (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
+          <h2 className="text-xl font-semibold mb-4">Décision finale</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
-            Vous pouvez utiliser la syntaxe Markdown pour le formatage.
+            Tous les avis ont été reçus. Rédigez maintenant votre décision finale en tenant compte des avis sollicités.
           </p>
           <div className="space-y-3">
             <textarea
               value={conclusion}
               onChange={(e) => setConclusion(e.target.value)}
               rows={6}
-              className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
-              placeholder="Entrez votre conclusion ici... (Markdown supporté)"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Rédigez votre décision finale ici..."
+            />
+          </div>
+        </div>
+      ) : decision.decisionType !== 'ADVICE_SOLICITATION' && isVotingFinished ? (
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
+          </p>
+          <div className="space-y-3">
+            <textarea
+              value={conclusion}
+              onChange={(e) => setConclusion(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Entrez votre conclusion ici..."
             />
             <button
               onClick={handleUpdateConclusion}
               disabled={loading}
               className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
               style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
             >
               Enregistrer la conclusion
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Actions */}
       <div className="flex gap-4">
@@ -596,7 +767,7 @@ export default function DecisionAdminClient({
           Retour
         </button>
 
-        {isDraft && (
+        {isDraft && decision.decisionType !== 'ADVICE_SOLICITATION' && (
           <button
             onClick={handleLaunchDecision}
             disabled={loading || decision.participants.length === 0 || (decision.decisionType === 'MAJORITY' && decision.proposals.length < 2)}
@@ -605,9 +776,55 @@ export default function DecisionAdminClient({
             {loading ? 'Lancement...' : 'Lancer la décision'}
           </button>
         )}
+
+        {isDraft && decision.decisionType === 'ADVICE_SOLICITATION' && (
+          <button
+            onClick={handleLaunchDecision}
+            disabled={loading || decision.participants.length < minimumParticipants}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Lancement...' : 'Lancer la sollicitation d\'avis'}
+          </button>
+        )}
+
+        {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
+          <>
+            <button
+              onClick={handleWithdrawDecision}
+              disabled={loading}
+              className="px-6 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Retrait...' : 'Retirer la décision'}
+            </button>
+
+            {opinionsReceived === decision.participants.length && decision.participants.length > 0 && (
+              <button
+                onClick={handleValidateFinalDecision}
+                disabled={loading || !conclusion || conclusion.trim() === ''}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Validation...' : 'Valider la décision finale'}
+              </button>
+            )}
+          </>
+        )}
       </div>
 
-      {isDraft && (
+      {isDraft && decision.decisionType === 'ADVICE_SOLICITATION' && (
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+          <h3 className="font-medium text-yellow-800 mb-2">Avant de lancer :</h3>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            {decision.participants.length < minimumParticipants && (
+              <li>• Sollicitez au moins {minimumParticipants} {minimumParticipants > 1 ? 'personnes' : 'personne'} pour leur avis</li>
+            )}
+            {decision.participants.length >= minimumParticipants && (
+              <li className="text-green-700">✓ Tout est prêt pour lancer la sollicitation d'avis !</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {isDraft && decision.decisionType !== 'ADVICE_SOLICITATION' && (
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
           <h3 className="font-medium text-yellow-800 mb-2">Avant de lancer :</h3>
           <ul className="text-sm text-yellow-700 space-y-1">
@@ -619,6 +836,21 @@ export default function DecisionAdminClient({
             )}
             {decision.participants.length > 0 && decision.proposals.length >= 2 && (
               <li className="text-green-700">✓ Tout est prêt pour lancer la décision !</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+          <h3 className="font-medium text-blue-900 mb-2">Statut de la sollicitation d'avis :</h3>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• {opinionsReceived} avis reçu{opinionsReceived > 1 ? 's' : ''} sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}</li>
+            {opinionsReceived < decision.participants.length && (
+              <li>• En attente de {decision.participants.length - opinionsReceived} avis supplémentaire{decision.participants.length - opinionsReceived > 1 ? 's' : ''}</li>
+            )}
+            {opinionsReceived === decision.participants.length && decision.participants.length > 0 && (
+              <li className="text-green-700">✓ Tous les avis ont été reçus ! Vous pouvez maintenant valider votre décision finale.</li>
             )}
           </ul>
         </div>
