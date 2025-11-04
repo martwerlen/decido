@@ -202,7 +202,7 @@ model Decision {
   initialProposal  String?      // Proposition originale (historique, immuable)
   proposal         String?      // Proposition actuelle (modifiable par le créateur)
 
-  // Pour le vote nuancé (jugement majoritaire)
+  // Pour le vote nuancé 
   nuancedScale        String?   // 3_LEVELS, 5_LEVELS, 7_LEVELS
   nuancedWinnerCount  Int?      // Nombre de propositions gagnantes
 
@@ -233,7 +233,7 @@ model Decision {
   comments          Comment[]
   tags              DecisionTag[]
   proposals         Proposal[]            // Pour vote à la majorité
-  nuancedProposals  NuancedProposal[]     // Pour vote nuancé (jugement majoritaire)
+  nuancedProposals  NuancedProposal[]     // Pour vote nuancé 
   participants      DecisionParticipant[] // Qui peut voter
   logs              DecisionLog[]         // Historique des événements
   anonymousVoteLogs AnonymousVoteLog[]    // Logs des votes anonymes (tracking IP)
@@ -262,7 +262,7 @@ model Proposal {
 }
 
 // ============================================
-// PROPOSITIONS POUR VOTE NUANCÉ (JUGEMENT MAJORITAIRE)
+// PROPOSITIONS POUR VOTE NUANCÉ
 // ============================================
 
 model NuancedProposal {

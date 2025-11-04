@@ -36,6 +36,7 @@ export default async function VotePage({
           id: true,
           name: true,
           email: true,
+          image: true,
         },
       },
       team: true,

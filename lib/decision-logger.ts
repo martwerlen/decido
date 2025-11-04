@@ -66,6 +66,22 @@ export async function logDecisionCreated(
 }
 
 /**
+ * Log le lancement d'une décision
+ */
+export async function logDecisionLaunched(
+  decisionId: string,
+  actorId: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'LAUNCHED',
+    actorId,
+    oldValue: 'DRAFT',
+    newValue: 'OPEN',
+  });
+}
+
+/**
  * Log un changement de statut
  */
 export async function logDecisionStatusChanged(

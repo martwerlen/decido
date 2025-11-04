@@ -42,6 +42,7 @@ import {
   HowToVote as DecisionIcon,
   People as PeopleIcon,
 } from '@mui/icons-material';
+import UserAvatar from '@/components/common/UserAvatar';
 
 interface TeamMember {
   id: string;
@@ -51,6 +52,7 @@ interface TeamMember {
       id: string;
       name: string;
       email: string;
+      image?: string | null;
     };
   };
 }
@@ -73,6 +75,7 @@ interface OrganizationMember {
     id: string;
     name: string;
     email: string;
+    image?: string | null;
   };
 }
 
@@ -449,10 +452,13 @@ export default function OrganizationTeamsPage() {
                       <List dense disablePadding>
                         {team.members.slice(0, 3).map((member) => (
                           <ListItem key={member.id} disablePadding>
-                            <ListItemText
-                              primary={member.organizationMember.user.name}
-                              primaryTypographyProps={{ variant: 'body2' }}
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                              <UserAvatar user={member.organizationMember.user} size="small" />
+                              <ListItemText
+                                primary={member.organizationMember.user.name}
+                                primaryTypographyProps={{ variant: 'body2' }}
+                              />
+                            </Box>
                             <ListItemSecondaryAction>
                               <IconButton
                                 edge="end"

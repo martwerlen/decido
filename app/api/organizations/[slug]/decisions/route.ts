@@ -121,82 +121,122 @@ export async function POST(
     }
 
     // Validation
-    const { title, description, decisionType, teamId, endDate } = body;
+    const { title, description, decisionType, teamId, endDate, votingMode = 'INVITED' } = body;
 
-    if (!title || !description) {
+    // Déterminer si c'est un brouillon (INVITED = brouillon, PUBLIC_LINK = lancé immédiatement)
+    const isDraft = votingMode === 'INVITED';
+
+    // Le titre est toujours requis
+    if (!title) {
       return Response.json(
-        { error: 'Le titre et la description sont requis' },
+        { error: 'Le titre est requis' },
         { status: 400 }
       );
     }
 
-    if (!isValidDecisionType(decisionType)) {
+    // Pour les décisions lancées (PUBLIC_LINK), les validations strictes s'appliquent
+    if (!isDraft) {
+      if (!description) {
+        return Response.json(
+          { error: 'La description est requise' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidDecisionType(decisionType)) {
+        return Response.json(
+          { error: 'Type de décision invalide' },
+          { status: 400 }
+        );
+      }
+
+      // Pour consensus, vérifier la présence de la proposition initiale
+      if (decisionType === 'CONSENSUS' && !body.initialProposal) {
+        return Response.json(
+          { error: 'Une proposition initiale est requise pour le consensus' },
+          { status: 400 }
+        );
+      }
+
+      // Pour vote nuancé, vérifier la configuration
+      if (decisionType === 'NUANCED_VOTE') {
+        if (!body.nuancedScale || !['3_LEVELS', '5_LEVELS', '7_LEVELS'].includes(body.nuancedScale)) {
+          return Response.json(
+            { error: 'Échelle de mentions invalide pour le vote nuancé' },
+            { status: 400 }
+          );
+        }
+        if (!body.nuancedWinnerCount || body.nuancedWinnerCount < 1) {
+          return Response.json(
+            { error: 'Le nombre de gagnants doit être au moins 1' },
+            { status: 400 }
+          );
+        }
+        if (!body.nuancedProposals || body.nuancedProposals.length < 2) {
+          return Response.json(
+            { error: 'Au moins 2 propositions sont requises pour le vote nuancé' },
+            { status: 400 }
+          );
+        }
+        if (body.nuancedProposals.length > 25) {
+          return Response.json(
+            { error: 'Maximum 25 propositions pour le vote nuancé' },
+            { status: 400 }
+          );
+        }
+        if (body.nuancedWinnerCount > body.nuancedProposals.length) {
+          return Response.json(
+            { error: 'Le nombre de gagnants ne peut pas dépasser le nombre de propositions' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Pour vote à la majorité, vérifier la présence des propositions
+      if (decisionType === 'MAJORITY') {
+        if (!body.proposals || body.proposals.length < 2) {
+          return Response.json(
+            { error: 'Au moins 2 propositions sont requises pour le vote à la majorité' },
+            { status: 400 }
+          );
+        }
+        if (body.proposals.length > 25) {
+          return Response.json(
+            { error: 'Maximum 25 propositions pour le vote à la majorité' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Vérifier que endDate est au moins 24h dans le futur
+      if (!endDate) {
+        return Response.json(
+          { error: 'La date de fin est requise' },
+          { status: 400 }
+        );
+      }
+      const endDateObj = new Date(endDate);
+      const minDate = new Date();
+      minDate.setHours(minDate.getHours() + 24);
+
+      if (endDateObj < minDate) {
+        return Response.json(
+          { error: 'La date de fin doit être au moins 24h dans le futur' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validation optionnelle du type de décision pour les brouillons
+    if (decisionType && !isValidDecisionType(decisionType)) {
       return Response.json(
         { error: 'Type de décision invalide' },
         { status: 400 }
       );
     }
 
-    // Pour consensus, vérifier la présence de la proposition initiale
-    if (decisionType === 'CONSENSUS' && !body.initialProposal) {
-      return Response.json(
-        { error: 'Une proposition initiale est requise pour le consensus' },
-        { status: 400 }
-      );
-    }
-
-    // Pour vote nuancé, vérifier la configuration
-    if (decisionType === 'NUANCED_VOTE') {
-      if (!body.nuancedScale || !['3_LEVELS', '5_LEVELS', '7_LEVELS'].includes(body.nuancedScale)) {
-        return Response.json(
-          { error: 'Échelle de mentions invalide pour le vote nuancé' },
-          { status: 400 }
-        );
-      }
-      if (!body.nuancedWinnerCount || body.nuancedWinnerCount < 1) {
-        return Response.json(
-          { error: 'Le nombre de gagnants doit être au moins 1' },
-          { status: 400 }
-        );
-      }
-      if (!body.nuancedProposals || body.nuancedProposals.length < 2) {
-        return Response.json(
-          { error: 'Au moins 2 propositions sont requises pour le vote nuancé' },
-          { status: 400 }
-        );
-      }
-      if (body.nuancedProposals.length > 25) {
-        return Response.json(
-          { error: 'Maximum 25 propositions pour le vote nuancé' },
-          { status: 400 }
-        );
-      }
-      if (body.nuancedWinnerCount > body.nuancedProposals.length) {
-        return Response.json(
-          { error: 'Le nombre de gagnants ne peut pas dépasser le nombre de propositions' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Pour vote à la majorité, vérifier la présence des propositions
-    if (decisionType === 'MAJORITY') {
-      if (!body.proposals || body.proposals.length < 2) {
-        return Response.json(
-          { error: 'Au moins 2 propositions sont requises pour le vote à la majorité' },
-          { status: 400 }
-        );
-      }
-      if (body.proposals.length > 25) {
-        return Response.json(
-          { error: 'Maximum 25 propositions pour le vote à la majorité' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Vérifier que endDate est au moins 24h dans le futur
-    if (endDate) {
+    // Vérifier que endDate est au moins 24h dans le futur (si fourni pour un brouillon)
+    if (isDraft && endDate) {
       const endDateObj = new Date(endDate);
       const minDate = new Date();
       minDate.setHours(minDate.getHours() + 24);
@@ -227,7 +267,6 @@ export async function POST(
     }
 
     // Validation du mode PUBLIC_LINK
-    const votingMode = body.votingMode || 'INVITED';
     if (votingMode === 'PUBLIC_LINK') {
       if (!body.publicSlug || body.publicSlug.length < 3) {
         return Response.json(
@@ -255,8 +294,8 @@ export async function POST(
     // Préparer les données de la décision
     const decisionData: any = {
       title,
-      description,
-      decisionType,
+      description: description || '',
+      decisionType: decisionType || 'MAJORITY',
       // En mode PUBLIC_LINK, lancer immédiatement (pas besoin de configuration)
       status: votingMode === 'PUBLIC_LINK' ? 'OPEN' : 'DRAFT',
       startDate: votingMode === 'PUBLIC_LINK' ? new Date() : null,
@@ -284,21 +323,23 @@ export async function POST(
 
     // Pour le vote nuancé, ajouter les champs spécifiques
     if (decisionType === 'NUANCED_VOTE') {
-      decisionData.nuancedScale = body.nuancedScale;
-      decisionData.nuancedWinnerCount = body.nuancedWinnerCount;
+      decisionData.nuancedScale = body.nuancedScale || '5_LEVELS';
+      decisionData.nuancedWinnerCount = body.nuancedWinnerCount || 1;
 
-      // Créer les propositions nuancées
-      decisionData.nuancedProposals = {
-        create: body.nuancedProposals.map((proposal: any, index: number) => ({
-          title: proposal.title,
-          description: proposal.description || null,
-          order: index,
-        })),
-      };
+      // Créer les propositions nuancées (uniquement si fournies)
+      if (body.nuancedProposals && body.nuancedProposals.length > 0) {
+        decisionData.nuancedProposals = {
+          create: body.nuancedProposals.map((proposal: any, index: number) => ({
+            title: proposal.title,
+            description: proposal.description || null,
+            order: index,
+          })),
+        };
+      }
     }
 
-    // Pour le vote à la majorité, créer les propositions
-    if (decisionType === 'MAJORITY') {
+    // Pour le vote à la majorité, créer les propositions (uniquement si fournies)
+    if (decisionType === 'MAJORITY' && body.proposals && body.proposals.length > 0) {
       decisionData.proposals = {
         create: body.proposals.map((proposal: any, index: number) => ({
           title: proposal.title,

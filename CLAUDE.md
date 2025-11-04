@@ -207,6 +207,11 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - This function is called after votes are submitted (in `VotePageClient.tsx`) to trigger an immediate sidebar update
 - The sidebar listens to the `refreshTrigger` state change to re-fetch decisions
 
+**Navigation & Permissions:**
+- Changing organization from the dropdown always redirects to `/organizations/[slug]` to ensure proper page refresh
+- The "Paramètres de l'organisation" menu option is only visible to users with OWNER or ADMIN role
+- User role is determined by checking the `OrganizationMember` relationship with the current organization
+
 ## Critical Architecture Details
 
 ### Database Schema & Enums
@@ -227,6 +232,7 @@ Type-safe enums are defined in `types/enums.ts` with corresponding validation he
 - `NuancedMention3`: 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' (mentions pour 3 niveaux)
 - `NuancedMention5`: 'EXCELLENT' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'TO_REJECT' (mentions pour 5 niveaux)
 - `NuancedMention7`: 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'VERY_INSUFFICIENT' | 'TO_REJECT' (mentions pour 7 niveaux)
+- `DecisionLogEventType`: 'CREATED' | 'LAUNCHED' | 'STATUS_CHANGED' | 'CLOSED' | 'REOPENED' | 'TITLE_UPDATED' | 'DESCRIPTION_UPDATED' | 'CONTEXT_UPDATED' | 'DEADLINE_UPDATED' | 'PROPOSAL_AMENDED' | 'CONCLUSION_ADDED' | 'PARTICIPANT_ADDED' | 'PARTICIPANT_REMOVED' | 'VOTE_RECORDED' | 'VOTE_UPDATED' | 'COMMENT_ADDED' (types d'événements pour l'historique des décisions)
 
 When working with these values:
 1. Import types from `types/enums.ts`, NOT from `@prisma/client`
@@ -270,6 +276,45 @@ Vote weights are defined in `getVoteWeight()`:
 - ABSTAIN: 0
 - WEAK_OPPOSE: -1, OPPOSE: -2, STRONG_OPPOSE: -3
 - BLOCK: -10 (only valid in CONSENT decisions)
+
+### Decision Audit Trail (DecisionLog)
+
+The application maintains a comprehensive audit trail of all decision-related events in the `DecisionLog` table. Logging is handled by the `lib/decision-logger.ts` module.
+
+**Events Currently Logged:**
+
+| Event Category | Event Type | When Logged | Includes Actor Info |
+|----------------|------------|-------------|---------------------|
+| **Lifecycle** | CREATED | Decision creation | ✓ Yes |
+| | LAUNCHED | Decision launched (manual or auto) | ✓ Yes |
+| | CLOSED | Decision closed (manual or automatic) | ✓ Yes (+ reason in metadata) |
+| **Modifications** | TITLE_UPDATED | Title changed | ✓ Yes (+ old/new values) |
+| | DESCRIPTION_UPDATED | Description changed | ✓ Yes |
+| | DEADLINE_UPDATED | End date changed | ✓ Yes (+ old/new values) |
+| | PROPOSAL_AMENDED | Proposal amended (CONSENSUS only) | ✓ Yes |
+| | CONCLUSION_ADDED | Conclusion added | ✓ Yes |
+| **Votes** | VOTE_RECORDED | New vote submitted | Depends on decision type* |
+| | VOTE_UPDATED | Vote modified | Depends on decision type* |
+| **Comments** | COMMENT_ADDED | Comment posted | ✓ Yes (authenticated users only) |
+
+**Vote Logging by Decision Type & Voting Mode:**
+- **CONSENSUS** (authenticated): Logs actor name, email, and vote value (AGREE/DISAGREE) in metadata
+- **MAJORITY/NUANCED_VOTE** (authenticated): Logs anonymously (no actor information, for privacy)
+- **PUBLIC_LINK** (anonymous voting): Logs anonymously with message "Un vote a été enregistré" (no IP or user data)
+- **INVITED with external participants**: Not currently logged (see DECISIONLOG_ANALYSIS.md for improvement recommendations)
+
+**Automatic Closure Logging:**
+When a decision is automatically closed (via results page access), the `reason` is stored in metadata:
+- `'deadline_reached'`: The end date was reached
+- `'all_voted'`: All participants have voted
+- `'manual'`: Creator manually closed the decision
+
+**Access to Logs:**
+- Logs are accessible via `GET /api/organizations/[slug]/decisions/[decisionId]/history`
+- Only organization members can access decision history
+- Logs are displayed in reverse chronological order (most recent first)
+
+**Note:** See `/DECISIONLOG_ANALYSIS.md` for a comprehensive analysis of logging coverage and recommendations for future improvements.
 
 ### Authentication Flow
 
@@ -495,6 +540,80 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Supports plain text with preserved line breaks (Markdown rendering can be added later)
 - Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
+
+### Draft Auto-Save System
+
+The application supports automatic saving of decision drafts to prevent data loss and allow users to work on decisions over multiple sessions.
+
+**Key Features:**
+- **Auto-save on blur**: All form fields automatically save 500ms after the user leaves the field (onBlur event)
+- **Manual save button**: "Enregistrer en brouillon" button allows explicit saves
+- **Visual feedback**: Real-time save indicator showing "Sauvegarde..." during save and "Sauvegardé automatiquement à [time]" after completion
+- **Multiple drafts**: Users can have multiple draft decisions simultaneously
+- **Navigation warning**: Browser prompts user before leaving page if there are unsaved changes
+- **Dashboard section**: "Brouillons" section displays all user's drafts with Continue and Delete actions
+
+**Technical Implementation:**
+
+1. **API Endpoints:**
+   - `POST /api/organizations/[slug]/decisions` - Creates a new draft with `status='DRAFT'` (unless `votingMode='PUBLIC_LINK'`)
+   - `PATCH /api/organizations/[slug]/decisions/[decisionId]` - Updates an existing draft
+     - Only works for decisions with `status='DRAFT'`
+     - Only the creator can update their draft
+     - Supports `autoSave` flag to skip audit logging for auto-saves
+     - Can update all decision fields: title, description, context, decisionType, endDate, votingMode, publicSlug, etc.
+
+2. **Creation Page (`app/organizations/[slug]/decisions/new/page.tsx`):**
+   - State tracking:
+     - `draftId`: ID of the created draft (null until first save)
+     - `lastSavedAt`: Timestamp of last successful save
+     - `isSaving`: Boolean flag during save operations
+     - `hasUnsavedChanges`: Tracks if changes exist since last save
+   - Auto-save logic:
+     - Triggered by `onBlur` events on all input fields
+     - Debounced with 500ms delay to avoid excessive API calls
+     - First save creates a new draft, subsequent saves update the existing draft
+   - Form submission:
+     - If `draftId` exists: Saves any pending changes and redirects to admin/share page
+     - If no `draftId`: Creates new decision (normal flow)
+
+3. **Dashboard Integration (`app/organizations/[slug]/page.tsx`):**
+   - Query fetches all drafts where:
+     - `organizationId` matches current organization
+     - `status = 'DRAFT'`
+     - `creatorId` matches current user
+   - Drafts displayed in dedicated "Brouillons" section (before "En cours" section)
+   - Each draft shows:
+     - Title (or "Brouillon sans titre" if empty)
+     - Description preview (truncated)
+     - Decision type and voting mode
+     - Last modification time ("Modifié il y a X")
+     - **Continue** button → redirects to `/organizations/[slug]/decisions/[draftId]/admin`
+     - **Delete** button → calls `DELETE /api/organizations/[slug]/decisions/[draftId]`
+
+4. **Draft Card Component (`components/dashboard/DraftCard.tsx`):**
+   - Client component handling delete functionality
+   - Confirmation dialog before deletion
+   - Automatic page refresh after successful deletion
+   - Time-ago display helper for showing relative modification time
+
+**User Workflow:**
+1. User navigates to "Nouvelle décision" page
+2. User starts filling in decision details
+3. Upon leaving any field (onBlur), auto-save creates/updates draft after 500ms
+4. Visual indicator shows "Sauvegardé automatiquement à [time]"
+5. User can:
+   - Click "Enregistrer en brouillon" to save explicitly
+   - Click "Créer et configurer" to finalize and proceed
+   - Navigate away (browser warns if unsaved changes)
+   - Return later from dashboard's "Brouillons" section
+
+**Important Notes:**
+- Drafts are automatically created on first field blur (requires at least a title)
+- Only the decision creator can see and manage their drafts
+- Drafts can only be deleted if `status='DRAFT'` (enforced by API)
+- Auto-saves use `autoSave: true` flag to prevent audit log clutter
+- Manual saves and form submission trigger full audit logging
 
 ### Invitation System
 

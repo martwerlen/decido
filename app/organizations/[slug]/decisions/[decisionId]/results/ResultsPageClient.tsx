@@ -304,7 +304,7 @@ export default function ResultsPageClient({
         );
       })()}
 
-      {/* Résultats vote nuancé (jugement majoritaire) */}
+      {/* Résultats vote nuancé  */}
       {decision.decisionType === 'NUANCED_VOTE' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Résultats du vote nuancé</h2>

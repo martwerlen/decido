@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import { logVoteRecorded, logVoteUpdated } from '@/lib/decision-logger';
 
 /**
  * Hash une adresse IP pour anonymisation
@@ -196,6 +197,9 @@ export async function POST(
             votedAt: new Date(),
           },
         });
+
+        // Logger la mise à jour du vote (anonyme)
+        await logVoteUpdated(decision.id);
       } else {
         // Créer un nouveau vote et log
         await prisma.$transaction([
@@ -214,6 +218,9 @@ export async function POST(
             },
           }),
         ]);
+
+        // Logger le nouveau vote (anonyme)
+        await logVoteRecorded(decision.id);
       }
     } else if (decision.decisionType === 'MAJORITY') {
       const { proposalId } = body;
@@ -259,6 +266,9 @@ export async function POST(
             votedAt: new Date(),
           },
         });
+
+        // Logger la mise à jour du vote (anonyme)
+        await logVoteUpdated(decision.id);
       } else {
         // Créer un nouveau vote et log
         await prisma.$transaction([
@@ -277,6 +287,9 @@ export async function POST(
             },
           }),
         ]);
+
+        // Logger le nouveau vote (anonyme)
+        await logVoteRecorded(decision.id);
       }
     } else if (decision.decisionType === 'NUANCED_VOTE') {
       const { votes } = body;
@@ -331,6 +344,9 @@ export async function POST(
             },
           }),
         ]);
+
+        // Logger la mise à jour du vote (anonyme)
+        await logVoteUpdated(decision.id);
       } else {
         // Créer les votes et le log
         await prisma.$transaction([
@@ -352,6 +368,9 @@ export async function POST(
             },
           }),
         ]);
+
+        // Logger le nouveau vote (anonyme)
+        await logVoteRecorded(decision.id);
       }
     } else {
       return NextResponse.json(

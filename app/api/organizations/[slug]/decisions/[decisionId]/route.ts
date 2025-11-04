@@ -5,6 +5,7 @@ import { isValidDecisionType, isValidDecisionStatus } from '@/types/enums';
 import {
   logDecisionTitleUpdated,
   logDecisionDescriptionUpdated,
+  logDecisionContextUpdated,
   logDecisionDeadlineUpdated,
   logProposalAmended,
 } from '@/lib/decision-logger';
@@ -263,24 +264,79 @@ export async function PATCH(
 
     if (body.title !== undefined) updateData.title = body.title;
     if (body.description !== undefined) updateData.description = body.description;
+    if (body.context !== undefined) updateData.context = body.context;
     if (body.endDate !== undefined) {
-      const endDateObj = new Date(body.endDate);
-      const minDate = new Date();
-      minDate.setHours(minDate.getHours() + 24);
+      if (body.endDate) {
+        const endDateObj = new Date(body.endDate);
+        const minDate = new Date();
+        minDate.setHours(minDate.getHours() + 24);
 
-      if (endDateObj < minDate) {
-        return Response.json(
-          { error: 'La date de fin doit être au moins 24h dans le futur' },
-          { status: 400 }
-        );
+        if (endDateObj < minDate) {
+          return Response.json(
+            { error: 'La date de fin doit être au moins 24h dans le futur' },
+            { status: 400 }
+          );
+        }
+
+        updateData.endDate = endDateObj;
+      } else {
+        updateData.endDate = null;
       }
-
-      updateData.endDate = endDateObj;
     }
     if (body.initialProposal !== undefined) updateData.initialProposal = body.initialProposal;
     if (body.proposal !== undefined) updateData.proposal = body.proposal;
     if (body.votingMode !== undefined) updateData.votingMode = body.votingMode;
-    if (body.teamId !== undefined) updateData.teamId = body.teamId;
+    if (body.teamId !== undefined) {
+      if (body.teamId) {
+        const team = await prisma.team.findFirst({
+          where: {
+            id: body.teamId,
+            organizationId: organization.id,
+          },
+        });
+
+        if (!team) {
+          return Response.json(
+            { error: 'Équipe non trouvée ou n\'appartient pas à l\'organisation' },
+            { status: 400 }
+          );
+        }
+        updateData.teamId = body.teamId;
+      } else {
+        updateData.teamId = null;
+      }
+    }
+
+    // Changement de type de décision
+    if (body.decisionType !== undefined && isValidDecisionType(body.decisionType)) {
+      updateData.decisionType = body.decisionType;
+    }
+
+    // Champs spécifiques au mode PUBLIC_LINK
+    if (body.publicSlug !== undefined) {
+      if (body.publicSlug && body.publicSlug !== decision.publicSlug) {
+        // Vérifier l'unicité du slug dans l'organisation
+        const existingSlug = await prisma.decision.findFirst({
+          where: {
+            organizationId: organization.id,
+            publicSlug: body.publicSlug,
+            id: { not: decisionId },
+          },
+        });
+
+        if (existingSlug) {
+          return Response.json(
+            { error: 'Ce slug est déjà utilisé dans cette organisation' },
+            { status: 400 }
+          );
+        }
+      }
+      updateData.publicSlug = body.publicSlug;
+    }
+
+    // Champs spécifiques au vote nuancé
+    if (body.nuancedScale !== undefined) updateData.nuancedScale = body.nuancedScale;
+    if (body.nuancedWinnerCount !== undefined) updateData.nuancedWinnerCount = body.nuancedWinnerCount;
 
     // Mettre à jour la décision
     const updated = await prisma.decision.update({
@@ -299,22 +355,27 @@ export async function PATCH(
       },
     });
 
-    // Logger les modifications
-    if (body.title !== undefined && body.title !== decision.title) {
-      await logDecisionTitleUpdated(decisionId, session.user.id, decision.title, body.title);
-    }
-    if (body.description !== undefined && body.description !== decision.description) {
-      await logDecisionDescriptionUpdated(decisionId, session.user.id, decision.description, body.description);
-    }
-    if (body.endDate !== undefined) {
-      const newEndDate = new Date(body.endDate);
-      const oldEndDate = decision.endDate;
-      if (oldEndDate?.getTime() !== newEndDate.getTime()) {
-        await logDecisionDeadlineUpdated(decisionId, session.user.id, oldEndDate, newEndDate);
+    // Logger les modifications (seulement si on n'est pas en mode auto-save)
+    if (!body.autoSave) {
+      if (body.title !== undefined && body.title !== decision.title) {
+        await logDecisionTitleUpdated(decisionId, session.user.id, decision.title, body.title);
       }
-    }
-    if (body.proposal !== undefined && body.proposal !== decision.proposal) {
-      await logProposalAmended(decisionId, session.user.id);
+      if (body.description !== undefined && body.description !== decision.description) {
+        await logDecisionDescriptionUpdated(decisionId, session.user.id, decision.description, body.description);
+      }
+      if (body.context !== undefined && body.context !== decision.context) {
+        await logDecisionContextUpdated(decisionId, session.user.id, decision.context, body.context);
+      }
+      if (body.endDate !== undefined) {
+        const newEndDate = body.endDate ? new Date(body.endDate) : null;
+        const oldEndDate = decision.endDate;
+        if (oldEndDate?.getTime() !== newEndDate?.getTime()) {
+          await logDecisionDeadlineUpdated(decisionId, session.user.id, oldEndDate, newEndDate);
+        }
+      }
+      if (body.proposal !== undefined && body.proposal !== decision.proposal) {
+        await logProposalAmended(decisionId, session.user.id);
+      }
     }
 
     return Response.json({ decision: updated });

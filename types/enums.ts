@@ -49,12 +49,12 @@ export const DECISION_TYPES: DecisionType[] = [
 ];
 
 export const DecisionTypeLabels: Record<DecisionType, string> = {
-  CONSENSUS: 'Consensus (unanimité)',
+  CONSENSUS: 'Consensus',
   CONSENT: 'Consentement (pas d\'objection)',
   MAJORITY: 'Majorité simple',
   SUPERMAJORITY: 'Super-majorité (2/3)',
   WEIGHTED_VOTE: 'Vote nuancé',
-  NUANCED_VOTE: 'Vote nuancé (jugement majoritaire)',
+  NUANCED_VOTE: 'Vote nuancé',
   ADVISORY: 'Consultatif',
 };
 
@@ -230,6 +230,7 @@ export function isValidConsensusVoteValue(value: string): value is ConsensusVote
 export type DecisionLogEventType =
   // Cycle de vie
   | 'CREATED'                 // Décision créée
+  | 'LAUNCHED'                // Décision lancée
   | 'STATUS_CHANGED'          // Changement de statut
   | 'CLOSED'                  // Décision fermée
   | 'REOPENED'                // Décision rouverte
@@ -253,6 +254,7 @@ export type DecisionLogEventType =
 
 export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'CREATED',
+  'LAUNCHED',
   'STATUS_CHANGED',
   'CLOSED',
   'REOPENED',
@@ -271,6 +273,7 @@ export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
 
 export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = {
   CREATED: 'Décision créée',
+  LAUNCHED: 'Décision lancée',
   STATUS_CHANGED: 'Statut modifié',
   CLOSED: 'Décision fermée',
   REOPENED: 'Décision rouverte',
@@ -292,7 +295,7 @@ export function isValidDecisionLogEventType(type: string): type is DecisionLogEv
 }
 
 // ============================================
-// VOTE NUANCÉ (JUGEMENT MAJORITAIRE)
+// VOTE NUANCÉ 
 // ============================================
 
 // Échelles de mentions disponibles

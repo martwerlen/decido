@@ -1,16 +1,24 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { use, useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DecisionTypeLabels,
-  DecisionTypeDescriptions,
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
+import { Tooltip, CircularProgress } from '@mui/material';
+import { Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 
 type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
+
+// Descriptions courtes pour les tooltips
+const DecisionTypeTooltips: Record<DecisionType, string> = {
+  CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
+  MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
+  NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l'emporte",
+};
 
 interface NuancedProposal {
   title: string;
@@ -24,8 +32,10 @@ export default function NewDecisionPage({
 }) {
   const { slug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
@@ -54,6 +64,11 @@ export default function NewDecisionPage({
 
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
+
+  // Draft state
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Normaliser et valider le slug
   const normalizeSlug = (input: string): string => {
@@ -87,12 +102,145 @@ export default function NewDecisionPage({
     }
   };
 
+  // Sauvegarder manuellement le brouillon
+  const handleManualSave = async () => {
+    // Ne sauvegarder que si on a au moins un titre
+    if (!formData.title.trim()) {
+      setError('Le titre est requis pour sauvegarder un brouillon');
+      return;
+    }
+
+    setIsSaving(true);
+    setError('');
+
+    try {
+      if (!draftId) {
+        // Créer un nouveau brouillon
+        const body: any = { ...formData };
+        if (formData.decisionType === 'NUANCED_VOTE') {
+          body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
+        } else if (formData.decisionType === 'MAJORITY') {
+          body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
+        }
+
+        const response = await fetch(`/api/organizations/${slug}/decisions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setDraftId(data.decision.id);
+          setLastSavedAt(new Date());
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la sauvegarde');
+        }
+      } else {
+        // Mettre à jour le brouillon existant
+        const body: any = { ...formData };
+
+        const response = await fetch(`/api/organizations/${slug}/decisions/${draftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (response.ok) {
+          setLastSavedAt(new Date());
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la sauvegarde');
+        }
+      }
+    } catch (err) {
+      console.error('Error saving draft:', err);
+      setError('Erreur lors de la sauvegarde du brouillon');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Charger le brouillon si paramètre draft présent
+  useEffect(() => {
+    const draftId = searchParams.get('draft');
+    if (draftId) {
+      setLoadingDraft(true);
+      fetch(`/api/organizations/${slug}/decisions/${draftId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.decision) {
+            const decision = data.decision;
+
+            // Pré-remplir le formulaire
+            setFormData({
+              title: decision.title || '',
+              description: decision.description || '',
+              decisionType: decision.decisionType || 'MAJORITY',
+              initialProposal: decision.initialProposal || '',
+              endDate: decision.endDate ? new Date(decision.endDate).toISOString().slice(0, 16) : '',
+              votingMode: decision.votingMode || 'INVITED',
+              publicSlug: decision.publicSlug || '',
+              nuancedScale: decision.nuancedScale || '5_LEVELS',
+              nuancedWinnerCount: decision.nuancedWinnerCount || 1,
+            });
+
+            // Charger les propositions si MAJORITY
+            if (decision.decisionType === 'MAJORITY' && decision.proposals && decision.proposals.length > 0) {
+              const sortedProposals = [...decision.proposals].sort((a: any, b: any) => a.order - b.order);
+              setMajorityProposals(sortedProposals.map((p: any) => ({
+                title: p.title || '',
+                description: p.description || '',
+              })));
+            }
+
+            // Charger les propositions si NUANCED_VOTE
+            if (decision.decisionType === 'NUANCED_VOTE' && decision.nuancedProposals && decision.nuancedProposals.length > 0) {
+              const sortedProposals = [...decision.nuancedProposals].sort((a: any, b: any) => a.order - b.order);
+              setNuancedProposals(sortedProposals.map((p: any) => ({
+                title: p.title || '',
+                description: p.description || '',
+              })));
+            }
+
+            // Définir le draftId pour l'auto-save
+            setDraftId(draftId);
+            setLastSavedAt(new Date(decision.updatedAt));
+          }
+        })
+        .catch(err => {
+          console.error('Error loading draft:', err);
+          setError('Impossible de charger le brouillon');
+        })
+        .finally(() => {
+          setLoadingDraft(false);
+        });
+    }
+  }, [searchParams, slug]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Si un brouillon existe déjà, rediriger vers la page d'administration
+      if (draftId) {
+        // Actualiser la sidebar
+        refreshSidebar();
+
+        // Rediriger selon le mode de vote
+        if (formData.votingMode === 'PUBLIC_LINK') {
+          router.push(`/organizations/${slug}/decisions/${draftId}/share`);
+        } else {
+          router.push(`/organizations/${slug}/decisions/${draftId}/admin`);
+        }
+        return;
+      }
+
+      // Sinon, créer une nouvelle décision (comportement normal)
+
       // Validation du mode PUBLIC_LINK
       if (formData.votingMode === 'PUBLIC_LINK') {
         if (!formData.publicSlug || formData.publicSlug.length < 3) {
@@ -233,9 +381,25 @@ export default function NewDecisionPage({
   minDate.setHours(minDate.getHours() + 24);
   const minDateString = minDate.toISOString().slice(0, 16);
 
+  // Afficher un spinner pendant le chargement du brouillon
+  if (loadingDraft) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-2xl flex justify-center items-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <CircularProgress />
+          <p className="text-gray-600">Chargement du brouillon...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6">Nouvelle décision</h1>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">
+          {draftId ? 'Continuer le brouillon' : 'Nouvelle décision'}
+        </h1>
+      </div>
 
       {error && (
         <div className="px-4 py-3 rounded mb-4" style={{ backgroundColor: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)' }}>
@@ -337,7 +501,7 @@ export default function NewDecisionPage({
                     setSlugAvailable(null);
                   }
                 }}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="mon-vote-2024"
                 minLength={3}
                 maxLength={50}
@@ -369,50 +533,59 @@ export default function NewDecisionPage({
             Modalité décisionnelle *
           </label>
           <div className="space-y-3">
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="MAJORITY"
-                checked={formData.decisionType === 'MAJORITY'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'MAJORITY' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+            <Tooltip
+              title={DecisionTypeTooltips.MAJORITY}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="MAJORITY"
+                  checked={formData.decisionType === 'MAJORITY'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'MAJORITY' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.MAJORITY}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.MAJORITY}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
 
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="CONSENSUS"
-                checked={formData.decisionType === 'CONSENSUS'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'CONSENSUS' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+            <Tooltip
+              title={DecisionTypeTooltips.CONSENSUS}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="CONSENSUS"
+                  checked={formData.decisionType === 'CONSENSUS'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'CONSENSUS' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.CONSENSUS}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.CONSENSUS}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
 
-            <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="decisionType"
-                value="NUANCED_VOTE"
-                checked={formData.decisionType === 'NUANCED_VOTE'}
-                onChange={(e) => setFormData({ ...formData, decisionType: 'NUANCED_VOTE' })}
-                className="mt-1 mr-3"
-              />
-              <div>
+            <Tooltip
+              title={DecisionTypeTooltips.NUANCED_VOTE}
+              arrow
+              placement="right"
+            >
+              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="decisionType"
+                  value="NUANCED_VOTE"
+                  checked={formData.decisionType === 'NUANCED_VOTE'}
+                  onChange={(e) => setFormData({ ...formData, decisionType: 'NUANCED_VOTE' })}
+                  className="mt-1 mr-3"
+                />
                 <div className="font-medium">{DecisionTypeLabels.NUANCED_VOTE}</div>
-                <div className="text-sm text-gray-600">{DecisionTypeDescriptions.NUANCED_VOTE}</div>
-              </div>
-            </label>
+              </label>
+            </Tooltip>
           </div>
         </div>
 
@@ -445,14 +618,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateMajorityProposal(index, 'title', e.target.value)}
-                        placeholder="Titre de la proposition"
+                                    placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateMajorityProposal(index, 'description', e.target.value)}
-                        placeholder="Description (optionnelle)"
+                                    placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -488,7 +661,7 @@ export default function NewDecisionPage({
               rows={4}
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Décrivez votre proposition initiale pour le consensus..."
             />
           </div>
@@ -508,7 +681,7 @@ export default function NewDecisionPage({
                 id="nuancedScale"
                 value={formData.nuancedScale}
                 onChange={(e) => setFormData({ ...formData, nuancedScale: e.target.value as NuancedScale })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Pour / Sans avis / Contre)</option>
                 <option value="5_LEVELS">{NuancedScaleLabels['5_LEVELS']} (Franchement pour / Pour / Sans avis / Contre / Franchement contre)</option>
@@ -528,7 +701,7 @@ export default function NewDecisionPage({
                 max="25"
                 value={formData.nuancedWinnerCount}
                 onChange={(e) => setFormData({ ...formData, nuancedWinnerCount: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-600 mt-1">
                 Combien de propositions souhaitez-vous désigner comme gagnantes ?
@@ -561,14 +734,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateNuancedProposal(index, 'title', e.target.value)}
-                        placeholder="Titre de la proposition"
+                                    placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateNuancedProposal(index, 'description', e.target.value)}
-                        placeholder="Description (optionnelle)"
+                                    placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -611,6 +784,14 @@ export default function NewDecisionPage({
           </p>
         </div>
 
+        {/* Indicateur de sauvegarde */}
+        {!isSaving && lastSavedAt && (
+          <div className="flex items-center gap-2 text-sm text-green-600 pt-4">
+            <CheckCircleIcon fontSize="small" />
+            <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
+          </div>
+        )}
+
         {/* Boutons */}
         <div className="flex gap-4 pt-4">
           <button
@@ -621,11 +802,23 @@ export default function NewDecisionPage({
             Annuler
           </button>
           <button
+            type="button"
+            onClick={handleManualSave}
+            disabled={isSaving || !formData.title.trim()}
+            className="px-6 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+            onMouseEnter={(e) => !isSaving && formData.title.trim() && (e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)')}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            {isSaving ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+            {isSaving ? 'Sauvegarde...' : 'Enregistrer en brouillon'}
+          </button>
+          <button
             type="submit"
             disabled={loading}
             className="px-6 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'var(--color-primary)' }}
-            onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
           >
             {loading ? 'Création...' : 'Créer et configurer'}
