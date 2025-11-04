@@ -30,13 +30,14 @@ export const InvitationStatusLabels: Record<InvitationStatus, string> = {
 
 // Types de décisions
 export type DecisionType =
-  | 'CONSENSUS'       // Unanimité requise
-  | 'CONSENT'         // Pas d'objection majeure
-  | 'MAJORITY'        // Vote majoritaire simple
-  | 'SUPERMAJORITY'   // Vote qualifié (2/3, 3/4...)
-  | 'WEIGHTED_VOTE'   // Vote nuancé avec échelle
-  | 'NUANCED_VOTE'    // Jugement majoritaire
-  | 'ADVISORY';       // Consultatif
+  | 'CONSENSUS'             // Unanimité requise
+  | 'CONSENT'               // Pas d'objection majeure
+  | 'MAJORITY'              // Vote majoritaire simple
+  | 'SUPERMAJORITY'         // Vote qualifié (2/3, 3/4...)
+  | 'WEIGHTED_VOTE'         // Vote nuancé avec échelle
+  | 'NUANCED_VOTE'          // Jugement majoritaire
+  | 'ADVISORY'              // Consultatif
+  | 'ADVICE_SOLICITATION';  // Sollicitation d'avis
 
 export const DECISION_TYPES: DecisionType[] = [
   'CONSENSUS',
@@ -46,6 +47,7 @@ export const DECISION_TYPES: DecisionType[] = [
   'WEIGHTED_VOTE',
   'NUANCED_VOTE',
   'ADVISORY',
+  'ADVICE_SOLICITATION',
 ];
 
 export const DecisionTypeLabels: Record<DecisionType, string> = {
@@ -56,6 +58,7 @@ export const DecisionTypeLabels: Record<DecisionType, string> = {
   WEIGHTED_VOTE: 'Vote nuancé',
   NUANCED_VOTE: 'Vote nuancé',
   ADVISORY: 'Consultatif',
+  ADVICE_SOLICITATION: 'Décision par sollicitation d\'avis',
 };
 
 export const DecisionTypeDescriptions: Record<DecisionType, string> = {
@@ -66,6 +69,7 @@ export const DecisionTypeDescriptions: Record<DecisionType, string> = {
   WEIGHTED_VOTE: 'Vote avec échelle de préférence (-3 à +3)',
   NUANCED_VOTE: 'Chaque participant évalue toutes les propositions avec une mention',
   ADVISORY: 'Vote consultatif sans décision contraignante',
+  ADVICE_SOLICITATION: 'Sollicitez l\'avis de personnes compétentes avant de décider en autonomie',
 };
 
 // Statuts de décision
@@ -250,7 +254,12 @@ export type DecisionLogEventType =
   // Actions des participants
   | 'VOTE_RECORDED'           // Vote enregistré
   | 'VOTE_UPDATED'            // Vote modifié
-  | 'COMMENT_ADDED';          // Commentaire ajouté
+  | 'COMMENT_ADDED'           // Commentaire ajouté
+
+  // Sollicitation d'avis
+  | 'OPINION_SUBMITTED'       // Avis déposé
+  | 'OPINION_UPDATED'         // Avis modifié
+  | 'FINAL_DECISION_MADE';    // Décision finale prise
 
 export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'CREATED',
@@ -269,6 +278,9 @@ export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'VOTE_RECORDED',
   'VOTE_UPDATED',
   'COMMENT_ADDED',
+  'OPINION_SUBMITTED',
+  'OPINION_UPDATED',
+  'FINAL_DECISION_MADE',
 ];
 
 export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = {
@@ -288,6 +300,9 @@ export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = 
   VOTE_RECORDED: 'Vote enregistré',
   VOTE_UPDATED: 'Vote modifié',
   COMMENT_ADDED: 'Commentaire ajouté',
+  OPINION_SUBMITTED: 'Avis déposé',
+  OPINION_UPDATED: 'Avis modifié',
+  FINAL_DECISION_MADE: 'Décision finale prise',
 };
 
 export function isValidDecisionLogEventType(type: string): type is DecisionLogEventType {

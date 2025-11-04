@@ -31,6 +31,7 @@ model User {
   votes                 Vote[]
   proposalVotes         ProposalVote[]
   nuancedVotes          NuancedVote[]
+  opinionResponses      OpinionResponse[]
   comments              Comment[]
   decisionParticipants  DecisionParticipant[]
   decisionLogs          DecisionLog[]
@@ -382,6 +383,30 @@ model NuancedVote {
   @@unique([userId, proposalId]) // Un utilisateur ne peut voter qu'une fois par proposition
   @@unique([externalParticipantId, proposalId])
   @@map("nuanced_votes")
+}
+
+// ============================================
+// AVIS (OPINION SOLICITATION)
+// ============================================
+
+model OpinionResponse {
+  id                    String   @id @default(cuid())
+  decisionId            String
+  content               String   // Contenu de l'avis
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  userId                String?  // Nullable pour les avis externes
+  externalParticipantId String?  // ID du DecisionParticipant pour avis externes
+
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decision            Decision             @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  externalParticipant DecisionParticipant? @relation(fields: [externalParticipantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, decisionId])
+  @@unique([externalParticipantId, decisionId])
+  @@map("opinion_responses")
 }
 
 // ============================================
