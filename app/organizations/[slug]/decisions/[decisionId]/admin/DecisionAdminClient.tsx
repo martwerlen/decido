@@ -487,7 +487,7 @@ export default function DecisionAdminClient({
           <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
 
           <div className="mb-4">
-            <h3 className="font-medium mb-2">Intention de décision</h3>
+            <h3 className="font-medium mb-2">Proposition actuelle</h3>
             <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
               {decision.initialProposal || decision.proposal}
             </div>
@@ -496,7 +496,7 @@ export default function DecisionAdminClient({
           {isOpen && opinionsReceived === 0 && (
             <div>
               <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
-                ⚠️ Vous pouvez modifier votre intention uniquement tant qu'aucun avis n'a été donné.
+                ⚠️ Vous pouvez modifier votre proposition uniquement tant qu'aucun avis n'a été donné.
               </p>
               <div className="space-y-3">
                 <textarea
@@ -504,7 +504,7 @@ export default function DecisionAdminClient({
                   onChange={(e) => setAmendedProposal(e.target.value)}
                   rows={6}
                   className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Modifiez votre intention de décision si nécessaire..."
+                  placeholder="Modifiez votre proposition de décision si nécessaire..."
                 />
                 <button
                   onClick={handleUpdateAmendedProposal}
@@ -514,7 +514,7 @@ export default function DecisionAdminClient({
                   onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
                 >
-                  Mettre à jour l'intention
+                  Mettre à jour la proposition
                 </button>
               </div>
             </div>
@@ -522,7 +522,7 @@ export default function DecisionAdminClient({
 
           {isOpen && opinionsReceived > 0 && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-              ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre intention de décision.
+              ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre proposition de décision.
             </div>
           )}
         </div>
