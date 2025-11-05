@@ -526,6 +526,7 @@ export default function NewDecisionPage({
                 </div>
               )}
             </div>
+          )}
           </div>
         )}
 
