@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidDecisionType } from '@/types/enums';
 import { logDecisionCreated } from '@/lib/decision-logger';
+import { sendEmail } from '@/lib/email';
 import crypto from 'crypto';
 
 // GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
@@ -121,10 +122,21 @@ export async function POST(
     }
 
     // Validation
-    const { title, description, decisionType, teamId, endDate, votingMode = 'INVITED' } = body;
+    const {
+      title,
+      description,
+      decisionType,
+      teamId,
+      endDate,
+      votingMode = 'INVITED',
+      launch = false, // Nouveau paramètre : lance immédiatement la décision
+      teamIds = [],
+      userIds = [],
+      externalParticipants = []
+    } = body;
 
-    // Déterminer si c'est un brouillon (INVITED = brouillon, PUBLIC_LINK = lancé immédiatement)
-    const isDraft = votingMode === 'INVITED';
+    // Déterminer si c'est un brouillon (INVITED sans launch = brouillon, PUBLIC_LINK = lancé immédiatement)
+    const isDraft = votingMode === 'INVITED' && !launch;
 
     // Le titre est toujours requis
     if (!title) {
@@ -134,7 +146,7 @@ export async function POST(
       );
     }
 
-    // Pour les décisions lancées (PUBLIC_LINK), les validations strictes s'appliquent
+    // Pour les décisions lancées (PUBLIC_LINK ou launch=true), les validations strictes s'appliquent
     if (!isDraft) {
       if (!description) {
         return Response.json(
@@ -154,6 +166,14 @@ export async function POST(
       if (decisionType === 'CONSENSUS' && !body.initialProposal) {
         return Response.json(
           { error: 'Une proposition initiale est requise pour le consensus' },
+          { status: 400 }
+        );
+      }
+
+      // Pour ADVICE_SOLICITATION, vérifier la présence de l'intention
+      if (decisionType === 'ADVICE_SOLICITATION' && !body.initialProposal) {
+        return Response.json(
+          { error: 'Une intention de décision est requise pour la sollicitation d\'avis' },
           { status: 400 }
         );
       }
@@ -208,22 +228,35 @@ export async function POST(
         }
       }
 
-      // Vérifier que endDate est au moins 24h dans le futur
-      if (!endDate) {
-        return Response.json(
-          { error: 'La date de fin est requise' },
-          { status: 400 }
-        );
-      }
-      const endDateObj = new Date(endDate);
-      const minDate = new Date();
-      minDate.setHours(minDate.getHours() + 24);
+      // Vérifier que endDate est au moins 24h dans le futur (sauf ADVICE_SOLICITATION)
+      if (decisionType !== 'ADVICE_SOLICITATION') {
+        if (!endDate) {
+          return Response.json(
+            { error: 'La date de fin est requise' },
+            { status: 400 }
+          );
+        }
+        const endDateObj = new Date(endDate);
+        const minDate = new Date();
+        minDate.setHours(minDate.getHours() + 24);
 
-      if (endDateObj < minDate) {
-        return Response.json(
-          { error: 'La date de fin doit être au moins 24h dans le futur' },
-          { status: 400 }
-        );
+        if (endDateObj < minDate) {
+          return Response.json(
+            { error: 'La date de fin doit être au moins 24h dans le futur' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Si mode INVITED et launch=true, vérifier qu'il y a des participants
+      if (votingMode === 'INVITED' && launch) {
+        const totalParticipants = teamIds.length + userIds.length + externalParticipants.length;
+        if (totalParticipants === 0) {
+          return Response.json(
+            { error: 'Au moins un participant doit être invité' },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -296,19 +329,23 @@ export async function POST(
       title,
       description: description || '',
       decisionType: decisionType || 'MAJORITY',
-      // En mode PUBLIC_LINK, lancer immédiatement (pas besoin de configuration)
-      status: votingMode === 'PUBLIC_LINK' ? 'OPEN' : 'DRAFT',
-      startDate: votingMode === 'PUBLIC_LINK' ? new Date() : null,
+      // En mode PUBLIC_LINK ou launch=true, lancer immédiatement (pas besoin de configuration)
+      status: votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch) ? 'OPEN' : 'DRAFT',
+      startDate: votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch) ? new Date() : null,
       organizationId: organization.id,
       creatorId: session.user.id,
       teamId: teamId || null,
       endDate: endDate ? new Date(endDate) : null,
       initialProposal: body.initialProposal || null,
+      // Pour CONSENSUS, copier initialProposal vers proposal
+      proposal: (decisionType === 'CONSENSUS' || decisionType === 'ADVICE_SOLICITATION') && body.initialProposal
+        ? body.initialProposal
+        : null,
       votingMode,
       publicSlug: votingMode === 'PUBLIC_LINK' ? body.publicSlug : null,
     };
 
-    // Ajouter le créateur comme participant uniquement en mode INVITED
+    // Ajouter le créateur comme participant uniquement en mode INVITED (brouillon ou lancé)
     if (votingMode === 'INVITED') {
       decisionData.participants = {
         create: {
@@ -388,8 +425,8 @@ export async function POST(
     // Logger la création de la décision
     await logDecisionCreated(decision.id, session.user.id);
 
-    // Si PUBLIC_LINK, logger aussi le lancement automatique
-    if (votingMode === 'PUBLIC_LINK') {
+    // Si PUBLIC_LINK ou launch=true, logger le lancement automatique
+    if (votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch)) {
       await prisma.decisionLog.create({
         data: {
           decisionId: decision.id,
@@ -399,6 +436,167 @@ export async function POST(
           newValue: 'OPEN',
         },
       });
+    }
+
+    // Si launch=true et mode INVITED, créer les participants et envoyer les emails
+    if (votingMode === 'INVITED' && launch) {
+      const createdExternalParticipants: any[] = [];
+
+      // Ajouter des équipes entières
+      if (teamIds && Array.isArray(teamIds) && teamIds.length > 0) {
+        for (const teamId of teamIds) {
+          // Vérifier que l'équipe appartient à l'organisation
+          const team = await prisma.team.findFirst({
+            where: {
+              id: teamId,
+              organizationId: organization.id,
+            },
+            include: {
+              members: {
+                include: {
+                  organizationMember: true,
+                },
+              },
+            },
+          });
+
+          if (!team) continue;
+
+          // Ajouter tous les membres de l'équipe (sauf le créateur)
+          for (const teamMember of team.members) {
+            // Ne pas ajouter le créateur de la décision comme participant (déjà ajouté)
+            if (teamMember.organizationMember.userId === decision.creatorId) {
+              continue;
+            }
+
+            try {
+              await prisma.decisionParticipant.create({
+                data: {
+                  decisionId: decision.id,
+                  userId: teamMember.organizationMember.userId,
+                  invitedVia: 'TEAM',
+                  teamId,
+                },
+              });
+            } catch (error) {
+              // Ignorer les doublons
+              console.error('Duplicate participant:', error);
+            }
+          }
+        }
+      }
+
+      // Ajouter des membres individuels
+      if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+        for (const userId of userIds) {
+          // Ne pas ajouter le créateur de la décision comme participant (déjà ajouté)
+          if (userId === decision.creatorId) {
+            continue;
+          }
+
+          // Vérifier que l'utilisateur est membre de l'organisation
+          const membership = await prisma.organizationMember.findFirst({
+            where: {
+              userId,
+              organizationId: organization.id,
+            },
+          });
+
+          if (!membership) continue;
+
+          try {
+            await prisma.decisionParticipant.create({
+              data: {
+                decisionId: decision.id,
+                userId,
+                invitedVia: 'MANUAL',
+              },
+            });
+          } catch (error) {
+            // Ignorer les doublons
+            console.error('Duplicate participant:', error);
+          }
+        }
+      }
+
+      // Ajouter des participants externes
+      if (externalParticipants && Array.isArray(externalParticipants) && externalParticipants.length > 0) {
+        for (const external of externalParticipants) {
+          if (!external.email || !external.name) continue;
+
+          try {
+            // Générer un token unique pour le participant externe
+            const token = crypto.randomBytes(32).toString('hex');
+
+            const participant = await prisma.decisionParticipant.create({
+              data: {
+                decisionId: decision.id,
+                externalEmail: external.email,
+                externalName: external.name,
+                invitedVia: 'EXTERNAL',
+                token,
+                tokenExpiresAt: decision.endDate || undefined,
+              },
+            });
+            createdExternalParticipants.push(participant);
+          } catch (error) {
+            // Ignorer les doublons
+            console.error('Duplicate external participant:', error);
+          }
+        }
+      }
+
+      // Envoyer des emails uniquement aux participants externes
+      if (createdExternalParticipants.length > 0) {
+        console.log(`\n📧 === ENVOI EMAILS === ${createdExternalParticipants.length} participant(s) externe(s)\n`);
+
+        const emailPromises = createdExternalParticipants.map(async (participant) => {
+          const email = participant.externalEmail!;
+          const name = participant.externalName || 'Participant';
+          const voteUrl = `${process.env.NEXTAUTH_URL}/vote/${participant.token}`;
+
+          try {
+            console.log(`📤 Envoi à ${email} (${name})`);
+
+            const decisionTypeLabel = decision.decisionType === 'MAJORITY'
+              ? 'Vote à la majorité'
+              : decision.decisionType === 'CONSENSUS'
+              ? 'Consensus'
+              : decision.decisionType === 'ADVICE_SOLICITATION'
+              ? 'Sollicitation d\'avis'
+              : decision.decisionType === 'NUANCED_VOTE'
+              ? 'Vote nuancé'
+              : decision.decisionType;
+
+            await sendEmail({
+              to: email,
+              subject: `Nouvelle décision: ${decision.title}`,
+              html: `
+                <h2>Vous êtes invité à participer à une décision</h2>
+                <p>Bonjour ${name},</p>
+                <p>Vous êtes invité à participer à une décision :</p>
+                <h3>${decision.title}</h3>
+                <p>${decision.description}</p>
+                <p><strong>Type de décision :</strong> ${decisionTypeLabel}</p>
+                ${decision.endDate ? `<p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>` : ''}
+                <p>
+                  <a href="${voteUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">
+                    Participer à la décision
+                  </a>
+                </p>
+                <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
+                ${decision.endDate ? `<p style="color: #666; font-size: 12px; margin-top: 20px;">Ce lien est personnel et expire le ${new Date(decision.endDate).toLocaleDateString('fr-FR')}.</p>` : ''}
+              `,
+            });
+            console.log(`✅ Envoyé à ${email}`);
+          } catch (error) {
+            console.error(`❌ Erreur pour ${email}:`, error);
+          }
+        });
+
+        await Promise.allSettled(emailPromises);
+        console.log(`\n📧 === FIN ENVOI EMAILS ===\n`);
+      }
     }
 
     return Response.json({ decision }, { status: 201 });

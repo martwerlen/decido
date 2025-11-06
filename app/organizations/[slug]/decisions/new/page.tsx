@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useRef } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DecisionTypeLabels,
@@ -26,6 +26,24 @@ interface NuancedProposal {
   description: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  _count: {
+    members: number;
+  };
+}
+
+interface Member {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
 export default function NewDecisionPage({
   params,
 }: {
@@ -36,8 +54,13 @@ export default function NewDecisionPage({
   const searchParams = useSearchParams();
   const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [error, setError] = useState('');
+
+  // Teams et membres
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -71,6 +94,14 @@ export default function NewDecisionPage({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Participants state
+  const [participantMode, setParticipantMode] = useState<'teams' | 'users' | 'external'>('teams');
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [externalParticipants, setExternalParticipants] = useState<Array<{ email: string; name: string }>>([]);
+  const [externalEmail, setExternalEmail] = useState('');
+  const [externalName, setExternalName] = useState('');
+
   // Normaliser et valider le slug
   const normalizeSlug = (input: string): string => {
     return input
@@ -102,6 +133,33 @@ export default function NewDecisionPage({
       setCheckingSlug(false);
     }
   };
+
+  // Charger les teams et members
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch teams
+        const teamsRes = await fetch(`/api/organizations/${slug}/teams`);
+        if (teamsRes.ok) {
+          const teamsData = await teamsRes.json();
+          setTeams(teamsData.teams || []);
+        }
+
+        // Fetch members
+        const membersRes = await fetch(`/api/organizations/${slug}/members`);
+        if (membersRes.ok) {
+          const membersData = await membersRes.json();
+          setMembers(membersData.members || []);
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [slug]);
 
   // Sauvegarder manuellement le brouillon
   const handleManualSave = async () => {
@@ -205,7 +263,7 @@ export default function NewDecisionPage({
               })));
             }
 
-            // Définir le draftId pour l'auto-save
+            // Définir le draftId
             setDraftId(draftId);
             setLastSavedAt(new Date(decision.updatedAt));
           }
@@ -220,28 +278,68 @@ export default function NewDecisionPage({
     }
   }, [searchParams, slug]);
 
+  // Calculer le nombre minimum de participants pour ADVICE_SOLICITATION
+  const getMinimumParticipants = (): number => {
+    if (formData.decisionType !== 'ADVICE_SOLICITATION') return 0;
+
+    const memberCount = members.length;
+    if (memberCount === 1) return 1; // 1 membre = 1 externe minimum
+    if (memberCount >= 2 && memberCount <= 4) return 1; // 2-4 membres = 1 min
+    if (memberCount >= 5) return 3; // 5+ membres = 3 min
+    return 1;
+  };
+
+  const minimumParticipants = getMinimumParticipants();
+
+  // Calculer le nombre total de participants sélectionnés
+  const getTotalParticipants = (): number => {
+    let total = 0;
+
+    // Compter les membres des équipes sélectionnées
+    selectedTeams.forEach(teamId => {
+      const team = teams.find(t => t.id === teamId);
+      if (team) total += team._count.members;
+    });
+
+    // Compter les membres individuels
+    total += selectedUsers.length;
+
+    // Compter les participants externes
+    total += externalParticipants.length;
+
+    return total;
+  };
+
+  // Ajouter un participant externe à la liste
+  const handleAddExternalParticipant = () => {
+    if (!externalEmail || !externalName) {
+      setError('Email et nom sont requis pour les participants externes');
+      return;
+    }
+
+    // Vérifier que l'email n'est pas déjà dans la liste
+    if (externalParticipants.some(p => p.email === externalEmail)) {
+      setError('Cet email est déjà dans la liste');
+      return;
+    }
+
+    setExternalParticipants([...externalParticipants, { email: externalEmail, name: externalName }]);
+    setExternalEmail('');
+    setExternalName('');
+    setError('');
+  };
+
+  // Supprimer un participant externe
+  const handleRemoveExternalParticipant = (email: string) => {
+    setExternalParticipants(externalParticipants.filter(p => p.email !== email));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Si un brouillon existe déjà, rediriger vers la page d'administration
-      if (draftId) {
-        // Actualiser la sidebar
-        refreshSidebar();
-
-        // Rediriger selon le mode de vote
-        if (formData.votingMode === 'PUBLIC_LINK') {
-          router.push(`/organizations/${slug}/decisions/${draftId}/share`);
-        } else {
-          router.push(`/organizations/${slug}/decisions/${draftId}/admin`);
-        }
-        return;
-      }
-
-      // Sinon, créer une nouvelle décision (comportement normal)
-
       // Validation du mode PUBLIC_LINK
       if (formData.votingMode === 'PUBLIC_LINK') {
         if (!formData.publicSlug || formData.publicSlug.length < 3) {
@@ -256,8 +354,8 @@ export default function NewDecisionPage({
         }
       }
 
-      // Vérifier que endDate est au moins 24h dans le futur
-      if (formData.endDate) {
+      // Vérifier que endDate est au moins 24h dans le futur (sauf ADVICE_SOLICITATION)
+      if (formData.decisionType !== 'ADVICE_SOLICITATION' && formData.endDate) {
         const endDate = new Date(formData.endDate);
         const minDate = new Date();
         minDate.setHours(minDate.getHours() + 24);
@@ -294,12 +392,43 @@ export default function NewDecisionPage({
         }
       }
 
+      // Validation des participants (mode INVITED uniquement)
+      if (formData.votingMode === 'INVITED') {
+        const totalParticipants = getTotalParticipants();
+
+        if (totalParticipants === 0) {
+          setError('Vous devez ajouter au moins un participant');
+          setLoading(false);
+          return;
+        }
+
+        // Validation spécifique pour ADVICE_SOLICITATION
+        if (formData.decisionType === 'ADVICE_SOLICITATION') {
+          if (totalParticipants < minimumParticipants) {
+            setError(`Vous devez solliciter au moins ${minimumParticipants} personne(s) pour une sollicitation d'avis`);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       // Préparer le body avec les propositions si nécessaire
-      const body: any = { ...formData };
+      const body: any = {
+        ...formData,
+        launch: true, // Toujours lancer la décision depuis /new
+      };
+
       if (formData.decisionType === 'NUANCED_VOTE') {
         body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
       } else if (formData.decisionType === 'MAJORITY') {
         body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
+      }
+
+      // Ajouter les participants (mode INVITED uniquement)
+      if (formData.votingMode === 'INVITED') {
+        body.teamIds = selectedTeams;
+        body.userIds = selectedUsers;
+        body.externalParticipants = externalParticipants;
       }
 
       const response = await fetch(`/api/organizations/${slug}/decisions`, {
@@ -332,8 +461,11 @@ export default function NewDecisionPage({
         console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/share`);
         router.push(`/organizations/${slug}/decisions/${decision.id}/share`);
       } else {
-        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/admin`);
-        router.push(`/organizations/${slug}/decisions/${decision.id}/admin`);
+        // Mode INVITED : vérifier si le créateur est participant
+        // On redirige vers /vote s'il est participant, sinon vers /admin
+        // Note : le backend ajoute automatiquement le créateur comme participant
+        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/vote`);
+        router.push(`/organizations/${slug}/decisions/${decision.id}/vote`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
@@ -382,13 +514,13 @@ export default function NewDecisionPage({
   minDate.setHours(minDate.getHours() + 24);
   const minDateString = minDate.toISOString().slice(0, 16);
 
-  // Afficher un spinner pendant le chargement du brouillon
-  if (loadingDraft) {
+  // Afficher un spinner pendant le chargement du brouillon ou des données
+  if (loadingDraft || loadingData) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-2xl flex justify-center items-center min-h-screen">
         <div className="flex flex-col items-center gap-4">
           <CircularProgress />
-          <p className="text-gray-600">Chargement du brouillon...</p>
+          <p className="text-gray-600">Chargement...</p>
         </div>
       </div>
     );
@@ -503,7 +635,7 @@ export default function NewDecisionPage({
                     setSlugAvailable(null);
                   }
                 }}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="mon-vote-2024"
                 minLength={3}
                 maxLength={50}
@@ -642,14 +774,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateMajorityProposal(index, 'title', e.target.value)}
-                                    placeholder="Titre de la proposition"
+                        placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateMajorityProposal(index, 'description', e.target.value)}
-                                    placeholder="Description (optionnelle)"
+                        placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -685,7 +817,7 @@ export default function NewDecisionPage({
               rows={4}
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Décrivez votre proposition initiale pour le consensus..."
             />
           </div>
@@ -695,7 +827,7 @@ export default function NewDecisionPage({
         {formData.decisionType === 'ADVICE_SOLICITATION' && (
           <div>
             <label htmlFor="initialProposal" className="block font-medium mb-2">
-              Proposition de décision *
+              Intention de décision *
             </label>
             <textarea
               id="initialProposal"
@@ -703,7 +835,7 @@ export default function NewDecisionPage({
               rows={6}
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Partagez votre intention de décision avant de solliciter l'avis de personnes compétentes..."
             />
             <p className="text-sm text-gray-600 mt-1">
@@ -726,7 +858,7 @@ export default function NewDecisionPage({
                 id="nuancedScale"
                 value={formData.nuancedScale}
                 onChange={(e) => setFormData({ ...formData, nuancedScale: e.target.value as NuancedScale })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="3_LEVELS">{NuancedScaleLabels['3_LEVELS']} (Pour / Sans avis / Contre)</option>
                 <option value="5_LEVELS">{NuancedScaleLabels['5_LEVELS']} (Franchement pour / Pour / Sans avis / Contre / Franchement contre)</option>
@@ -746,7 +878,7 @@ export default function NewDecisionPage({
                 max="25"
                 value={formData.nuancedWinnerCount}
                 onChange={(e) => setFormData({ ...formData, nuancedWinnerCount: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-600 mt-1">
                 Combien de propositions souhaitez-vous désigner comme gagnantes ?
@@ -779,14 +911,14 @@ export default function NewDecisionPage({
                         type="text"
                         value={proposal.title}
                         onChange={(e) => updateNuancedProposal(index, 'title', e.target.value)}
-                                    placeholder="Titre de la proposition"
+                        placeholder="Titre de la proposition"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index < 2}
                       />
                       <textarea
                         value={proposal.description}
                         onChange={(e) => updateNuancedProposal(index, 'description', e.target.value)}
-                                    placeholder="Description (optionnelle)"
+                        placeholder="Description (optionnelle)"
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -812,7 +944,7 @@ export default function NewDecisionPage({
 
         {/* Date de fin - masquée pour ADVICE_SOLICITATION */}
         {formData.decisionType !== 'ADVICE_SOLICITATION' && (
-          <div>
+          <div className="border-t pt-6">
             <label htmlFor="endDate" className="block font-medium mb-2">
               Date de fin {formData.decisionType === 'CONSENSUS' ? 'prévisionnelle' : ''} *
             </label>
@@ -828,6 +960,202 @@ export default function NewDecisionPage({
             <p className="text-sm text-gray-600 mt-1">
               Doit être au moins 24h dans le futur
             </p>
+          </div>
+        )}
+
+        {/* Section Participants (uniquement mode INVITED) */}
+        {formData.votingMode === 'INVITED' && (
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">
+              {formData.decisionType === 'ADVICE_SOLICITATION'
+                ? `Personnes à solliciter pour avis (minimum ${minimumParticipants})`
+                : 'Participants'}
+            </h3>
+
+            {formData.decisionType === 'ADVICE_SOLICITATION' && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded mb-4">
+                <p className="font-medium text-blue-900 mb-2">
+                  💡 Conseil : Sélectionnez au moins {minimumParticipants} {minimumParticipants > 1 ? 'personnes compétentes et/ou impactées' : 'personne compétente et/ou impactée'}
+                </p>
+                <p className="text-sm text-blue-800">
+                  {members.length === 1 && 'Votre organisation ne compte qu\'un membre. Vous devez inviter au moins 1 personne externe.'}
+                  {members.length >= 2 && members.length <= 4 && 'Votre organisation compte 2 à 4 membres. Sollicitez au moins 1 personne (membre interne ou externe).'}
+                  {members.length >= 5 && 'Votre organisation compte 5 membres ou plus. Sollicitez au moins 3 personnes (membres internes ou externes).'}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Onglets */}
+              <div className="flex gap-2 border-b pb-2">
+                <button
+                  type="button"
+                  onClick={() => setParticipantMode('teams')}
+                  className={`px-4 py-2 rounded ${
+                    participantMode === 'teams'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  Équipes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setParticipantMode('users')}
+                  className={`px-4 py-2 rounded ${
+                    participantMode === 'users'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  Membres
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setParticipantMode('external')}
+                  className={`px-4 py-2 rounded ${
+                    participantMode === 'external'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  Externes
+                </button>
+              </div>
+
+              {/* Sélection d'équipes */}
+              {participantMode === 'teams' && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Sélectionnez les équipes à inviter (tous les membres seront ajoutés)
+                  </p>
+                  {teams.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">Aucune équipe disponible</p>
+                  ) : (
+                    teams.map((team) => (
+                      <label key={team.id} className="flex items-center p-3 border rounded hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={selectedTeams.includes(team.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTeams([...selectedTeams, team.id]);
+                            } else {
+                              setSelectedTeams(selectedTeams.filter((id) => id !== team.id));
+                            }
+                          }}
+                          className="mr-3"
+                        />
+                        <span className="font-medium">{team.name}</span>
+                        <span className="text-sm text-gray-600 ml-2">
+                          ({team._count.members} membres)
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Sélection de membres */}
+              {participantMode === 'users' && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Sélectionnez les membres à inviter individuellement
+                  </p>
+                  {members.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">Aucun membre disponible</p>
+                  ) : (
+                    members.map((member) => (
+                      <label key={member.id} className="flex items-center p-3 border rounded hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.includes(member.userId)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUsers([...selectedUsers, member.userId]);
+                            } else {
+                              setSelectedUsers(selectedUsers.filter((id) => id !== member.userId));
+                            }
+                          }}
+                          className="mr-3"
+                        />
+                        <span className="font-medium">{member.user.name || 'Sans nom'}</span>
+                        <span className="text-sm text-gray-600 ml-2">
+                          ({member.user.email})
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Participants externes */}
+              {participantMode === 'external' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Ajoutez des personnes externes par email (elles ne seront pas membres de l'organisation)
+                  </p>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={externalEmail}
+                    onChange={(e) => setExternalEmail(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nom complet"
+                    value={externalName}
+                    onChange={(e) => setExternalName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddExternalParticipant}
+                    className="px-4 py-2 border rounded-lg"
+                    style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    + Ajouter à la liste
+                  </button>
+
+                  {/* Liste des participants externes ajoutés */}
+                  {externalParticipants.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      <p className="text-sm font-medium">Participants externes ajoutés :</p>
+                      {externalParticipants.map((participant, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded bg-gray-50">
+                          <div>
+                            <span className="font-medium">{participant.name}</span>
+                            <span className="text-sm text-gray-600 ml-2">({participant.email})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExternalParticipant(participant.email)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Résumé des participants sélectionnés */}
+              <div className="p-3 bg-gray-50 border rounded">
+                <p className="text-sm font-medium">
+                  Total de participants sélectionnés : <span className="text-blue-600">{getTotalParticipants()}</span>
+                </p>
+                {formData.decisionType === 'ADVICE_SOLICITATION' && getTotalParticipants() < minimumParticipants && (
+                  <p className="text-sm text-red-600 mt-1">
+                    ⚠️ Minimum requis : {minimumParticipants} personne(s)
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -868,17 +1196,9 @@ export default function NewDecisionPage({
             onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
           >
-            {loading ? 'Création...' : 'Créer et configurer'}
+            {loading ? 'Lancement...' : 'Lancer la décision'}
           </button>
         </div>
-
-        <p className="text-sm text-gray-600">
-          {formData.decisionType === 'ADVICE_SOLICITATION'
-            ? 'Après la création, vous devrez solliciter au moins 3 personnes compétentes et/ou impactées pour donner leur avis.'
-            : formData.votingMode === 'PUBLIC_LINK'
-            ? 'Après la création, vous accéderez à la page de partage avec le lien et le QR code à diffuser.'
-            : 'Après la création, vous pourrez configurer les participants avant de lancer la décision.'}
-        </p>
       </form>
     </div>
   );

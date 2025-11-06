@@ -91,44 +91,9 @@ export default async function DecisionAdminPage({
     redirect(`/organizations/${slug}/decisions/${decisionId}/share`);
   }
 
-  // Récupérer les équipes de l'organisation
-  const teams = await prisma.team.findMany({
-    where: {
-      organizationId: organization.id,
-    },
-    include: {
-      _count: {
-        select: {
-          members: true,
-        },
-      },
-    },
-  });
-
-  // Récupérer les membres de l'organisation (exclure le créateur de la décision)
-  const members = await prisma.organizationMember.findMany({
-    where: {
-      organizationId: organization.id,
-      userId: {
-        not: decision.creatorId,
-      },
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
-
   return (
     <DecisionAdminClient
       decision={decision}
-      teams={teams}
-      members={members}
       slug={slug}
       userId={session.user.id}
     />

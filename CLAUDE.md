@@ -706,79 +706,83 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
 
-### Draft Auto-Save System
+### Decision Creation Flow (Consolidated on `/new`)
 
-The application supports automatic saving of decision drafts to prevent data loss and allow users to work on decisions over multiple sessions.
+**IMPORTANT CHANGE**: The entire decision creation and configuration process now happens on the `/new` page in a single consolidated form. The decision is created AND launched with participants in one action.
 
-**Key Features:**
-- **Auto-save on blur**: All form fields automatically save 500ms after the user leaves the field (onBlur event)
-- **Manual save button**: "Enregistrer en brouillon" button allows explicit saves
-- **Visual feedback**: Real-time save indicator showing "Sauvegarde..." during save and "Sauvegardé automatiquement à [time]" after completion
-- **Multiple drafts**: Users can have multiple draft decisions simultaneously
-- **Navigation warning**: Browser prompts user before leaving page if there are unsaved changes
-- **Dashboard section**: "Brouillons" section displays all user's drafts with Continue and Delete actions
+**New Flow:**
+1. User fills out the complete decision form on `/organizations/[slug]/decisions/new`
+2. Form includes ALL configuration in one page:
+   - Basic info (title, description, decision type, voting mode)
+   - Mode-specific fields:
+     - **CONSENSUS**: `initialProposal` (copied to both `initialProposal` and `proposal` fields)
+     - **ADVICE_SOLICITATION**: `initialProposal` (intention de décision)
+     - **MAJORITY**: Multiple proposals (title + description each)
+     - **NUANCED_VOTE**: Multiple proposals + scale selection (3/5/7 levels)
+   - Deadline field (required for all except ADVICE_SOLICITATION, hidden for ADVICE_SOLICITATION)
+   - **Participants section** (only for INVITED mode, hidden for PUBLIC_LINK):
+     - Teams selection (adds all team members)
+     - Individual members selection
+     - External participants (email + name)
+     - Validation of ADVICE_SOLICITATION constraints (minimum participants based on org size)
+3. User clicks "Lancer la décision" (not "Créer et configurer" anymore)
+4. API creates decision with `status='OPEN'` + creates all participants + sends emails to external participants
+5. Redirection after launch:
+   - **PUBLIC_LINK mode** → `/organizations/[slug]/decisions/[id]/share` (QR code + link)
+   - **INVITED mode** (creator is participant) → `/organizations/[slug]/decisions/[id]/vote`
+   - **INVITED mode** (creator not participant) → `/organizations/[slug]/decisions/[id]/admin`
 
-**Technical Implementation:**
+**Draft System (Manual Save Only):**
+- **No auto-save**: Removed to simplify the flow
+- **Manual save button**: "Enregistrer en brouillon" button only
+- **Drafts do NOT include participants**: Too complex to persist, users must reconfigure participants when resuming
+- Visual feedback: "Sauvegardé à [time]" after manual save
+- Drafts accessible from dashboard → "Continuer" reopens `/new` with pre-filled data (except participants)
 
-1. **API Endpoints:**
-   - `POST /api/organizations/[slug]/decisions` - Creates a new draft with `status='DRAFT'` (unless `votingMode='PUBLIC_LINK'`)
-   - `PATCH /api/organizations/[slug]/decisions/[decisionId]` - Updates an existing draft
-     - Only works for decisions with `status='DRAFT'`
-     - Only the creator can update their draft
-     - Supports `autoSave` flag to skip audit logging for auto-saves
-     - Can update all decision fields: title, description, context, decisionType, endDate, votingMode, publicSlug, etc.
+**API Endpoint Changes:**
+- `POST /api/organizations/[slug]/decisions` now accepts:
+  - `launch: boolean` flag (default: false)
+  - `teamIds: string[]` (team IDs to invite)
+  - `userIds: string[]` (user IDs to invite)
+  - `externalParticipants: Array<{email: string, name: string}>` (external participants)
+- When `launch: true`:
+  - Sets `status='OPEN'` and `startDate=now()`
+  - Creates all `DecisionParticipant` records
+  - Generates tokens for external participants
+  - Sends emails to external participants
+  - Logs 'LAUNCHED' event
+- When `launch: false` (draft):
+  - Sets `status='DRAFT'`
+  - Does NOT create participants
+  - Does NOT send emails
 
-2. **Creation Page (`app/organizations/[slug]/decisions/new/page.tsx`):**
-   - State tracking:
-     - `draftId`: ID of the created draft (null until first save)
-     - `lastSavedAt`: Timestamp of last successful save
-     - `isSaving`: Boolean flag during save operations
-     - `hasUnsavedChanges`: Tracks if changes exist since last save
-   - Auto-save logic:
-     - Triggered by `onBlur` events on all input fields
-     - Debounced with 500ms delay to avoid excessive API calls
-     - First save creates a new draft, subsequent saves update the existing draft
-   - Form submission:
-     - If `draftId` exists: Saves any pending changes and redirects to admin/share page
-     - If no `draftId`: Creates new decision (normal flow)
+**Page `/admin` Role (Post-Launch Management Only):**
+The `/admin` page is now **only for post-launch management**, NOT for initial configuration:
 
-3. **Dashboard Integration (`app/organizations/[slug]/page.tsx`):**
-   - Query fetches all drafts where:
-     - `organizationId` matches current organization
-     - `status = 'DRAFT'`
-     - `creatorId` matches current user
-   - Drafts displayed in dedicated "Brouillons" section (before "En cours" section)
-   - Each draft shows:
-     - Title (or "Brouillon sans titre" if empty)
-     - Description preview (truncated)
-     - Decision type and voting mode
-     - Last modification time ("Modifié il y a X")
-     - **Continue** button → redirects to `/organizations/[slug]/decisions/[draftId]/admin`
-     - **Delete** button → calls `DELETE /api/organizations/[slug]/decisions/[draftId]`
+- **All modes** (except PUBLIC_LINK which redirects to `/share`):
+  - View participants list with vote/opinion status
+  - Button "Retirer la décision" (only if status='OPEN', sets status=CLOSED + result=WITHDRAWN via `/withdraw` API)
+  - Button "Voir la décision en cours" or "Voir le vote" (redirects to `/vote` page)
 
-4. **Draft Card Component (`components/dashboard/DraftCard.tsx`):**
-   - Client component handling delete functionality
-   - Confirmation dialog before deletion
-   - Automatic page refresh after successful deletion
-   - Time-ago display helper for showing relative modification time
+- **CONSENSUS specific**:
+  - View initial proposal (immutable)
+  - Edit amended proposal (only while OPEN)
+  - Add conclusion (when voting finished)
 
-**User Workflow:**
-1. User navigates to "Nouvelle décision" page
-2. User starts filling in decision details
-3. Upon leaving any field (onBlur), auto-save creates/updates draft after 500ms
-4. Visual indicator shows "Sauvegardé automatiquement à [time]"
-5. User can:
-   - Click "Enregistrer en brouillon" to save explicitly
-   - Click "Créer et configurer" to finalize and proceed
-   - Navigate away (browser warns if unsaved changes)
-   - Return later from dashboard's "Brouillons" section
+- **MAJORITY & NUANCED_VOTE specific**:
+  - Add conclusion (when voting finished)
+
+- **ADVICE_SOLICITATION specific**:
+  - Edit intention (only if no opinions yet, disabled after first opinion)
+  - View opinion status (how many opinions received)
+  - Add final decision (when all opinions received)
+  - Button "Valider la décision finale" (when all opinions received, sets status=CLOSED + result=APPROVED via `/validate` API)
 
 **Important Notes:**
-- Drafts are automatically created on first field blur (requires at least a title)
-- Only the decision creator can see and manage their drafts
-- Drafts can only be deleted if `status='DRAFT'` (enforced by API)
-- Auto-saves use `autoSave: true` flag to prevent audit log clutter
-- Manual saves and form submission trigger full audit logging
+- Creator is automatically added as participant in INVITED mode
+- `/admin` page is NOT accessible for PUBLIC_LINK decisions (redirects to `/share`)
+- Participant management completely removed from `/admin` (now only in `/new`)
+- "Lancer la décision" button replaces old "Créer et configurer" workflow
 
 ### Invitation System
 

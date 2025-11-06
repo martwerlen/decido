@@ -44,10 +44,10 @@ export async function PATCH(
       );
     }
 
-    // Vérifier que la décision n'est pas déjà fermée
-    if (decision.status === 'CLOSED') {
+    // Vérifier que la décision est OPEN (ne fonctionne que pour les décisions en cours)
+    if (decision.status !== 'OPEN') {
       return Response.json(
-        { error: 'Cette décision est déjà fermée' },
+        { error: 'Seules les décisions ouvertes peuvent être retirées' },
         { status: 400 }
       );
     }
