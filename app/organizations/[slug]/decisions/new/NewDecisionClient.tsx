@@ -159,7 +159,7 @@ export default function NewDecisionClient({
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
 
-  const [draftId, setDraftId] = useState<string | null>(draftDecision?.id || null);
+  const [decisionId, setDecisionId] = useState<string | null>(draftDecision?.id || null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(draftDecision?.updatedAt || null);
 
   // Charger les données du brouillon
@@ -398,11 +398,6 @@ export default function NewDecisionClient({
     try {
       const body: any = { ...formData };
 
-      // Ajouter le draftId s'il existe (pour mettre à jour le brouillon existant)
-      if (draftId) {
-        body.draftId = draftId;
-      }
-
       if (formData.decisionType === 'NUANCED_VOTE') {
         body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
       } else if (formData.decisionType === 'MAJORITY') {
@@ -418,17 +413,29 @@ export default function NewDecisionClient({
         };
       }
 
-      const response = await fetch(`/api/organizations/${slug}/decisions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      let response;
+
+      if (decisionId) {
+        // Mettre à jour le brouillon existant via PATCH
+        response = await fetch(`/api/organizations/${slug}/decisions/${decisionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        // Créer un nouveau brouillon via POST
+        response = await fetch(`/api/organizations/${slug}/decisions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
 
       if (response.ok) {
         const data = await response.json();
-        // Stocker l'ID du brouillon si c'est la première sauvegarde
-        if (!draftId) {
-          setDraftId(data.decision.id);
+        // Stocker l'ID de la décision si c'est la première sauvegarde
+        if (!decisionId) {
+          setDecisionId(data.decision.id);
         }
         setLastSavedAt(new Date());
         refreshSidebar();
@@ -477,11 +484,23 @@ export default function NewDecisionClient({
         };
       }
 
-      const response = await fetch(`/api/organizations/${slug}/decisions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      let response;
+
+      if (decisionId) {
+        // Lancer un brouillon existant via PATCH
+        response = await fetch(`/api/organizations/${slug}/decisions/${decisionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        // Créer et lancer directement via POST
+        response = await fetch(`/api/organizations/${slug}/decisions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
 
       const data = await response.json();
 
@@ -512,7 +531,7 @@ export default function NewDecisionClient({
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        {draftId ? 'Continuer le brouillon' : 'Nouvelle décision'}
+        {decisionId ? 'Continuer le brouillon' : 'Nouvelle décision'}
       </Typography>
 
       {(error || validationErrors.length > 0) && (

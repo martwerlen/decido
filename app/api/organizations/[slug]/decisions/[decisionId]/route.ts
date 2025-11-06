@@ -8,7 +8,10 @@ import {
   logDecisionContextUpdated,
   logDecisionDeadlineUpdated,
   logProposalAmended,
+  logDecisionLaunched,
 } from '@/lib/decision-logger';
+import { sendEmail } from '@/lib/email';
+import crypto from 'crypto';
 
 // GET /api/organizations/[slug]/decisions/[decisionId] - Récupère une décision
 export async function GET(
@@ -215,7 +218,122 @@ export async function PATCH(
       );
     }
 
-    // Si la décision est OPEN ou CLOSED, on ne peut plus modifier certains champs
+    // ===== CAS SPÉCIAL : Lancement d'un brouillon =====
+    if (decision.status === 'DRAFT' && body.launch === true) {
+      // Validation complète avant le lancement
+      if (!decision.title || !decision.description) {
+        return Response.json(
+          { error: 'Le titre et la description sont requis pour lancer la décision' },
+          { status: 400 }
+        );
+      }
+
+      // Mettre à jour les champs si fournis
+      const launchUpdateData: any = {
+        status: 'OPEN',
+        startDate: new Date(),
+      };
+
+      // Appliquer les mises à jour de champs si fournis dans body
+      if (body.title !== undefined) launchUpdateData.title = body.title;
+      if (body.description !== undefined) launchUpdateData.description = body.description;
+      if (body.context !== undefined) launchUpdateData.context = body.context;
+      if (body.endDate !== undefined) launchUpdateData.endDate = new Date(body.endDate);
+      if (body.initialProposal !== undefined) {
+        launchUpdateData.initialProposal = body.initialProposal;
+        launchUpdateData.proposal = body.initialProposal;
+      }
+
+      // Mettre à jour la décision pour la lancer
+      await prisma.decision.update({
+        where: { id: decisionId },
+        data: launchUpdateData,
+      });
+
+      // Logger le lancement
+      await logDecisionLaunched(decisionId, session.user.id);
+
+      // Envoyer les emails aux participants externes
+      if (decision.votingMode === 'INVITED') {
+        const externalParticipants = await prisma.decisionParticipant.findMany({
+          where: {
+            decisionId,
+            externalEmail: { not: null },
+          },
+        });
+
+        if (externalParticipants.length > 0) {
+          console.log(`\n📧 === ENVOI EMAILS === ${externalParticipants.length} participant(s) externe(s)\n`);
+
+          const emailPromises = externalParticipants.map(async (participant: any) => {
+            const email = participant.externalEmail;
+            const name = participant.externalName || 'Participant';
+            const voteUrl = `${process.env.NEXTAUTH_URL}/vote/${participant.token}`;
+
+            try {
+              console.log(`📤 Envoi à ${email} (${name})`);
+
+              const decisionTypeLabel = decision.decisionType === 'MAJORITY'
+                ? 'Vote à la majorité'
+                : decision.decisionType === 'CONSENSUS'
+                ? 'Consensus'
+                : decision.decisionType === 'ADVICE_SOLICITATION'
+                ? 'Sollicitation d\'avis'
+                : decision.decisionType === 'NUANCED_VOTE'
+                ? 'Vote nuancé'
+                : decision.decisionType;
+
+              await sendEmail({
+                to: email,
+                subject: `Nouvelle décision: ${decision.title}`,
+                html: `
+                  <h2>Vous êtes invité à participer à une décision</h2>
+                  <p>Bonjour ${name},</p>
+                  <p>Vous êtes invité à participer à une décision :</p>
+                  <h3>${decision.title}</h3>
+                  <p>${decision.description}</p>
+                  <p><strong>Type de décision :</strong> ${decisionTypeLabel}</p>
+                  ${decision.endDate ? `<p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>` : ''}
+                  <p>
+                    <a href="${voteUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">
+                      Participer à la décision
+                    </a>
+                  </p>
+                  <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
+                  ${decision.endDate ? `<p style="color: #666; font-size: 12px; margin-top: 20px;">Ce lien est personnel et expire le ${new Date(decision.endDate).toLocaleDateString('fr-FR')}.</p>` : ''}
+                `,
+              });
+              console.log(`✅ Envoyé à ${email}`);
+            } catch (error) {
+              console.error(`❌ Erreur pour ${email}:`, error);
+            }
+          });
+
+          await Promise.allSettled(emailPromises);
+          console.log(`\n📧 === FIN ENVOI EMAILS ===\n`);
+        }
+      }
+
+      // Récupérer la décision complète pour la réponse
+      const launchedDecision = await prisma.decision.findUnique({
+        where: { id: decisionId },
+        include: {
+          creator: { select: { id: true, name: true, email: true } },
+          team: true,
+          participants: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+          proposals: { orderBy: { order: 'asc' } },
+          nuancedProposals: { orderBy: { order: 'asc' } },
+        },
+      });
+
+      return Response.json({ decision: launchedDecision });
+    }
+
+    // ===== Si la décision est OPEN ou CLOSED, restrictions =====
     if (decision.status === 'OPEN' || decision.status === 'CLOSED') {
       // On peut modifier proposal pour le consensus
       if (decision.decisionType === 'CONSENSUS' && body.proposal !== undefined) {
@@ -293,6 +411,8 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    // ===== Mise à jour d'un brouillon (DRAFT) =====
 
     // Construire les données à mettre à jour
     const updateData: any = {};
@@ -390,6 +510,126 @@ export async function PATCH(
       },
     });
 
+    // ===== Mise à jour des propositions pour MAJORITY =====
+    if (body.proposals !== undefined && decision.decisionType === 'MAJORITY') {
+      // Supprimer les anciennes propositions
+      await prisma.proposal.deleteMany({
+        where: { decisionId },
+      });
+
+      // Créer les nouvelles propositions
+      if (body.proposals.length > 0) {
+        await prisma.proposal.createMany({
+          data: body.proposals.map((p: any, index: number) => ({
+            decisionId,
+            title: p.title,
+            description: p.description || null,
+            order: index,
+          })),
+        });
+      }
+    }
+
+    // ===== Mise à jour des propositions pour NUANCED_VOTE =====
+    if (body.nuancedProposals !== undefined && decision.decisionType === 'NUANCED_VOTE') {
+      // Supprimer les anciennes propositions
+      await prisma.nuancedProposal.deleteMany({
+        where: { decisionId },
+      });
+
+      // Créer les nouvelles propositions
+      if (body.nuancedProposals.length > 0) {
+        await prisma.nuancedProposal.createMany({
+          data: body.nuancedProposals.map((p: any, index: number) => ({
+            decisionId,
+            title: p.title,
+            description: p.description || null,
+            order: index,
+          })),
+        });
+      }
+    }
+
+    // ===== Mise à jour des participants (mode INVITED uniquement) =====
+    if (body.participants !== undefined && decision.votingMode === 'INVITED') {
+      const { teamIds, memberIds, externalParticipants } = body.participants;
+
+      // Supprimer tous les participants existants
+      await prisma.decisionParticipant.deleteMany({
+        where: { decisionId },
+      });
+
+      // Recréer les participants
+      // 1. Ajouter le créateur
+      await prisma.decisionParticipant.create({
+        data: {
+          decisionId,
+          userId: session.user.id,
+          invitedVia: 'MANUAL',
+        },
+      });
+
+      // 2. Ajouter participants via teams
+      if (teamIds && teamIds.length > 0) {
+        for (const teamId of teamIds) {
+          const teamMembers = await prisma.teamMember.findMany({
+            where: { teamId },
+            include: { organizationMember: true },
+          });
+
+          for (const teamMember of teamMembers) {
+            if (teamMember.organizationMember.userId !== session.user.id) {
+              await prisma.decisionParticipant.create({
+                data: {
+                  decisionId,
+                  userId: teamMember.organizationMember.userId,
+                  invitedVia: 'TEAM',
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 3. Ajouter participants individuels
+      if (memberIds && memberIds.length > 0) {
+        for (const userId of memberIds) {
+          if (userId !== session.user.id) {
+            const existing = await prisma.decisionParticipant.findFirst({
+              where: { decisionId, userId },
+            });
+            if (!existing) {
+              await prisma.decisionParticipant.create({
+                data: {
+                  decisionId,
+                  userId: userId,
+                  invitedVia: 'MANUAL',
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Ajouter participants externes
+      if (externalParticipants && externalParticipants.length > 0) {
+        for (const external of externalParticipants) {
+          const token = crypto.randomBytes(32).toString('hex');
+          await prisma.decisionParticipant.create({
+            data: {
+              decisionId,
+              userId: null,
+              externalEmail: external.email,
+              externalName: external.name,
+              invitedVia: 'EXTERNAL',
+              token,
+              tokenExpiresAt: updated.endDate,
+            },
+          });
+        }
+      }
+    }
+
     // Logger les modifications (seulement si on n'est pas en mode auto-save)
     if (!body.autoSave) {
       if (body.title !== undefined && body.title !== decision.title) {
@@ -413,7 +653,27 @@ export async function PATCH(
       }
     }
 
-    return Response.json({ decision: updated });
+    // Récupérer la décision complète avec les relations mises à jour
+    const finalDecision = await prisma.decision.findUnique({
+      where: { id: decisionId },
+      include: {
+        creator: {
+          select: { id: true, name: true, email: true },
+        },
+        team: true,
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
+        proposals: { orderBy: { order: 'asc' } },
+        nuancedProposals: { orderBy: { order: 'asc' } },
+      },
+    });
+
+    return Response.json({ decision: finalDecision });
   } catch (error) {
     console.error('Error updating decision:', error);
     return Response.json(
