@@ -48,6 +48,24 @@ interface Comment {
   };
 }
 
+interface OpinionResponse {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  externalParticipant: {
+    id: string;
+    externalName: string | null;
+    externalEmail: string | null;
+  } | null;
+}
+
 interface Decision {
   id: string;
   title: string;
@@ -74,6 +92,7 @@ interface Props {
   agreeCount: number;
   disagreeCount: number;
   consensusReached: boolean;
+  opinionResponses: OpinionResponse[];
   slug: string;
   isCreator: boolean;
   votingMode: string;
@@ -86,6 +105,7 @@ export default function ResultsPageClient({
   agreeCount,
   disagreeCount,
   consensusReached,
+  opinionResponses,
   slug,
   isCreator,
   votingMode,
@@ -718,6 +738,138 @@ export default function ResultsPageClient({
         </>
       )}
 
+      {/* Sollicitation d'avis */}
+      {decision.decisionType === 'ADVICE_SOLICITATION' && (
+        <>
+          {/* Statut de la décision */}
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Statut</h2>
+              {decision.result && (
+                <span
+                  className={`px-4 py-2 rounded-lg font-medium ${
+                    decision.result === 'WITHDRAWN'
+                      ? 'bg-red-100 text-red-800'
+                      : decision.result === 'APPROVED'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {decision.result === 'WITHDRAWN'
+                    ? 'Proposition retirée'
+                    : decision.result === 'APPROVED'
+                    ? 'Décision finale validée après sollicitation d\'avis'
+                    : DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]}
+                </span>
+              )}
+            </div>
+
+            <div className="text-sm text-gray-600">
+              {decision.status === 'OPEN' && (
+                <p>
+                  {opinionResponses.length} avis reçu{opinionResponses.length > 1 ? 's' : ''} sur{' '}
+                  {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}
+                </p>
+              )}
+              {decision.status === 'CLOSED' && decision.decidedAt && (
+                <p>
+                  Décision finalisée le{' '}
+                  {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Proposition de décision */}
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
+            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
+              {decision.proposal || decision.initialProposal}
+            </div>
+          </div>
+
+          {/* Avis reçus */}
+          {opinionResponses.length > 0 && (
+            <div className="bg-white border rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">
+                Avis reçus ({opinionResponses.length}/{decision.participants.length})
+              </h2>
+              <div className="space-y-6">
+                {opinionResponses.map((opinion) => {
+                  const authorName =
+                    opinion.user?.name ||
+                    opinion.externalParticipant?.externalName ||
+                    'Anonyme';
+
+                  return (
+                    <div key={opinion.id} className="border-l-4 border-blue-500 pl-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-lg">{authorName}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(opinion.createdAt).toLocaleString('fr-FR')}
+                          {new Date(opinion.updatedAt) > new Date(opinion.createdAt) &&
+                            ' (modifié)'}
+                        </span>
+                      </div>
+                      <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {opinion.content}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Avis en attente */}
+          {decision.status === 'OPEN' &&
+            opinionResponses.length < decision.participants.length && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-yellow-900 mb-2">
+                  Avis en attente ({decision.participants.length - opinionResponses.length})
+                </h3>
+                <div className="text-sm text-yellow-800">
+                  {decision.participants
+                    .filter(
+                      (p) =>
+                        !opinionResponses.some(
+                          (o) => o.userId === p.userId && o.userId !== null
+                        )
+                    )
+                    .map((p) => p.user?.name || p.externalName || 'Utilisateur')
+                    .join(', ')}{' '}
+                  {decision.participants.filter(
+                    (p) =>
+                      !opinionResponses.some(
+                        (o) => o.userId === p.userId && o.userId !== null
+                      )
+                  ).length > 0 && "n'ont pas encore donné leur avis"}
+                </div>
+              </div>
+            )}
+
+          {/* Décision finale (dans conclusion si status CLOSED) */}
+          {decision.status === 'CLOSED' &&
+            decision.result === 'APPROVED' &&
+            decision.conclusion && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4 text-green-900">
+                  Décision finale
+                </h2>
+                <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {decision.conclusion}
+                </div>
+              </div>
+            )}
+        </>
+      )}
+
       {/* Détails du résultat */}
       {decision.resultDetails && (
         <div className="bg-gray-50 border rounded-lg p-6 mb-6">
@@ -726,8 +878,8 @@ export default function ResultsPageClient({
         </div>
       )}
 
-      {/* Conclusion */}
-      {decision.conclusion && (
+      {/* Conclusion (pour types de décision autres qu'ADVICE_SOLICITATION) */}
+      {decision.conclusion && decision.decisionType !== 'ADVICE_SOLICITATION' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-blue-900">Conclusion</h2>
           <div className="prose max-w-none text-gray-800">

@@ -130,6 +130,27 @@ export default async function ResultsPage({
           },
         },
       },
+      opinionResponses: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          externalParticipant: {
+            select: {
+              id: true,
+              externalName: true,
+              externalEmail: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
     },
   });
 
@@ -168,11 +189,13 @@ export default async function ResultsPage({
   // Vérifier si l'utilisateur peut voir les résultats
   // Pour PUBLIC_LINK : le créateur peut toujours voir les résultats (suivi en temps réel)
   // Pour CONSENSUS : accès libre à tout moment
+  // Pour ADVICE_SOLICITATION : accès libre à tout moment (membres peuvent voir les avis)
   // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé ou fermé manuellement
   const isManuallyClosedOrFinished = ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'].includes(decision.status) || isVotingFinished;
   const canSeeResults =
     (decision.votingMode === 'PUBLIC_LINK' && isCreator) ||
     decision.decisionType === 'CONSENSUS' ||
+    decision.decisionType === 'ADVICE_SOLICITATION' ||
     isManuallyClosedOrFinished;
 
   if (!canSeeResults) {
@@ -252,6 +275,7 @@ export default async function ResultsPage({
       agreeCount={agreeCount}
       disagreeCount={disagreeCount}
       consensusReached={consensusReached}
+      opinionResponses={decision.opinionResponses || []}
       slug={slug}
       isCreator={isCreator}
       votingMode={decision.votingMode}

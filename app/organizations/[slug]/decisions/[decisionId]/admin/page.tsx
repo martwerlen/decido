@@ -105,10 +105,13 @@ export default async function DecisionAdminPage({
     },
   });
 
-  // Récupérer les membres de l'organisation
+  // Récupérer les membres de l'organisation (exclure le créateur de la décision)
   const members = await prisma.organizationMember.findMany({
     where: {
       organizationId: organization.id,
+      userId: {
+        not: decision.creatorId,
+      },
     },
     include: {
       user: {

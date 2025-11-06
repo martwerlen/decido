@@ -25,6 +25,7 @@ import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import CommentIcon from '@mui/icons-material/Comment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -60,6 +61,10 @@ function getEventIcon(eventType: string) {
       return <HowToVoteIcon />;
     case 'COMMENT_ADDED':
       return <CommentIcon />;
+    case 'OPINION_SUBMITTED':
+    case 'OPINION_UPDATED':
+    case 'FINAL_DECISION_MADE':
+      return <FeedbackIcon />;
     case 'CLOSED':
     case 'STATUS_CHANGED':
       return <CheckCircleIcon />;
@@ -87,6 +92,11 @@ function getEventColor(eventType: string): 'primary' | 'secondary' | 'success' |
       return 'success';
     case 'COMMENT_ADDED':
       return 'secondary';
+    case 'OPINION_SUBMITTED':
+    case 'OPINION_UPDATED':
+      return 'info';
+    case 'FINAL_DECISION_MADE':
+      return 'success';
     case 'CLOSED':
       return 'warning';
     case 'STATUS_CHANGED':

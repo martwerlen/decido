@@ -217,7 +217,7 @@ export async function PATCH(
 
     // Si la décision est OPEN ou CLOSED, on ne peut plus modifier certains champs
     if (decision.status === 'OPEN' || decision.status === 'CLOSED') {
-      // On peut seulement modifier proposal pour le consensus
+      // On peut modifier proposal pour le consensus
       if (decision.decisionType === 'CONSENSUS' && body.proposal !== undefined) {
         // Vérifier si la proposition a réellement changé
         if (body.proposal !== decision.proposal) {
@@ -244,6 +244,41 @@ export async function PATCH(
           });
 
           // Logger l'amendement
+          await logProposalAmended(decisionId, session.user.id);
+
+          return Response.json({ decision: updated });
+        }
+
+        // Si pas de changement, juste retourner la décision actuelle
+        return Response.json({ decision });
+      }
+
+      // On peut modifier proposal pour ADVICE_SOLICITATION, mais seulement si aucun avis n'a été donné
+      if (decision.decisionType === 'ADVICE_SOLICITATION' && body.proposal !== undefined) {
+        // Compter les avis déjà donnés
+        const opinionCount = await prisma.opinionResponse.count({
+          where: {
+            decisionId,
+          },
+        });
+
+        if (opinionCount > 0) {
+          return Response.json(
+            { error: 'Vous ne pouvez plus modifier la proposition car des avis ont déjà été donnés' },
+            { status: 400 }
+          );
+        }
+
+        // Vérifier si la proposition a réellement changé
+        if (body.proposal !== decision.proposal) {
+          const updated = await prisma.decision.update({
+            where: { id: decisionId },
+            data: {
+              proposal: body.proposal,
+            },
+          });
+
+          // Logger la modification
           await logProposalAmended(decisionId, session.user.id);
 
           return Response.json({ decision: updated });

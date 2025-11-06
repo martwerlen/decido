@@ -177,6 +177,18 @@ export async function GET(
           message = `${actorName} a commenté`;
           break;
 
+        case 'OPINION_SUBMITTED':
+          message = `${actorName} a partagé son avis sur la décision`;
+          break;
+
+        case 'OPINION_UPDATED':
+          message = `${actorName} a mis à jour son avis sur la décision`;
+          break;
+
+        case 'FINAL_DECISION_MADE':
+          message = `${actorName} a validé la décision finale`;
+          break;
+
         default:
           message = `${actorName} - ${log.eventType}`;
       }

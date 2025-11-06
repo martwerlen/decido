@@ -60,6 +60,24 @@ interface Comment {
   }>;
 }
 
+interface OpinionResponse {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  externalParticipant: {
+    id: string;
+    externalName: string | null;
+    externalEmail: string | null;
+  } | null;
+}
+
 interface Decision {
   id: string;
   title: string;
@@ -88,6 +106,8 @@ interface Props {
   userVote: { id: string; value: string } | null;
   userProposalVote: { id: string; proposalId: string; proposal: Proposal } | null;
   userNuancedVotes: NuancedVote[] | null;
+  userOpinion: { id: string; content: string } | null;
+  allOpinions: OpinionResponse[] | null;
   slug: string;
   userId: string;
   isCreator: boolean;
@@ -98,6 +118,8 @@ export default function VotePageClient({
   userVote: initialUserVote,
   userProposalVote: initialUserProposalVote,
   userNuancedVotes: initialUserNuancedVotes,
+  userOpinion: initialUserOpinion,
+  allOpinions: initialAllOpinions,
   slug,
   userId,
   isCreator,
@@ -125,6 +147,10 @@ export default function VotePageClient({
   }
   const [nuancedVotes, setNuancedVotes] = useState<Record<string, string>>(initialNuancedVotes);
 
+  // Sollicitation d'avis
+  const [opinionContent, setOpinionContent] = useState(initialUserOpinion?.content || '');
+  const [allOpinions, setAllOpinions] = useState(initialAllOpinions || []);
+
   // Commentaires
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -134,10 +160,16 @@ export default function VotePageClient({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const isOpen = decision.status === 'OPEN';
+
+  // Vérifier si le participant est sollicité pour un avis
+  const isSolicited = decision.participants.some(p => p.userId === userId);
+
   const hasVoted = decision.decisionType === 'MAJORITY'
     ? !!initialUserProposalVote
     : decision.decisionType === 'NUANCED_VOTE'
     ? initialUserNuancedVotes && initialUserNuancedVotes.length > 0
+    : decision.decisionType === 'ADVICE_SOLICITATION'
+    ? !!initialUserOpinion
     : !!initialUserVote;
 
   // Vote pour une proposition (majorité)
@@ -251,6 +283,53 @@ export default function VotePageClient({
       }
 
       setSuccess('Votre vote a été enregistré !');
+      refreshSidebar();
+      setTimeout(() => {
+        router.refresh();
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Soumettre un avis (ADVICE_SOLICITATION)
+  const handleSubmitOpinion = async () => {
+    if (!opinionContent.trim()) {
+      setError('L\'avis ne peut pas être vide');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/opinions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: opinionContent }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      const { opinion, isUpdate } = await response.json();
+
+      // Mettre à jour la liste des avis
+      if (isUpdate) {
+        setAllOpinions(allOpinions.map(o => o.id === opinion.id ? opinion : o));
+        setSuccess('Votre avis a été mis à jour !');
+      } else {
+        setAllOpinions([...allOpinions, opinion]);
+        setSuccess('Votre avis a été enregistré !');
+      }
+
       refreshSidebar();
       setTimeout(() => {
         router.refresh();
@@ -723,6 +802,177 @@ export default function VotePageClient({
         </>
       )}
 
+      {/* Sollicitation d'avis */}
+      {decision.decisionType === 'ADVICE_SOLICITATION' && (
+        <>
+          {/* Proposition de décision */}
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
+            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
+              {decision.proposal || decision.initialProposal}
+            </div>
+          </div>
+
+          {/* Avis déjà donnés */}
+          {allOpinions.length > 0 && (
+            <div className="bg-white border rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">Avis reçus ({allOpinions.length})</h2>
+              <div className="space-y-4">
+                {allOpinions.map((opinion) => {
+                  const authorName = opinion.user?.name || opinion.externalParticipant?.externalName || 'Anonyme';
+                  const isCurrentUser = opinion.userId === userId;
+
+                  return (
+                    <div key={opinion.id} className={`border-l-4 pl-4 ${isCurrentUser ? 'border-blue-500' : 'border-gray-300'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">{authorName}</span>
+                        {isCurrentUser && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Votre avis</span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {new Date(opinion.createdAt).toLocaleString('fr-FR')}
+                          {new Date(opinion.updatedAt) > new Date(opinion.createdAt) && ' (modifié)'}
+                        </span>
+                      </div>
+                      <div className="text-gray-700 whitespace-pre-wrap">{opinion.content}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Avis en attente */}
+          {allOpinions.length < decision.participants.length && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                {decision.participants.length - allOpinions.length} avis en attente sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}
+              </p>
+              <div className="mt-2 text-sm text-blue-700">
+                {decision.participants
+                  .filter(p => !allOpinions.some(o => o.userId === p.userId))
+                  .map(p => p.user?.name || p.externalName || 'Utilisateur')
+                  .map((name, idx, arr) => (
+                    <span key={idx}>
+                      {name}{idx < arr.length - 1 && ', '}
+                    </span>
+                  ))}
+                {decision.participants.filter(p => !allOpinions.some(o => o.userId === p.userId)).length > 0 && ' n\'ont pas encore donné leur avis'}
+              </div>
+            </div>
+          )}
+
+          {/* Formulaire d'avis (uniquement pour les participants sollicités) */}
+          {isSolicited && isOpen && (
+            <div className="bg-white border rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">
+                {hasVoted ? 'Modifier votre avis' : 'Donner votre avis'}
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Avis de {decision.creator.name || 'créateur'} : Votre expertise et votre point de vue sont précieux pour cette décision.
+              </p>
+              <div className="space-y-3">
+                <textarea
+                  value={opinionContent}
+                  onChange={(e) => setOpinionContent(e.target.value)}
+                  rows={6}
+                  placeholder="Partagez votre avis sur cette proposition de décision..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleSubmitOpinion}
+                  disabled={loading || !opinionContent.trim()}
+                  className="w-full text-white py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                >
+                  {loading ? 'Enregistrement...' : hasVoted ? 'Mettre à jour mon avis' : 'Enregistrer mon avis'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Message pour les non-sollicités */}
+          {!isSolicited && isOpen && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-700">
+                ℹ️ Vous n'êtes pas sollicité pour donner votre avis sur cette décision, mais vous pouvez la consulter et ajouter des commentaires ci-dessous.
+              </p>
+            </div>
+          )}
+
+          {/* Commentaires (accessible à tous les membres) */}
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Commentaires</h2>
+
+            {decision.comments.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Aucun commentaire pour le moment</p>
+            ) : (
+              <div className="space-y-4 mb-6">
+                {decision.comments.map((comment) => (
+                  <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.createdAt).toLocaleString('fr-FR')}
+                            {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
+                          </span>
+                        </div>
+
+                        <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+
+                        {/* Réponses */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <div className="mt-3 space-y-3 pl-4 border-l-2 border-gray-100">
+                            {comment.replies.map((reply) => (
+                              <div key={reply.id}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-sm">{reply.user?.name || 'Anonyme'}</span>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(reply.createdAt).toLocaleString('fr-FR')}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{reply.content}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ajouter un commentaire */}
+            {isOpen && (
+              <div className="space-y-3">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={3}
+                  placeholder="Ajouter un commentaire..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={loading || !newComment.trim()}
+                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                >
+                  {loading ? 'Envoi...' : 'Ajouter un commentaire'}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Navigation */}
       <div className="flex gap-4 mt-6">
         <Link
@@ -742,12 +992,15 @@ export default function VotePageClient({
             Administrer
           </Link>
         )}
-        <Link
-          href={`/organizations/${slug}/decisions/${decision.id}/results`}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-        >
-          Voir les résultats
-        </Link>
+        {/* Masquer les résultats pour ADVICE_SOLICITATION en cours */}
+        {(decision.decisionType !== 'ADVICE_SOLICITATION' || !isOpen) && (
+          <Link
+            href={`/organizations/${slug}/decisions/${decision.id}/results`}
+            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            Voir les résultats
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -83,8 +83,13 @@ export async function POST(
 
         if (!team) continue;
 
-        // Ajouter tous les membres de l'équipe
+        // Ajouter tous les membres de l'équipe (sauf le créateur)
         for (const teamMember of team.members) {
+          // Ne pas ajouter le créateur de la décision comme participant
+          if (teamMember.organizationMember.userId === decision.creatorId) {
+            continue;
+          }
+
           try {
             const participant = await prisma.decisionParticipant.create({
               data: {
@@ -115,6 +120,11 @@ export async function POST(
     // Ajouter des membres individuels
     if (type === 'users' && userIds && Array.isArray(userIds)) {
       for (const userId of userIds) {
+        // Ne pas ajouter le créateur de la décision comme participant
+        if (userId === decision.creatorId) {
+          continue;
+        }
+
         // Vérifier que l'utilisateur est membre de l'organisation
         const membership = await prisma.organizationMember.findFirst({
           where: {

@@ -90,8 +90,8 @@ export async function POST(
       );
     }
 
-    // Vérifier qu'une date de fin est définie
-    if (!decision.endDate) {
+    // Vérifier qu'une date de fin est définie (sauf pour ADVICE_SOLICITATION)
+    if (decision.decisionType !== 'ADVICE_SOLICITATION' && !decision.endDate) {
       return Response.json(
         { error: 'Une date de fin doit être définie' },
         { status: 400 }
@@ -117,16 +117,18 @@ export async function POST(
     // Logger le lancement
     await logDecisionLaunched(decisionId, session.user.id);
 
-    // Mettre à jour tokenExpiresAt pour tous les participants externes
-    await prisma.decisionParticipant.updateMany({
-      where: {
-        decisionId,
-        externalEmail: { not: null },
-      },
-      data: {
-        tokenExpiresAt: decision.endDate,
-      },
-    });
+    // Mettre à jour tokenExpiresAt pour tous les participants externes (sauf ADVICE_SOLICITATION qui n'a pas de deadline)
+    if (decision.endDate) {
+      await prisma.decisionParticipant.updateMany({
+        where: {
+          decisionId,
+          externalEmail: { not: null },
+        },
+        data: {
+          tokenExpiresAt: decision.endDate,
+        },
+      });
+    }
 
     // Envoyer des emails uniquement aux participants externes (non-membres)
     if (decision.votingMode === 'INVITED') {
@@ -143,6 +145,15 @@ export async function POST(
 
           try {
             console.log(`📤 Envoi à ${email} (${name})`);
+
+            const decisionTypeLabel = decision.decisionType === 'MAJORITY'
+              ? 'Vote à la majorité'
+              : decision.decisionType === 'CONSENSUS'
+              ? 'Consensus'
+              : decision.decisionType === 'ADVICE_SOLICITATION'
+              ? 'Sollicitation d\'avis'
+              : decision.decisionType;
+
             await sendEmail({
               to: email,
               subject: `Nouvelle décision: ${decision.title}`,
@@ -152,15 +163,15 @@ export async function POST(
                 <p>Vous êtes invité à participer à une décision :</p>
                 <h3>${decision.title}</h3>
                 <p>${decision.description}</p>
-                <p><strong>Type de décision :</strong> ${decision.decisionType === 'MAJORITY' ? 'Vote à la majorité' : 'Consensus'}</p>
-                <p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>
+                <p><strong>Type de décision :</strong> ${decisionTypeLabel}</p>
+                ${decision.endDate ? `<p><strong>Date limite :</strong> ${new Date(decision.endDate).toLocaleDateString('fr-FR')}</p>` : ''}
                 <p>
                   <a href="${voteUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">
                     Participer à la décision
                   </a>
                 </p>
                 <p>Vous pouvez également cliquer sur ce lien : <a href="${voteUrl}">${voteUrl}</a></p>
-                <p style="color: #666; font-size: 12px; margin-top: 20px;">Ce lien est personnel et expire le ${new Date(decision.endDate).toLocaleDateString('fr-FR')}.</p>
+                ${decision.endDate ? `<p style="color: #666; font-size: 12px; margin-top: 20px;">Ce lien est personnel et expire le ${new Date(decision.endDate).toLocaleDateString('fr-FR')}.</p>` : ''}
               `,
             });
             console.log(`✅ Envoyé à ${email}`);

@@ -169,6 +169,10 @@ Authenticated APIs (under `/api/organizations/[slug]/...`):
 - `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
 - `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Get vote statistics (creator only)
 - `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Close decision manually (creator only)
+- `POST /api/organizations/[slug]/decisions/[decisionId]/opinions` - Submit/update opinion (ADVICE_SOLICITATION)
+- `GET /api/organizations/[slug]/decisions/[decisionId]/opinions` - Get all opinions (ADVICE_SOLICITATION)
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/validate` - Validate final decision (ADVICE_SOLICITATION, creator only)
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw` - Withdraw decision (ADVICE_SOLICITATION, creator only)
 
 Public APIs:
 - `GET /api/vote/[token]` - Fetch decision data for external participant (token-based)
@@ -221,7 +225,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 Type-safe enums are defined in `types/enums.ts` with corresponding validation helpers:
 - `MemberRole`: 'OWNER' | 'ADMIN' | 'MEMBER'
 - `InvitationStatus`: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
-- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'NUANCED_VOTE' | 'ADVISORY'
+- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'NUANCED_VOTE' | 'ADVISORY' | 'ADVICE_SOLICITATION'
 - `DecisionStatus`: 'DRAFT' | 'OPEN' | 'CLOSED' | 'IMPLEMENTED' | 'ARCHIVED'
 - `DecisionResult`: 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN'
 - `VoteValue`: 'STRONG_SUPPORT' | 'SUPPORT' | 'WEAK_SUPPORT' | 'ABSTAIN' | 'WEAK_OPPOSE' | 'OPPOSE' | 'STRONG_OPPOSE' | 'BLOCK'
@@ -232,7 +236,7 @@ Type-safe enums are defined in `types/enums.ts` with corresponding validation he
 - `NuancedMention3`: 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' (mentions pour 3 niveaux)
 - `NuancedMention5`: 'EXCELLENT' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'TO_REJECT' (mentions pour 5 niveaux)
 - `NuancedMention7`: 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'PASSABLE' | 'INSUFFICIENT' | 'VERY_INSUFFICIENT' | 'TO_REJECT' (mentions pour 7 niveaux)
-- `DecisionLogEventType`: 'CREATED' | 'LAUNCHED' | 'STATUS_CHANGED' | 'CLOSED' | 'REOPENED' | 'TITLE_UPDATED' | 'DESCRIPTION_UPDATED' | 'CONTEXT_UPDATED' | 'DEADLINE_UPDATED' | 'PROPOSAL_AMENDED' | 'CONCLUSION_ADDED' | 'PARTICIPANT_ADDED' | 'PARTICIPANT_REMOVED' | 'VOTE_RECORDED' | 'VOTE_UPDATED' | 'COMMENT_ADDED' (types d'événements pour l'historique des décisions)
+- `DecisionLogEventType`: 'CREATED' | 'LAUNCHED' | 'STATUS_CHANGED' | 'CLOSED' | 'REOPENED' | 'TITLE_UPDATED' | 'DESCRIPTION_UPDATED' | 'CONTEXT_UPDATED' | 'DEADLINE_UPDATED' | 'PROPOSAL_AMENDED' | 'CONCLUSION_ADDED' | 'PARTICIPANT_ADDED' | 'PARTICIPANT_REMOVED' | 'VOTE_RECORDED' | 'VOTE_UPDATED' | 'COMMENT_ADDED' | 'OPINION_SUBMITTED' | 'OPINION_UPDATED' | 'FINAL_DECISION_MADE' (types d'événements pour l'historique des décisions)
 
 When working with these values:
 1. Import types from `types/enums.ts`, NOT from `@prisma/client`
@@ -271,6 +275,23 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 
 **ADVISORY**: Always returns APPROVED (informational only)
 
+**ADVICE_SOLICITATION** (Sollicitation d'avis): Individual decision-making with opinion gathering
+- The decision creator shares a decision intention and solicits opinions from competent and/or impacted people
+- **No deadline**: The creator controls when to close or validate the decision
+- **No PUBLIC_LINK mode**: Only INVITED mode is supported
+- **Minimum participants required**:
+  - 1 member organization → must invite at least 1 external participant
+  - 2-4 member organization → must solicit at least 1 person (internal or external)
+  - 5+ member organization → must solicit at least 3 people (internal or external)
+- **Opinion collection**: Each solicited participant provides a written opinion (stored in `OpinionResponse` table)
+- **Intention modification**: Creator can modify the decision intention ONLY before the first opinion is submitted
+- **All members can view**: All organization members can see the decision and comment, but only solicited participants can give opinions
+- **Final decision**: Creator validates the final decision (stored in `conclusion` field) after receiving all opinions
+- **Two possible outcomes**:
+  - `WITHDRAWN`: Creator withdraws the decision at any time (status = CLOSED, result = WITHDRAWN)
+  - `APPROVED`: Creator validates final decision after all opinions received (status = CLOSED, result = APPROVED)
+- **Results visibility**: Accessible at any time to all organization members (no deadline restriction)
+
 Vote weights are defined in `getVoteWeight()`:
 - STRONG_SUPPORT: +3, SUPPORT: +2, WEAK_SUPPORT: +1
 - ABSTAIN: 0
@@ -295,11 +316,15 @@ The application maintains a comprehensive audit trail of all decision-related ev
 | | CONCLUSION_ADDED | Conclusion added | ✓ Yes |
 | **Votes** | VOTE_RECORDED | New vote submitted | Depends on decision type* |
 | | VOTE_UPDATED | Vote modified | Depends on decision type* |
+| **Opinions** | OPINION_SUBMITTED | Opinion submitted (ADVICE_SOLICITATION) | ✓ Yes |
+| | OPINION_UPDATED | Opinion modified (ADVICE_SOLICITATION) | ✓ Yes |
+| | FINAL_DECISION_MADE | Final decision validated (ADVICE_SOLICITATION) | ✓ Yes |
 | **Comments** | COMMENT_ADDED | Comment posted | ✓ Yes (authenticated users only) |
 
 **Vote Logging by Decision Type & Voting Mode:**
 - **CONSENSUS** (authenticated): Logs actor name, email, and vote value (AGREE/DISAGREE) in metadata
 - **MAJORITY/NUANCED_VOTE** (authenticated): Logs anonymously (no actor information, for privacy)
+- **ADVICE_SOLICITATION**: Logs actor name and email for OPINION_SUBMITTED, OPINION_UPDATED, and FINAL_DECISION_MADE events
 - **PUBLIC_LINK** (anonymous voting): Logs anonymously with message "Un vote a été enregistré" (no IP or user data)
 - **INVITED with external participants**: Not currently logged (see DECISIONLOG_ANALYSIS.md for improvement recommendations)
 
