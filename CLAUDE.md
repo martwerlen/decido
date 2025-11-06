@@ -91,18 +91,67 @@ npm run db:studio          # Open Prisma Studio (database GUI)
 - Cards: 12px border-radius, 2px solid border, subtle shadow
 - Spacing: Consistent use of MUI spacing units (multiples of 8px)
 
+### React Context Provider Architecture
+
+**Provider Nesting Order** (in `app/layout.tsx`):
+```typescript
+<DarkModeProvider>
+  <ThemeProvider>
+    <SessionProvider>
+      <SidebarRefreshProvider>
+        {children}
+      </SidebarRefreshProvider>
+    </SessionProvider>
+  </ThemeProvider>
+</DarkModeProvider>
+```
+
+**Important Providers:**
+- `DarkModeProvider` (`components/providers/DarkModeProvider.tsx`) - Must wrap ThemeProvider to provide dark mode state
+- `ThemeProvider` (`components/providers/ThemeProvider.tsx`) - Material-UI theme that depends on dark mode context
+- `SessionProvider` (NextAuth) - Authentication session
+- `SidebarRefreshProvider` (`components/providers/SidebarRefreshProvider.tsx`) - Counter-based refresh trigger for sidebar updates after votes
+
+**Organization Memory Pattern:**
+- `OrganizationMemoryUpdater` component (in `app/organizations/[slug]/layout.tsx`) syncs last visited organization to session JWT
+- Uses `useOrganizationMemory()` hook to update `lastOrganizationSlug` in session
+- Enables automatic redirect to last visited organization on login
+
+### Next.js 15 Patterns
+
+**Async Params (Breaking Change):**
+All dynamic route handlers must await params before destructuring:
+```typescript
+// Server Components and API Routes
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params  // Must await first!
+  // ... use slug
+}
+```
+
 ### Key Directories
 ```
 app/                      # Next.js App Router
 ├── api/                  # API routes
 │   ├── organizations/   # Organization-scoped APIs
+│   │   ├── route.ts              # List user's organizations
 │   │   └── [slug]/
+│   │       ├── route.ts          # Get/update organization
 │   │       └── decisions/
 │   │           ├── route.ts                    # Create decision
+│   │           ├── sidebar/                    # Sidebar decision list
 │   │           ├── check-public-slug/          # Check slug availability
 │   │           └── [decisionId]/
+│   │               ├── route.ts                # Delete decision (drafts only)
 │   │               ├── stats/                  # Vote statistics
-│   │               └── close/                  # Close decision
+│   │               ├── close/                  # Close decision
+│   │               ├── withdraw/               # Withdraw decision
+│   │               ├── history/                # Decision audit trail
+│   │               ├── conclusion/             # Add/update conclusion
+│   │               ├── opinions/               # ADVICE_SOLICITATION opinions
+│   │               └── validate/               # Validate ADVICE_SOLICITATION
+│   ├── invitations/     # Invitation acceptance
+│   ├── profile/         # User profile API
 │   └── vote/             # Public voting APIs (no auth)
 │       ├── [token]/      # Token-based voting (external participants)
 │       └── [orgSlug]/[publicSlug]/  # Anonymous voting (PUBLIC_LINK mode)
@@ -128,13 +177,25 @@ app/                      # Next.js App Router
 lib/                      # Core business logic
 ├── auth.ts              # NextAuth configuration
 ├── decision-logic.ts    # Decision calculation algorithms
-├── email.ts             # Email sending with Resend
+├── decision-logger.ts   # Audit trail logging service
+├── email.ts             # Email sending with Resend (+ console fallback)
+├── organization.ts      # Permission checking utilities
+├── slug.ts              # Slug generation utilities
 └── prisma.ts            # Prisma client instance
 
 components/               # React components
 ├── auth/                # Authentication forms
 ├── dashboard/           # Dashboard components
-└── providers/           # Context providers (Session, Theme)
+│   ├── Dashboard.tsx
+│   ├── Sidebar.tsx
+│   ├── DashboardContent.tsx
+│   ├── DecisionFilters.tsx
+│   └── DraftCard.tsx
+└── providers/           # Context providers
+    ├── DarkModeProvider.tsx
+    ├── ThemeProvider.tsx
+    ├── SessionProvider.tsx (NextAuth)
+    └── SidebarRefreshProvider.tsx
 
 types/                    # TypeScript types
 ├── enums.ts             # Type-safe enums (replaces Prisma enums)
@@ -217,6 +278,76 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - User role is determined by checking the `OrganizationMember` relationship with the current organization
 
 ## Critical Architecture Details
+
+### Vote Storage Models (3 Parallel Systems)
+
+The application uses **three different vote storage models** depending on decision type:
+
+1. **`Vote` table** - Used for most decision types (CONSENSUS, CONSENT, WEIGHTED_VOTE, etc.)
+   - Stores a single `value` field (VoteValue enum)
+   - Links to either `userId` (authenticated) or `externalParticipantId` (guest voting)
+   - One vote per user per decision
+
+2. **`ProposalVote` table** - Used for MAJORITY decisions with multiple proposals
+   - Links to specific `Proposal` record
+   - User can only vote for ONE proposal per decision
+   - Links to either `userId` or `externalParticipantId`
+
+3. **`NuancedVote` table** - Used for NUANCED_VOTE (Jugement Majoritaire)
+   - One vote **per user per proposal** (evaluates each proposal separately)
+   - Stores `mention` field (scale: 3, 5, or 7 levels)
+   - Results calculated using median mention algorithm
+
+**Important:** When writing vote submission logic, check `decisionType` to determine which table to use.
+
+### Permission Checking Utilities
+
+The `lib/organization.ts` file provides three permission checking functions:
+
+```typescript
+// Check if user is a member (any role)
+await checkUserIsMember(organizationId, userId)
+// Throws 403 if not a member
+
+// Check if user is OWNER or ADMIN
+await checkUserPermission(organizationId, userId)
+// Throws 403 if only MEMBER role
+
+// Check if user is OWNER
+await checkUserIsOwner(organizationId, userId)
+// Throws 403 if not OWNER
+```
+
+**Usage pattern:**
+```typescript
+// In API routes
+import { checkUserPermission } from "@/lib/organization"
+
+const session = await auth()
+await checkUserPermission(organization.id, session.user.id)
+// If we reach here, user has permission
+```
+
+### Slug Generation Utilities
+
+The `lib/slug.ts` file provides slug generation for organizations and decisions:
+
+```typescript
+import { generateSlug, generateAlternativeSlug } from "@/lib/slug"
+
+// Generate slug from text
+const slug = generateSlug("Mon Organisation")  // → "mon-organisation"
+
+// Generate alternative if collision detected
+const alt = generateAlternativeSlug("mon-organisation", 1)  // → "mon-organisation-1"
+```
+
+**Rules:**
+- Removes accents (é → e, à → a)
+- Converts to lowercase
+- Replaces spaces/special chars with hyphens
+- Limits to 50 characters
+- Used for both organization slugs and decision publicSlugs
 
 ### Database Schema & Enums
 
@@ -327,6 +458,15 @@ The application maintains a comprehensive audit trail of all decision-related ev
 - **ADVICE_SOLICITATION**: Logs actor name and email for OPINION_SUBMITTED, OPINION_UPDATED, and FINAL_DECISION_MADE events
 - **PUBLIC_LINK** (anonymous voting): Logs anonymously with message "Un vote a été enregistré" (no IP or user data)
 - **INVITED with external participants**: Not currently logged (see DECISIONLOG_ANALYSIS.md for improvement recommendations)
+
+**Coverage Gaps (see DECISIONLOG_ANALYSIS.md for details):**
+- Manual decision launch (INVITED mode) - LAUNCHED event not logged
+- Manual decision close - CLOSED event not fully logged in all cases
+- External participant votes/comments - not logged to DecisionLog
+- Anonymous votes (PUBLIC_LINK) - not logged to DecisionLog
+- Participant add/remove events - not logged
+- Context updates - logging function exists but never called
+- **Current coverage: ~50% of defined event types (11/22)**
 
 **Automatic Closure Logging:**
 When a decision is automatically closed (via results page access), the `reason` is stored in metadata:
@@ -665,6 +805,12 @@ RESEND_API_KEY=""                               # Resend API key (optional for d
 FROM_EMAIL="noreply@decidoo.fr"                 # Sender email for invitations
 ```
 
+**Email System (`lib/email.ts`):**
+- Uses Resend API when `RESEND_API_KEY` is configured
+- **Fallback pattern**: If API key is missing or request fails, email content is logged to console
+- Converts HTML emails to plain text for better compatibility
+- Three email templates: Generic, Invitation, Welcome
+
 ## Important Conventions
 
 ### Path Aliases
@@ -689,6 +835,36 @@ Always use the singleton Prisma client from `lib/prisma.ts`:
 ```typescript
 import { prisma } from "@/lib/prisma"
 ```
+
+**Transactions for Atomic Operations:**
+Use Prisma transactions when multiple related writes must succeed together:
+```typescript
+await prisma.$transaction([
+  prisma.vote.create({ data: voteData }),
+  prisma.anonymousVoteLog.create({ data: logData })
+])
+```
+Currently used in: PUBLIC_LINK vote submission to ensure vote + IP log are created atomically.
+
+### Component Architecture Pattern
+
+**Server Components vs Client Components:**
+- **Page files** (`page.tsx`) are Server Components by default - handle data fetching and authentication
+- **Client Components** handle interactivity - marked with `"use client"` directive
+- **Pattern**: Page components fetch data → Pass to Client component for UI
+
+Example:
+```
+app/organizations/[slug]/decisions/[decisionId]/vote/
+├── page.tsx              # Server: Fetches decision data, checks auth
+└── VotePageClient.tsx    # Client: Interactive voting form
+```
+
+**Common Client Components:**
+- `*Client.tsx` - Interactive forms and UI
+- `*Form.tsx` - Form components with validation
+- Components using hooks (useState, useEffect, useContext)
+- Components using browser APIs (localStorage, window)
 
 ### Common Query Patterns
 
@@ -716,6 +892,39 @@ const decision = await prisma.decision.findUnique({
 })
 // Check participants for voting eligibility, votes for existing vote
 ```
+
+## Key Files for Understanding Architecture
+
+When onboarding to this codebase or debugging complex issues, read these files in order:
+
+**Core Architecture (Read First):**
+1. `prisma/schema.prisma` - Complete data model and relationships
+2. `types/enums.ts` - All type definitions and validation helpers
+3. `lib/auth.ts` - NextAuth configuration and session management
+4. `app/layout.tsx` - Provider nesting order and global layout
+
+**Business Logic (Critical):**
+5. `lib/decision-logic.ts` - Decision result calculation for all 8 decision types
+6. `lib/decision-logger.ts` - Audit trail logging service (see coverage gaps)
+7. `lib/organization.ts` - Permission checking utilities
+8. `lib/slug.ts` - Slug generation for organizations and decisions
+9. `lib/email.ts` - Email system with Resend fallback
+
+**API Patterns (Examples):**
+10. `app/api/organizations/[slug]/decisions/route.ts` - Decision creation with draft auto-save system
+11. `app/api/organizations/[slug]/decisions/[decisionId]/vote/route.ts` - Authenticated vote submission for all decision types
+12. `app/api/public-vote/[orgSlug]/[publicSlug]/route.ts` - Anonymous voting with IP hashing and transactions
+13. `app/api/vote/[token]/route.ts` - External participant token-based voting (guest access)
+
+**UI Patterns (Examples):**
+14. `components/providers/` - All context providers (DarkMode, Theme, Session, SidebarRefresh)
+15. `app/organizations/[slug]/decisions/new/page.tsx` - Draft auto-save pattern
+16. `app/organizations/[slug]/decisions/[decisionId]/vote/VotePageClient.tsx` - Vote form with sidebar refresh
+
+**Documentation:**
+17. `DECISIONLOG_ANALYSIS.md` - Audit trail coverage analysis and gaps
+18. `ORGANIZATIONS_FEATURES.md` - Organization management details
+19. `MIGRATE_HISTORY.md` - Recent feature additions
 
 ## Known Issues & Workarounds
 
