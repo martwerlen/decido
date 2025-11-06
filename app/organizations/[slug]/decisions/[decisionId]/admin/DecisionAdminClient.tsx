@@ -481,50 +481,46 @@ export default function DecisionAdminClient({
         </div>
       )}
 
-      {/* Section Intention de décision (ADVICE_SOLICITATION) */}
+      {/* Section Proposition de décision (ADVICE_SOLICITATION) */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
 
-          <div className="mb-4">
-            <h3 className="font-medium mb-2">Proposition actuelle</h3>
-            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
-              {decision.initialProposal || decision.proposal}
-            </div>
-          </div>
-
           {isOpen && opinionsReceived === 0 && (
-            <div>
-              <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
-                ⚠️ Vous pouvez modifier votre proposition uniquement tant qu'aucun avis n'a été donné.
-              </p>
-              <div className="space-y-3">
-                <textarea
-                  value={proposal}
-                  onChange={(e) => setAmendedProposal(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Modifiez votre proposition de décision si nécessaire..."
-                />
-                <button
-                  onClick={handleUpdateAmendedProposal}
-                  disabled={loading}
-                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
-                >
-                  Mettre à jour la proposition
-                </button>
-              </div>
-            </div>
+            <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+              ⚠️ Vous pouvez modifier votre proposition uniquement tant qu'aucun avis n'a été donné.
+            </p>
           )}
 
-          {isOpen && opinionsReceived > 0 && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-              ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre proposition de décision.
-            </div>
-          )}
+          <div className="space-y-3">
+            <textarea
+              value={proposal}
+              onChange={(e) => setAmendedProposal(e.target.value)}
+              rows={6}
+              disabled={opinionsReceived > 0}
+              className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Proposition de décision..."
+            />
+
+            {isOpen && opinionsReceived === 0 && (
+              <button
+                onClick={handleUpdateAmendedProposal}
+                disabled={loading}
+                className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+              >
+                {loading ? 'Mise à jour...' : 'Mettre à jour la proposition'}
+              </button>
+            )}
+
+            {isOpen && opinionsReceived > 0 && (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
+                ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre proposition de décision.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -766,6 +762,24 @@ export default function DecisionAdminClient({
         >
           Retour
         </button>
+
+        {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
+          <button
+            onClick={() => router.push(`/organizations/${slug}/decisions/${decision.id}/vote`)}
+            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--color-primary)';
+            }}
+          >
+            Voir la décision en cours
+          </button>
+        )}
 
         {isDraft && decision.decisionType !== 'ADVICE_SOLICITATION' && (
           <button
