@@ -161,29 +161,13 @@ export default async function OrganizationDashboard({
     take: 5,
   });
 
-  // Récupérer les 10 dernières décisions closes (INVITED et PUBLIC_LINK)
+  // Récupérer les 10 dernières décisions closes (visibles pour tous les membres de l'organisation)
   const closedDecisions = await prisma.decision.findMany({
     where: {
       organizationId: organization.id,
       status: {
-        in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED'],
+        in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'],
       },
-      OR: [
-        {
-          // Décisions INVITED où l'utilisateur est participant
-          votingMode: 'INVITED',
-          participants: {
-            some: {
-              userId: session.user.id,
-            },
-          },
-        },
-        {
-          // Décisions PUBLIC_LINK créées par l'utilisateur
-          votingMode: 'PUBLIC_LINK',
-          creatorId: session.user.id,
-        },
-      ],
     },
     select: {
       id: true,

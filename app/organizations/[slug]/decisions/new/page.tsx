@@ -590,23 +590,26 @@ export default function NewDecisionPage({
               </label>
             </Tooltip>
 
-            <Tooltip
-              title={DecisionTypeTooltips.ADVICE_SOLICITATION}
-              arrow
-              placement="right"
-            >
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="decisionType"
-                  value="ADVICE_SOLICITATION"
-                  checked={formData.decisionType === 'ADVICE_SOLICITATION'}
-                  onChange={(e) => setFormData({ ...formData, decisionType: 'ADVICE_SOLICITATION', votingMode: 'INVITED' })}
-                  className="mt-1 mr-3"
-                />
-                <div className="font-medium">{DecisionTypeLabels.ADVICE_SOLICITATION}</div>
-              </label>
-            </Tooltip>
+            {/* Masquer ADVICE_SOLICITATION si PUBLIC_LINK est sélectionné */}
+            {formData.votingMode !== 'PUBLIC_LINK' && (
+              <Tooltip
+                title={DecisionTypeTooltips.ADVICE_SOLICITATION}
+                arrow
+                placement="right"
+              >
+                <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="decisionType"
+                    value="ADVICE_SOLICITATION"
+                    checked={formData.decisionType === 'ADVICE_SOLICITATION'}
+                    onChange={(e) => setFormData({ ...formData, decisionType: 'ADVICE_SOLICITATION', votingMode: 'INVITED' })}
+                    className="mt-1 mr-3"
+                  />
+                  <div className="font-medium">{DecisionTypeLabels.ADVICE_SOLICITATION}</div>
+                </label>
+              </Tooltip>
+            )}
           </div>
         </div>
 
