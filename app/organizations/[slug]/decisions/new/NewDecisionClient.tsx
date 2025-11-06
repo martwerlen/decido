@@ -398,6 +398,11 @@ export default function NewDecisionClient({
     try {
       const body: any = { ...formData };
 
+      // Ajouter le draftId s'il existe (pour mettre à jour le brouillon existant)
+      if (draftId) {
+        body.draftId = draftId;
+      }
+
       if (formData.decisionType === 'NUANCED_VOTE') {
         body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
       } else if (formData.decisionType === 'MAJORITY') {
@@ -421,7 +426,10 @@ export default function NewDecisionClient({
 
       if (response.ok) {
         const data = await response.json();
-        setDraftId(data.decision.id);
+        // Stocker l'ID du brouillon si c'est la première sauvegarde
+        if (!draftId) {
+          setDraftId(data.decision.id);
+        }
         setLastSavedAt(new Date());
         refreshSidebar();
       } else {
@@ -517,12 +525,6 @@ export default function NewDecisionClient({
               ))}
             </ul>
           )}
-        </Alert>
-      )}
-
-      {lastSavedAt && (
-        <Alert severity="success" sx={{ mb: 3 }} icon={<CheckCircleIcon />}>
-          Sauvegardé à {lastSavedAt.toLocaleTimeString()}
         </Alert>
       )}
 
@@ -1037,6 +1039,12 @@ export default function NewDecisionClient({
         )}
 
         {/* Boutons d'action */}
+        {lastSavedAt && (
+          <Alert severity="success" sx={{ mb: 2 }} icon={<CheckCircleIcon />}>
+            Sauvegardé à {lastSavedAt.toLocaleTimeString()}
+          </Alert>
+        )}
+
         <Box sx={{ display: 'flex', gap: 2, pt: 2 }}>
           <Button variant="outlined" onClick={() => router.back()}>
             Annuler
@@ -1057,10 +1065,6 @@ export default function NewDecisionClient({
             {loading ? 'Lancement...' : 'Lancer la décision'}
           </Button>
         </Box>
-
-        <Typography variant="body2" color="text.secondary">
-          Le bouton "Lancer la décision" créera la décision avec le statut OPEN et enverra les emails d'invitation aux participants externes.
-        </Typography>
       </Box>
     </Box>
   );

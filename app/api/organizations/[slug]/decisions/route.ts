@@ -132,6 +132,7 @@ export async function POST(
       votingMode = 'INVITED',
       launch = false, // Nouveau paramètre : true = lancer directement, false = brouillon
       participants, // Nouveau paramètre : { teamIds, memberIds, externalParticipants }
+      draftId, // Nouveau paramètre : ID du brouillon à mettre à jour (optionnel)
     } = body;
 
     // Le titre est toujours requis
@@ -140,6 +141,181 @@ export async function POST(
         { error: 'Le titre est requis' },
         { status: 400 }
       );
+    }
+
+    // Si draftId est fourni, on met à jour le brouillon existant
+    if (draftId && !launch) {
+      // Vérifier que le brouillon existe et appartient au créateur
+      const existingDraft = await prisma.decision.findFirst({
+        where: {
+          id: draftId,
+          organizationId: organization.id,
+          creatorId: session.user.id,
+          status: 'DRAFT',
+        },
+      });
+
+      if (!existingDraft) {
+        return Response.json(
+          { error: 'Brouillon non trouvé ou non modifiable' },
+          { status: 404 }
+        );
+      }
+
+      // Préparer les données de mise à jour
+      const updateData: any = {
+        title,
+        description: description || '',
+        context: context || null,
+        decisionType: decisionType || 'MAJORITY',
+        teamId: teamId || null,
+        endDate: endDate ? new Date(endDate) : null,
+        initialProposal: body.initialProposal || null,
+        proposal: body.initialProposal || null,
+        votingMode,
+        publicSlug: votingMode === 'PUBLIC_LINK' ? body.publicSlug : null,
+      };
+
+      // Pour le vote nuancé
+      if (decisionType === 'NUANCED_VOTE') {
+        updateData.nuancedScale = body.nuancedScale || '5_LEVELS';
+        updateData.nuancedWinnerCount = body.nuancedWinnerCount || 1;
+      }
+
+      // Mettre à jour la décision
+      await prisma.decision.update({
+        where: { id: draftId },
+        data: updateData,
+      });
+
+      // Supprimer les anciennes propositions et en créer de nouvelles
+      if (decisionType === 'MAJORITY') {
+        await prisma.proposal.deleteMany({ where: { decisionId: draftId } });
+        if (body.proposals && body.proposals.length > 0) {
+          await prisma.proposal.createMany({
+            data: body.proposals.map((p: any, index: number) => ({
+              decisionId: draftId,
+              title: p.title,
+              description: p.description || null,
+              order: index,
+            })),
+          });
+        }
+      }
+
+      if (decisionType === 'NUANCED_VOTE') {
+        await prisma.nuancedProposal.deleteMany({ where: { decisionId: draftId } });
+        if (body.nuancedProposals && body.nuancedProposals.length > 0) {
+          await prisma.nuancedProposal.createMany({
+            data: body.nuancedProposals.map((p: any, index: number) => ({
+              decisionId: draftId,
+              title: p.title,
+              description: p.description || null,
+              order: index,
+            })),
+          });
+        }
+      }
+
+      // Mettre à jour les participants si fournis
+      if (participants && votingMode === 'INVITED') {
+        // Supprimer tous les participants existants
+        await prisma.decisionParticipant.deleteMany({ where: { decisionId: draftId } });
+
+        // Recréer les participants
+        const createdParticipants: any[] = [];
+
+        // Ajouter le créateur
+        await prisma.decisionParticipant.create({
+          data: {
+            decisionId: draftId,
+            userId: session.user.id,
+            invitedVia: 'MANUAL',
+          },
+        });
+
+        // Ajouter participants via teams
+        if (participants.teamIds && participants.teamIds.length > 0) {
+          for (const teamId of participants.teamIds) {
+            const teamMembers = await prisma.teamMember.findMany({
+              where: { teamId },
+              include: { organizationMember: true },
+            });
+
+            for (const teamMember of teamMembers) {
+              if (teamMember.organizationMember.userId !== session.user.id) {
+                await prisma.decisionParticipant.create({
+                  data: {
+                    decisionId: draftId,
+                    userId: teamMember.organizationMember.userId,
+                    invitedVia: 'TEAM',
+                  },
+                });
+              }
+            }
+          }
+        }
+
+        // Ajouter participants individuels
+        if (participants.memberIds && participants.memberIds.length > 0) {
+          for (const userId of participants.memberIds) {
+            if (userId !== session.user.id) {
+              const existing = await prisma.decisionParticipant.findFirst({
+                where: { decisionId: draftId, userId },
+              });
+              if (!existing) {
+                await prisma.decisionParticipant.create({
+                  data: {
+                    decisionId: draftId,
+                    userId: userId,
+                    invitedVia: 'MANUAL',
+                  },
+                });
+              }
+            }
+          }
+        }
+
+        // Ajouter participants externes
+        if (participants.externalParticipants && participants.externalParticipants.length > 0) {
+          for (const external of participants.externalParticipants) {
+            const token = crypto.randomBytes(32).toString('hex');
+            await prisma.decisionParticipant.create({
+              data: {
+                decisionId: draftId,
+                userId: null,
+                externalEmail: external.email,
+                externalName: external.name,
+                invitedVia: 'EXTERNAL',
+                token,
+                tokenExpiresAt: updateData.endDate,
+              },
+            });
+          }
+        }
+      }
+
+      // Récupérer la décision mise à jour
+      const updatedDecision = await prisma.decision.findUnique({
+        where: { id: draftId },
+        include: {
+          creator: {
+            select: { id: true, name: true, email: true },
+          },
+          team: true,
+          participants: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          proposals: decisionType === 'MAJORITY' ? { orderBy: { order: 'asc' } } : false,
+          nuancedProposals: decisionType === 'NUANCED_VOTE' ? { orderBy: { order: 'asc' } } : false,
+        },
+      });
+
+      return Response.json({ decision: updatedDecision }, { status: 200 });
     }
 
     // Validation stricte si launch=true ou PUBLIC_LINK
