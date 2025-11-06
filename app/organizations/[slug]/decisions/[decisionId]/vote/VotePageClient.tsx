@@ -992,12 +992,15 @@ export default function VotePageClient({
             Administrer
           </Link>
         )}
-        <Link
-          href={`/organizations/${slug}/decisions/${decision.id}/results`}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-        >
-          Voir les résultats
-        </Link>
+        {/* Masquer les résultats pour ADVICE_SOLICITATION en cours */}
+        {(decision.decisionType !== 'ADVICE_SOLICITATION' || !isOpen) && (
+          <Link
+            href={`/organizations/${slug}/decisions/${decision.id}/results`}
+            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            Voir les résultats
+          </Link>
+        )}
       </div>
     </div>
   );

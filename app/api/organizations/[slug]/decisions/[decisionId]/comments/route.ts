@@ -48,18 +48,38 @@ export async function POST(
 
     // Vérifier que l'utilisateur est autorisé à commenter
     if (decision.votingMode === 'INVITED') {
-      const participant = await prisma.decisionParticipant.findFirst({
-        where: {
-          decisionId,
-          userId: session.user.id,
-        },
-      });
+      // Pour ADVICE_SOLICITATION, tous les membres de l'organisation peuvent commenter
+      if (decision.decisionType === 'ADVICE_SOLICITATION') {
+        const membership = await prisma.organizationMember.findUnique({
+          where: {
+            userId_organizationId: {
+              userId: session.user.id,
+              organizationId: organization.id,
+            },
+          },
+        });
 
-      if (!participant) {
-        return Response.json(
-          { error: 'Vous n\'êtes pas autorisé à commenter sur cette décision' },
-          { status: 403 }
-        );
+        if (!membership) {
+          return Response.json(
+            { error: 'Vous n\'êtes pas autorisé à commenter sur cette décision' },
+            { status: 403 }
+          );
+        }
+      } else {
+        // Pour les autres types de décisions, seuls les participants peuvent commenter
+        const participant = await prisma.decisionParticipant.findFirst({
+          where: {
+            decisionId,
+            userId: session.user.id,
+          },
+        });
+
+        if (!participant) {
+          return Response.json(
+            { error: 'Vous n\'êtes pas autorisé à commenter sur cette décision' },
+            { status: 403 }
+          );
+        }
       }
     }
 
