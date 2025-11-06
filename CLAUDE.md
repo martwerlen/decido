@@ -154,7 +154,7 @@ The app uses dynamic routes extensively. Key patterns:
 - `/organizations/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
 - `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision (authenticated members)
 - `/organizations/[slug]/decisions/[decisionId]/results` - View results
-- `/organizations/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
+- `/organizations/[slug]/decisions/[decisionId]/admin` - Post-launch decision management (creator only, INVITED mode)
 - `/organizations/[slug]/decisions/[decisionId]/share` - Share page with public link and QR code (creator only, PUBLIC_LINK mode)
 - `/organizations/[slug]/decisions/new` - Create new decision
 
@@ -172,7 +172,7 @@ Authenticated APIs (under `/api/organizations/[slug]/...`):
 - `POST /api/organizations/[slug]/decisions/[decisionId]/opinions` - Submit/update opinion (ADVICE_SOLICITATION)
 - `GET /api/organizations/[slug]/decisions/[decisionId]/opinions` - Get all opinions (ADVICE_SOLICITATION)
 - `PATCH /api/organizations/[slug]/decisions/[decisionId]/validate` - Validate final decision (ADVICE_SOLICITATION, creator only)
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw` - Withdraw decision (ADVICE_SOLICITATION, creator only)
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw` - Withdraw decision (all types, creator only, sets status=CLOSED and result=WITHDRAWN)
 
 Public APIs:
 - `GET /api/vote/[token]` - Fetch decision data for external participant (token-based)
@@ -566,79 +566,124 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
 
-### Draft Auto-Save System
+### Decision Creation Flow
 
-The application supports automatic saving of decision drafts to prevent data loss and allow users to work on decisions over multiple sessions.
+The decision creation process has been streamlined into a single page experience where all configuration is done before launching the decision.
 
-**Key Features:**
-- **Auto-save on blur**: All form fields automatically save 500ms after the user leaves the field (onBlur event)
-- **Manual save button**: "Enregistrer en brouillon" button allows explicit saves
-- **Visual feedback**: Real-time save indicator showing "Sauvegarde..." during save and "Sauvegardé automatiquement à [time]" after completion
-- **Multiple drafts**: Users can have multiple draft decisions simultaneously
-- **Navigation warning**: Browser prompts user before leaving page if there are unsaved changes
-- **Dashboard section**: "Brouillons" section displays all user's drafts with Continue and Delete actions
+**New Workflow (Streamlined):**
+
+1. **Navigate to `/organizations/[slug]/decisions/new`**
+   - Server-side page loads teams, members, and organization data
+   - If `?draft=<id>` parameter present, loads existing draft
+
+2. **Fill in all decision details on one page:**
+   - **Basic information**: Title, description, context
+   - **Decision type**: CONSENSUS, MAJORITY, NUANCED_VOTE, or ADVICE_SOLICITATION
+   - **Mode of participation** (except ADVICE_SOLICITATION): INVITED or PUBLIC_LINK
+   - **Type-specific fields**:
+     - CONSENSUS: Initial proposal (text)
+     - ADVICE_SOLICITATION: Decision intention (text)
+     - MAJORITY: List of proposals (min 2, max 25)
+     - NUANCED_VOTE: List of proposals + scale selection (3/5/7 levels) + winner count
+   - **Participants** (INVITED mode only):
+     - Select teams (automatically includes all team members)
+     - Select individual members
+     - Add external participants (name + email)
+   - **End date** (required except for ADVICE_SOLICITATION)
+
+3. **Two action buttons:**
+   - **"Enregistrer en brouillon"**: Saves with `status='DRAFT'`, user can continue later
+   - **"Lancer la décision"**: Creates with `status='OPEN'`, sends invitation emails, redirects to `/vote`
 
 **Technical Implementation:**
 
-1. **API Endpoints:**
-   - `POST /api/organizations/[slug]/decisions` - Creates a new draft with `status='DRAFT'` (unless `votingMode='PUBLIC_LINK'`)
-   - `PATCH /api/organizations/[slug]/decisions/[decisionId]` - Updates an existing draft
-     - Only works for decisions with `status='DRAFT'`
-     - Only the creator can update their draft
-     - Supports `autoSave` flag to skip audit logging for auto-saves
-     - Can update all decision fields: title, description, context, decisionType, endDate, votingMode, publicSlug, etc.
+**API Endpoint (`POST /api/organizations/[slug]/decisions`):**
+- Accepts all decision fields in a single request
+- New `launch` parameter (boolean):
+  - `launch=false`: Creates draft (`status='DRAFT'`)
+  - `launch=true`: Creates and launches (`status='OPEN'`, sends emails)
+- New `participants` parameter (object):
+  ```typescript
+  {
+    teamIds: string[],          // IDs of teams to invite
+    memberIds: string[],         // IDs of individual members
+    externalParticipants: Array<{
+      name: string,
+      email: string
+    }>
+  }
+  ```
+- Validates all requirements before creating decision
+- Creates `DecisionParticipant` records with tokens for external participants
+- For `launch=true`: Sends invitation emails to external participants immediately
+- Logs CREATED and (if launched) LAUNCHED events
 
-2. **Creation Page (`app/organizations/[slug]/decisions/new/page.tsx`):**
-   - State tracking:
-     - `draftId`: ID of the created draft (null until first save)
-     - `lastSavedAt`: Timestamp of last successful save
-     - `isSaving`: Boolean flag during save operations
-     - `hasUnsavedChanges`: Tracks if changes exist since last save
-   - Auto-save logic:
-     - Triggered by `onBlur` events on all input fields
-     - Debounced with 500ms delay to avoid excessive API calls
-     - First save creates a new draft, subsequent saves update the existing draft
-   - Form submission:
-     - If `draftId` exists: Saves any pending changes and redirects to admin/share page
-     - If no `draftId`: Creates new decision (normal flow)
+**Page Structure:**
+- Server component: `app/organizations/[slug]/decisions/new/page.tsx`
+  - Fetches teams, members, organization member count
+  - Loads draft if `?draft=<id>` parameter present
+  - Passes data to client component
+- Client component: `app/organizations/[slug]/decisions/new/NewDecisionClient.tsx`
+  - ~1000 lines with complete form logic
+  - Material-UI components with Accordions for participant selection
+  - Client-side validation before submission
+  - Handles both draft save and launch actions
 
-3. **Dashboard Integration (`app/organizations/[slug]/page.tsx`):**
-   - Query fetches all drafts where:
-     - `organizationId` matches current organization
-     - `status = 'DRAFT'`
-     - `creatorId` matches current user
-   - Drafts displayed in dedicated "Brouillons" section (before "En cours" section)
-   - Each draft shows:
-     - Title (or "Brouillon sans titre" if empty)
-     - Description preview (truncated)
-     - Decision type and voting mode
-     - Last modification time ("Modifié il y a X")
-     - **Continue** button → redirects to `/organizations/[slug]/decisions/[draftId]/admin`
-     - **Delete** button → calls `DELETE /api/organizations/[slug]/decisions/[draftId]`
+**Validation:**
+- **For drafts**: Only requires title
+- **For launch**: Full validation including:
+  - All required fields based on decision type
+  - Minimum 2 proposals for MAJORITY/NUANCED_VOTE
+  - At least 1 participant for INVITED mode
+  - ADVICE_SOLICITATION minimum participant requirements:
+    - 1 member org → min 1 external participant
+    - 2-4 member org → min 1 participant (internal or external)
+    - 5+ member org → min 3 participants (internal or external)
+  - End date at least 24h in future (except ADVICE_SOLICITATION)
 
-4. **Draft Card Component (`components/dashboard/DraftCard.tsx`):**
-   - Client component handling delete functionality
-   - Confirmation dialog before deletion
-   - Automatic page refresh after successful deletion
-   - Time-ago display helper for showing relative modification time
+**Dashboard Integration:**
+- Drafts displayed in "Brouillons" section
+- **Continue** button → redirects to `/organizations/[slug]/decisions/new?draft=<id>`
+- **Delete** button → calls `DELETE /api/organizations/[slug]/decisions/[decisionId]`
 
-**User Workflow:**
-1. User navigates to "Nouvelle décision" page
-2. User starts filling in decision details
-3. Upon leaving any field (onBlur), auto-save creates/updates draft after 500ms
-4. Visual indicator shows "Sauvegardé automatiquement à [time]"
-5. User can:
-   - Click "Enregistrer en brouillon" to save explicitly
-   - Click "Créer et configurer" to finalize and proceed
-   - Navigate away (browser warns if unsaved changes)
-   - Return later from dashboard's "Brouillons" section
+**Key Changes from Old Flow:**
+- ❌ Removed: Auto-save on blur
+- ❌ Removed: Two-step process (create → configure participants on /admin)
+- ✅ Added: Single-page creation with integrated participant selection
+- ✅ Added: Direct launch from creation page
+- ✅ Added: Immediate redirect to /vote after launch
 
-**Important Notes:**
-- Drafts are automatically created on first field blur (requires at least a title)
-- Only the decision creator can see and manage their drafts
-- Drafts can only be deleted if `status='DRAFT'` (enforced by API)
-- Auto-saves use `autoSave: true` flag to prevent audit log clutter
-- Manual saves and form submission trigger full audit logging
+**Admin Page Post-Launch Management:**
+
+The `/admin` page has been simplified to focus only on post-launch actions (no longer used for initial configuration):
+
+**Actions available per decision type:**
+- **CONSENSUS**:
+  - View participants with vote status
+  - Amend proposal (while decision is OPEN)
+  - Add conclusion (when voting finished)
+  - "Voir la décision en cours" button
+  - "Retirer la décision" button
+  
+- **MAJORITY / NUANCED_VOTE**:
+  - View participants with vote status
+  - Add conclusion (when voting finished)
+  - "Voir le vote" button
+  - "Retirer la décision" button
+  
+- **ADVICE_SOLICITATION**:
+  - Modify decision intention (only before first opinion received)
+  - View solicited participants with opinion status
+  - Validate final decision (when all opinions received)
+  - "Voir la décision en cours" button
+  - "Retirer la décision" button
+
+**Withdraw Decision:**
+- New endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw`
+- Sets `status='CLOSED'` and `result='WITHDRAWN'`
+- Only available while decision is OPEN
+- Requires confirmation dialog
+- Logs withdrawal event with actor information
 
 ### Invitation System
 
