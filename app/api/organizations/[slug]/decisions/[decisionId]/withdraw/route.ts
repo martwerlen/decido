@@ -1,8 +1,13 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logDecisionWithdrawn } from '@/lib/decision-logger';
 
-// PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw - Retire la décision (WITHDRAWN)
+/**
+ * PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw
+ * Retire une décision (passe le status à CLOSED et result à WITHDRAWN)
+ * Accessible uniquement au créateur de la décision
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string; decisionId: string }> }
@@ -15,20 +20,29 @@ export async function PATCH(
 
     const { slug, decisionId } = await params;
 
-    // Récupérer l'organisation par son slug
-    const organization = await prisma.organization.findUnique({
+    // Vérifier que l'organisation existe et que l'utilisateur en est membre
+    const org = await prisma.organization.findUnique({
       where: { slug },
+      include: {
+        members: {
+          where: { userId: session.user.id }
+        }
+      }
     });
 
-    if (!organization) {
+    if (!org) {
       return Response.json({ error: 'Organisation non trouvée' }, { status: 404 });
     }
 
+    if (org.members.length === 0) {
+      return Response.json({ error: 'Accès refusé' }, { status: 403 });
+    }
+
     // Récupérer la décision
-    const decision = await prisma.decision.findFirst({
+    const decision = await prisma.decision.findUnique({
       where: {
         id: decisionId,
-        organizationId: organization.id,
+        organizationId: org.id
       },
     });
 
@@ -36,7 +50,7 @@ export async function PATCH(
       return Response.json({ error: 'Décision non trouvée' }, { status: 404 });
     }
 
-    // Vérifier que c'est le créateur
+    // Vérifier que l'utilisateur est le créateur
     if (decision.creatorId !== session.user.id) {
       return Response.json(
         { error: 'Seul le créateur peut retirer cette décision' },
@@ -44,19 +58,17 @@ export async function PATCH(
       );
     }
 
-    // Vérifier que la décision n'est pas déjà fermée
-    if (decision.status === 'CLOSED') {
+    // Vérifier que la décision est encore ouverte
+    if (decision.status !== 'OPEN') {
       return Response.json(
-        { error: 'Cette décision est déjà fermée' },
+        { error: 'Seules les décisions en cours peuvent être retirées' },
         { status: 400 }
       );
     }
 
     // Retirer la décision
     const updatedDecision = await prisma.decision.update({
-      where: {
-        id: decisionId,
-      },
+      where: { id: decisionId },
       data: {
         status: 'CLOSED',
         result: 'WITHDRAWN',
@@ -65,21 +77,12 @@ export async function PATCH(
     });
 
     // Logger le retrait
-    const userName = session.user.name || session.user.email || 'Créateur';
-    await prisma.decisionLog.create({
-      data: {
-        decisionId,
-        eventType: 'STATUS_CHANGED',
-        actorId: session.user.id,
-        actorName: userName,
-        actorEmail: session.user.email || undefined,
-        oldValue: decision.status,
-        newValue: 'CLOSED',
-        metadata: JSON.stringify({ result: 'WITHDRAWN' }),
-      },
-    });
+    await logDecisionWithdrawn(decisionId, session.user.id);
 
-    return Response.json({ decision: updatedDecision });
+    return Response.json({
+      decision: updatedDecision,
+      message: 'Décision retirée avec succès',
+    });
   } catch (error) {
     console.error('Error withdrawing decision:', error);
     return Response.json(

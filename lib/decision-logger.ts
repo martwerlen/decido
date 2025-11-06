@@ -323,3 +323,19 @@ export async function logCommentAdded(
     actorEmail,
   });
 }
+
+/**
+ * Log le retrait d'une décision
+ */
+export async function logDecisionWithdrawn(
+  decisionId: string,
+  actorId: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'STATUS_CHANGED',
+    actorId,
+    oldValue: 'OPEN',
+    newValue: 'WITHDRAWN',
+  });
+}
