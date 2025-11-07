@@ -366,7 +366,8 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           position="fixed"
           sx={{
             zIndex: (theme) => theme.zIndex.drawer + 1,
-            backgroundColor: isDarkMode ? 'grey.900' : 'primary.main',
+            backgroundColor: 'background.paper',
+            color: 'text.primary',
           }}
         >
           <Toolbar sx={{ minHeight: { xs: 56 }, px: 2 }}>
@@ -376,7 +377,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
               onClick={handleDashboard}
             >
               <Image
-                src="/logo-dark.svg"
+                src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
                 alt="Decidoo"
                 width={120}
                 height={32}
