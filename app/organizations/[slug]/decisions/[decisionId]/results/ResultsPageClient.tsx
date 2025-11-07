@@ -891,7 +891,7 @@ export default function ResultsPageClient({
       {/* Navigation */}
       <div className="flex gap-4">
         <Link
-          href={`/organizations/${slug}/decisions`}
+          href={`/organizations/${slug}`}
           className="px-6 py-2 border rounded-lg hover:bg-gray-50"
         >
           Retour aux décisions
@@ -905,16 +905,20 @@ export default function ResultsPageClient({
             Retour au vote
           </Link>
         )}
-        {isCreator && (
+        {isCreator && votingMode === 'PUBLIC_LINK' && decision.status === 'OPEN' && (
           <Link
-            href={
-              votingMode === 'PUBLIC_LINK'
-                ? `/organizations/${slug}/decisions/${decision.id}/share`
-                : `/organizations/${slug}/decisions/${decision.id}/admin`
-            }
+            href={`/organizations/${slug}/decisions/${decision.id}/share`}
             className="px-6 py-2 border rounded-lg hover:bg-gray-50"
           >
-            {votingMode === 'PUBLIC_LINK' ? 'Retour au partage' : 'Administrer'}
+            Retour au partage
+          </Link>
+        )}
+        {isCreator && votingMode !== 'PUBLIC_LINK' && (
+          <Link
+            href={`/organizations/${slug}/decisions/${decision.id}/admin`}
+            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            Administrer
           </Link>
         )}
       </div>
