@@ -75,8 +75,8 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
   };
 
   return (
-    <Box sx={{ mb: 3, p: 2, backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+    <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+      <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
         Filtrer les décisions
       </h3>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
