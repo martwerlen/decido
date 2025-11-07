@@ -161,15 +161,16 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       // Sélectionner l'organisation courante ou la première par défaut
       if (currentOrgSlug) {
         setOrganization(currentOrgSlug)
-      } else if (data.length > 0 && !organization) {
-        setOrganization(data[0].slug)
+      } else if (data.length > 0) {
+        // Vérifier si organization n'est pas déjà défini via setState callback
+        setOrganization(prev => prev || data[0].slug)
       }
     } catch (err: any) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [currentOrgSlug, organization])
+  }, [currentOrgSlug])
 
   const fetchDecisions = useCallback(async () => {
     if (!organization) return
@@ -189,22 +190,27 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }, [organization])
 
+  // Charger les organisations au mount uniquement
   useEffect(() => {
     fetchOrganizations()
-  }, [fetchOrganizations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  // Charger les décisions quand l'organisation change
   useEffect(() => {
     if (organization) {
       fetchDecisions()
     }
-  }, [organization, fetchDecisions])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization])
 
   // Rafraîchir quand le trigger change (après un vote ou changement de statut)
   useEffect(() => {
     if (refreshTrigger > 0 && organization) {
       fetchDecisions()
     }
-  }, [refreshTrigger, organization, fetchDecisions])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger])
 
   // Mettre à jour le rôle de l'utilisateur dans l'organisation courante
   useEffect(() => {

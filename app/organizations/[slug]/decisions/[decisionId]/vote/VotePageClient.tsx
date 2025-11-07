@@ -532,7 +532,7 @@ export default function VotePageClient({
               disabled={loading || !selectedProposal}
               className="w-full text-white py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
             >
               {loading ? 'Enregistrement...' : hasVoted ? 'Modifier mon vote' : 'Voter'}

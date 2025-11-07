@@ -65,6 +65,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.lastOrganizationSlug = session.lastOrganizationSlug
       }
 
+      // IMPORTANT: Nettoyer le token pour éviter les données volumineuses
+      // Ne pas stocker l'image dans le JWT (peut être très volumineuse)
+      delete token.picture
+      delete token.image
+
+      // Limiter lastOrganizationSlug à 50 caractères max
+      if (token.lastOrganizationSlug && typeof token.lastOrganizationSlug === 'string') {
+        token.lastOrganizationSlug = token.lastOrganizationSlug.substring(0, 50)
+      }
+
       return token
     },
     async session({ session, token }) {
