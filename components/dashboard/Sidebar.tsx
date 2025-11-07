@@ -414,35 +414,13 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
               boxSizing: 'border-box',
               width: 280,
               marginTop: '56px', // Hauteur de l'AppBar
-              height: 'calc(100% - 56px - 80px)', // Hauteur totale - AppBar - marge bas
-              maxHeight: '600px', // Hauteur max pour ne pas aller jusqu'en bas
+              height: 'auto', // Hauteur adaptative selon le contenu
             },
           }}
         >
-          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            {/* Header avec logo */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                p: 2,
-                borderBottom: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <Image
-                src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
-                alt="Decidoo"
-                width={150}
-                height={40}
-                style={{ objectFit: "contain" }}
-                priority
-              />
-            </Box>
-
+          <Box sx={{ display: "flex", flexDirection: "column" }}>
             {/* Sélecteur d'organisation */}
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, pt: 3 }}>
               {loading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
                   <CircularProgress size={24} />
