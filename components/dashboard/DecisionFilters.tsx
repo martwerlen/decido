@@ -81,7 +81,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
       </h3>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
         {/* Filtre 1: Statut */}
-        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
           <InputLabel id="status-filter-label">Statut</InputLabel>
           <Select
             labelId="status-filter-label"
@@ -116,7 +116,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
         </FormControl>
 
         {/* Filtre 2: Périmètre */}
-        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
           <InputLabel id="scope-filter-label">Périmètre</InputLabel>
           <Select
             labelId="scope-filter-label"
@@ -136,7 +136,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
         </FormControl>
 
         {/* Filtre 3: Type de décision */}
-        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
           <InputLabel id="type-filter-label">Type</InputLabel>
           <Select
             labelId="type-filter-label"
