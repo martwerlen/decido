@@ -357,26 +357,16 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   if (isMobile) {
     return (
       <>
-        {/* AppBar avec logo + bouton hamburger */}
+        {/* AppBar avec logo à gauche + bouton hamburger à droite */}
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
           <Toolbar sx={{ minHeight: { xs: 56 }, px: 2 }}>
-            {/* Bouton hamburger */}
-            <IconButton
-              color="inherit"
-              edge="start"
-              onClick={toggleMobileDrawer}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-
-            {/* Logo Decidoo */}
+            {/* Logo Decidoo à gauche */}
             <Box
               sx={{ display: "flex", alignItems: "center", cursor: "pointer", flexGrow: 1 }}
               onClick={handleDashboard}
             >
               <Image
-                src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
+                src="/logo-dark.svg"
                 alt="Decidoo"
                 width={120}
                 height={32}
@@ -384,15 +374,25 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                 priority
               />
             </Box>
+
+            {/* Bouton hamburger à droite */}
+            <IconButton
+              color="inherit"
+              edge="end"
+              onClick={toggleMobileDrawer}
+            >
+              <MenuIcon />
+            </IconButton>
           </Toolbar>
         </AppBar>
 
         {/* Spacer pour le contenu */}
         <Toolbar />
 
-        {/* Drawer vertical qui s'ouvre/ferme */}
+        {/* Drawer vertical qui descend depuis le top */}
         <Drawer
           variant="temporary"
+          anchor="right"
           open={mobileDrawerOpen}
           onClose={closeMobileDrawer}
           ModalProps={{
@@ -403,6 +403,9 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: 280,
+              marginTop: '56px', // Hauteur de l'AppBar
+              height: 'calc(100% - 56px - 80px)', // Hauteur totale - AppBar - marge bas
+              maxHeight: '600px', // Hauteur max pour ne pas aller jusqu'en bas
             },
           }}
         >
@@ -551,20 +554,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             </List>
 
             <Box sx={{ flexGrow: 1 }} />
-
-            <Divider />
-
-            {/* Déconnexion */}
-            <List>
-              <ListItem disablePadding>
-                <ListItemButton onClick={handleLogoutFromMenu}>
-                  <ListItemIcon>
-                    <Logout />
-                  </ListItemIcon>
-                  <ListItemText primary="Se déconnecter" />
-                </ListItemButton>
-              </ListItem>
-            </List>
           </Box>
         </Drawer>
 
