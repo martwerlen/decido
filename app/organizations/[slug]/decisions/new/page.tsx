@@ -199,7 +199,8 @@ export default function NewDecisionPage({
   // Obtenir l'état de la checkbox d'une équipe
   const getTeamCheckboxState = (teamId: string): 'checked' | 'indeterminate' | 'unchecked' => {
     const teamMembers = getTeamMembers(teamId);
-    const filteredTeamMembers = teamMembers.filter(m => getFilteredMembers().includes(m));
+    const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
+    const filteredTeamMembers = teamMembers.filter(m => filteredMemberIds.has(m.id));
 
     if (filteredTeamMembers.length === 0) return 'unchecked';
 
@@ -230,7 +231,8 @@ export default function NewDecisionPage({
   const toggleTeam = (teamId: string) => {
     const state = getTeamCheckboxState(teamId);
     const teamMembers = getTeamMembers(teamId);
-    const filteredTeamMembers = teamMembers.filter(m => getFilteredMembers().includes(m));
+    const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
+    const filteredTeamMembers = teamMembers.filter(m => filteredMemberIds.has(m.id));
 
     if (state === 'unchecked' || state === 'indeterminate') {
       // Cocher l'équipe : ajouter teamId, retirer les membres individuels de cette équipe
@@ -1159,13 +1161,19 @@ export default function NewDecisionPage({
               {/* Onglet Équipes et membres */}
               {participantMode === 'teams' && (
                 <div className="border rounded-lg max-h-[600px] overflow-y-auto">
-                  {getFilteredTeams().length === 0 && getMembersWithoutTeam().filter(m => getFilteredMembers().includes(m)).length === 0 ? (
-                    <p className="text-sm text-gray-500 italic p-4">Aucun membre disponible</p>
-                  ) : (
-                    <div>
-                      {/* Équipes */}
-                      {getFilteredTeams().map((team) => {
-                        const teamMembers = getTeamMembers(team.id).filter(m => getFilteredMembers().includes(m));
+                  {(() => {
+                    const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
+                    const filteredMembersWithoutTeam = getMembersWithoutTeam().filter(m => filteredMemberIds.has(m.id));
+
+                    if (getFilteredTeams().length === 0 && filteredMembersWithoutTeam.length === 0) {
+                      return <p className="text-sm text-gray-500 italic p-4">Aucun membre disponible</p>;
+                    }
+
+                    return (
+                      <div>
+                        {/* Équipes */}
+                        {getFilteredTeams().map((team) => {
+                          const teamMembers = getTeamMembers(team.id).filter(m => filteredMemberIds.has(m.id));
                         const checkboxState = getTeamCheckboxState(team.id);
                         const isExpanded = expandedTeamIds.includes(team.id);
 
@@ -1219,12 +1227,11 @@ export default function NewDecisionPage({
 
                       {/* Section "Sans équipe" */}
                       {(() => {
-                        const membersWithoutTeam = getMembersWithoutTeam().filter(m => getFilteredMembers().includes(m));
-                        if (membersWithoutTeam.length === 0) return null;
+                        if (filteredMembersWithoutTeam.length === 0) return null;
 
                         const isExpanded = expandedTeamIds.includes('no-team');
-                        const allSelected = membersWithoutTeam.every(m => isUserSelected(m.userId));
-                        const someSelected = membersWithoutTeam.some(m => isUserSelected(m.userId));
+                        const allSelected = filteredMembersWithoutTeam.every(m => isUserSelected(m.userId));
+                        const someSelected = filteredMembersWithoutTeam.some(m => isUserSelected(m.userId));
                         const checkboxState = allSelected ? 'checked' : (someSelected ? 'indeterminate' : 'unchecked');
 
                         return (
@@ -1248,14 +1255,14 @@ export default function NewDecisionPage({
                                 onChange={() => {
                                   if (allSelected) {
                                     // Décocher tous
-                                    membersWithoutTeam.forEach(m => {
+                                    filteredMembersWithoutTeam.forEach(m => {
                                       if (isUserSelected(m.userId)) {
                                         toggleUser(m.userId);
                                       }
                                     });
                                   } else {
                                     // Cocher tous
-                                    membersWithoutTeam.forEach(m => {
+                                    filteredMembersWithoutTeam.forEach(m => {
                                       if (!isUserSelected(m.userId)) {
                                         toggleUser(m.userId);
                                       }
@@ -1265,13 +1272,13 @@ export default function NewDecisionPage({
                                 size="small"
                               />
                               <span className="font-medium text-sm text-gray-600 italic">Sans équipe</span>
-                              <span className="text-xs text-gray-600 ml-2">({membersWithoutTeam.length} membres)</span>
+                              <span className="text-xs text-gray-600 ml-2">({filteredMembersWithoutTeam.length} membres)</span>
                             </div>
 
                             {/* Membres sans équipe (si dépliée) */}
                             {isExpanded && (
                               <div className="bg-gray-50">
-                                {membersWithoutTeam.map((member) => (
+                                {filteredMembersWithoutTeam.map((member) => (
                                   <div
                                     key={member.id}
                                     className="flex items-center py-2 px-3 pl-12 hover:bg-gray-100"
@@ -1290,8 +1297,9 @@ export default function NewDecisionPage({
                           </div>
                         );
                       })()}
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
