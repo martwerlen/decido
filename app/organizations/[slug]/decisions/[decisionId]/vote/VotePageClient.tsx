@@ -497,21 +497,30 @@ export default function VotePageClient({
 
       {/* Vote à la majorité */}
       {decision.decisionType === 'MAJORITY' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
           <h2 className="text-xl font-semibold mb-4">Propositions</h2>
-          <p className="text-gray-600 mb-4">
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
             Choisissez une proposition parmi les options suivantes :
-          </p>
+          </Typography>
 
           <div className="space-y-3 mb-6">
             {decision.proposals.map((proposal) => (
-              <label
+              <Box
+                component="label"
                 key={proposal.id}
-                className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition ${
-                  selectedProposal === proposal.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                } ${!isOpen ? 'cursor-not-allowed opacity-60' : ''}`}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 2,
+                  borderColor: selectedProposal === proposal.id ? 'primary.main' : 'divider',
+                  backgroundColor: selectedProposal === proposal.id ? 'primary.light' : 'transparent',
+                  borderRadius: 2,
+                  cursor: isOpen ? 'pointer' : 'not-allowed',
+                  opacity: isOpen ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  '&:hover': isOpen ? { borderColor: selectedProposal === proposal.id ? 'primary.main' : 'text.secondary' } : {}
+                }}
               >
                 <input
                   type="radio"
@@ -525,44 +534,44 @@ export default function VotePageClient({
                 <div className="flex-1">
                   <div className="font-medium">{proposal.title}</div>
                   {proposal.description && (
-                    <div className="text-sm text-gray-600 mt-1">{proposal.description}</div>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{proposal.description}</Typography>
                   )}
                 </div>
-              </label>
+              </Box>
             ))}
           </div>
 
           {isOpen && (
-            <button
+            <Button
               onClick={handleVoteProposal}
               disabled={loading || !selectedProposal}
-              className="w-full text-white py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{ py: 1.5, fontWeight: 'medium' }}
             >
               {loading ? 'Enregistrement...' : hasVoted ? 'Modifier mon vote' : 'Voter'}
-            </button>
+            </Button>
           )}
 
           {hasVoted && (
-            <p className="text-sm text-green-600 mt-2 text-center">
+            <Typography variant="body2" color="success.main" sx={{ mt: 1, textAlign: 'center' }}>
               ✓ Vous avez voté pour : {initialUserProposalVote?.proposal.title}
-            </p>
+            </Typography>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Vote nuancé */}
       {decision.decisionType === 'NUANCED_VOTE' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
           <h2 className="text-xl font-semibold mb-4">Vote nuancé</h2>
-          <p className="text-gray-600 mb-2">
+          <Typography color="text.secondary" sx={{ mb: 1 }}>
             Évaluez chaque proposition en lui attribuant une mention.
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
-          </p>
+          </Typography>
 
           <div className="space-y-4 mb-6">
             {decision.nuancedProposals?.map((proposal) => {
@@ -570,10 +579,10 @@ export default function VotePageClient({
               const selectedMention = nuancedVotes[proposal.id];
 
               return (
-                <div key={proposal.id} className="border rounded-lg p-4">
+                <Box key={proposal.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
                   <h3 className="font-semibold text-lg mb-2">{proposal.title}</h3>
                   {proposal.description && (
-                    <p className="text-gray-600 text-sm mb-3">{proposal.description}</p>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{proposal.description}</Typography>
                   )}
 
                   <div className="flex flex-wrap gap-2">
@@ -609,61 +618,67 @@ export default function VotePageClient({
                       );
                     })}
                   </div>
-                </div>
+                </Box>
               );
             })}
           </div>
 
           {isOpen && (
-            <button
+            <Button
               onClick={handleVoteNuanced}
               disabled={loading || Object.keys(nuancedVotes).length !== (decision.nuancedProposals?.length || 0)}
-              className="w-full text-white py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => !isSubmitting && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{ py: 1.5, fontWeight: 'medium' }}
             >
               {loading ? 'Enregistrement...' : hasVoted ? 'Modifier mon vote' : 'Voter'}
-            </button>
+            </Button>
           )}
 
           {hasVoted && (
-            <p className="text-sm text-green-600 mt-2 text-center">
+            <Typography variant="body2" color="success.main" sx={{ mt: 1, textAlign: 'center' }}>
               ✓ Vous avez déjà voté
-            </p>
+            </Typography>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Vote consensus */}
       {decision.decisionType === 'CONSENSUS' && (
         <>
           {/* Proposition */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
             <h2 className="text-xl font-semibold mb-4">Proposition</h2>
 
             {/* Afficher proposition initiale si elle diffère de la proposition actuelle */}
             {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal && (
-              <div className="mb-4">
-                <h3 className="font-medium text-gray-700 mb-2">Proposition initiale</h3>
-                <div className="p-4 bg-gray-50 rounded border">
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1" fontWeight="medium" sx={{ mb: 1 }}>Proposition initiale</Typography>
+                <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   <p className="whitespace-pre-wrap">{decision.initialProposal}</p>
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
 
             {/* Afficher la proposition actuelle */}
             <div>
               {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? (
-                <h3 className="font-medium text-blue-700 mb-2">Proposition actuelle</h3>
+                <Typography variant="body1" fontWeight="medium" color="primary.main" sx={{ mb: 1 }}>Proposition actuelle</Typography>
               ) : (
-                <h3 className="font-medium text-gray-700 mb-2">Proposition</h3>
+                <Typography variant="body1" fontWeight="medium" sx={{ mb: 1 }}>Proposition</Typography>
               )}
-              <div className={`p-4 rounded border ${decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
+              <Box sx={{
+                p: 2,
+                borderRadius: 1,
+                border: 1,
+                backgroundColor: decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? 'primary.light' : 'background.secondary',
+                borderColor: decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? 'primary.main' : 'divider'
+              }}>
                 <p className="whitespace-pre-wrap">{decision.proposal || decision.initialProposal}</p>
-              </div>
+              </Box>
             </div>
-          </div>
+          </Box>
 
           {/* Commentaires */}
           <div className="bg-white border rounded-lg p-6 mb-6">
@@ -761,50 +776,48 @@ export default function VotePageClient({
           </div>
 
           {/* Vote d'accord/pas d'accord */}
-          <div className="bg-white border rounded-lg p-6">
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3 }}>
             <h2 className="text-xl font-semibold mb-4">Votre position</h2>
 
             {isOpen ? (
-              <div className="flex gap-4">
-                <button
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
                   onClick={() => handleVoteConsensus('AGREE')}
                   disabled={loading}
-                  className={`flex-1 py-4 rounded-lg font-medium transition ${
-                    consensusVote === 'AGREE'
-                      ? 'bg-green-600 text-white'
-                      : 'border-2 border-green-600 text-green-600 hover:bg-green-50'
-                  } disabled:opacity-50`}
+                  variant={consensusVote === 'AGREE' ? 'contained' : 'outlined'}
+                  color="success"
+                  fullWidth
+                  sx={{ py: 2, fontWeight: 'medium' }}
                 >
                   ✓ D'accord
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleVoteConsensus('DISAGREE')}
                   disabled={loading}
-                  className={`flex-1 py-4 rounded-lg font-medium transition ${
-                    consensusVote === 'DISAGREE'
-                      ? 'bg-red-600 text-white'
-                      : 'border-2 border-red-600 text-red-600 hover:bg-red-50'
-                  } disabled:opacity-50`}
+                  variant={consensusVote === 'DISAGREE' ? 'contained' : 'outlined'}
+                  color="error"
+                  fullWidth
+                  sx={{ py: 2, fontWeight: 'medium' }}
                 >
                   ✗ Pas d'accord
-                </button>
-              </div>
+                </Button>
+              </Box>
             ) : (
-              <p className="text-gray-600 text-center py-4">
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
                 Le vote est fermé
-              </p>
+              </Typography>
             )}
 
             {hasVoted && (
-              <p className="text-sm text-center mt-3">
+              <Typography variant="body2" sx={{ textAlign: 'center', mt: 1.5 }}>
                 Votre vote actuel : {consensusVote === 'AGREE' ? (
-                  <span className="text-green-600 font-medium">✓ D'accord</span>
+                  <Typography component="span" color="success.main" fontWeight="medium">✓ D'accord</Typography>
                 ) : (
-                  <span className="text-red-600 font-medium">✗ Pas d'accord</span>
+                  <Typography component="span" color="error.main" fontWeight="medium">✗ Pas d'accord</Typography>
                 )}
-              </p>
+              </Typography>
             )}
-          </div>
+          </Box>
         </>
       )}
 
