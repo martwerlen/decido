@@ -417,6 +417,16 @@ export async function GET(
             image: true,
           },
         },
+        teamMembers: {
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         joinedAt: 'asc',
