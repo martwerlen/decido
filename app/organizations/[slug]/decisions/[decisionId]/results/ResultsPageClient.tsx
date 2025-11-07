@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Box, Chip, Typography, Alert, LinearProgress, Button } from '@mui/material';
 import {
   DecisionStatusLabels,
   DecisionTypeLabels,
@@ -132,30 +133,31 @@ export default function ResultsPageClient({
       />
 
       {/* En-tête */}
-      <div className="mb-6">
+      <Box sx={{ mb: 3 }}>
         <h1 className="text-3xl font-bold">{decision.title}</h1>
-        <p className="text-gray-600 mt-2">{decision.description}</p>
-        <div className="flex gap-2 mt-4">
-          <span className="bg-gray-100 px-3 py-1 rounded text-sm">
-            {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
-          </span>
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
-            {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-          </span>
+        <Typography color="text.secondary" sx={{ mt: 1 }}>{decision.description}</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Chip
+            label={DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
+            size="small"
+            variant="outlined"
+          />
+          <Chip
+            label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
           {decision.result && (
-            <span
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                decision.result === 'APPROVED'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }`}
-            >
-              {DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]}
-            </span>
+            <Chip
+              label={DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]}
+              size="small"
+              color={decision.result === 'APPROVED' ? 'success' : 'error'}
+            />
           )}
-        </div>
+        </Box>
         {decision.decidedAt && (
-          <p className="text-sm text-gray-600 mt-2">
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Décision prise le {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
               year: 'numeric',
               month: 'long',
@@ -163,9 +165,9 @@ export default function ResultsPageClient({
               hour: '2-digit',
               minute: '2-digit',
             })}
-          </p>
+          </Typography>
         )}
-      </div>
+      </Box>
 
       {/* Résultats vote à la majorité */}
       {decision.decisionType === 'MAJORITY' && (() => {
@@ -176,113 +178,108 @@ export default function ResultsPageClient({
         const otherProposals = proposalResults.filter(r => !r.isWinner);
 
         return (
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Résultats du vote</h2>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultats du vote</Typography>
 
-            <div className="mb-6">
-              <p className="text-gray-600">
+            <Box sx={{ mb: 3 }}>
+              <Typography color="text.secondary">
                 {totalVotes} vote{totalVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
-              </p>
-            </div>
+              </Typography>
+            </Box>
 
             {/* Proposition gagnante (si gagnant clair) */}
             {!hasExAequo && winners.length === 1 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4 text-green-700">
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" fontWeight="semibold" color="success.main" sx={{ mb: 2 }}>
                   🏆 Proposition gagnante
-                </h3>
+                </Typography>
                 {winners.map((result) => (
-                  <div
+                  <Box
                     key={result.proposal.id}
-                    className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
+                    sx={{ border: 2, borderColor: 'success.main', backgroundColor: 'success.light', borderRadius: 2, p: 2 }}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-2xl">🏆</span>
                           <span className="font-bold text-lg">{result.proposal.title}</span>
-                          <span className="text-white px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-success)' }}>
-                            GAGNANT
-                          </span>
+                          <Chip label="GAGNANT" size="small" color="success" sx={{ fontWeight: 'medium' }} />
                         </div>
                         {result.proposal.description && (
-                          <p className="text-sm text-gray-600 mt-1">{result.proposal.description}</p>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{result.proposal.description}</Typography>
                         )}
                       </div>
                       <div className="text-right ml-4">
                         <div className="text-2xl font-bold">{result.voteCount}</div>
-                        <div className="text-sm text-gray-600">
+                        <Typography variant="body2" color="text.secondary">
                           {result.percentage.toFixed(1)}%
-                        </div>
+                        </Typography>
                       </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-                      <div
-                        className="h-3 rounded-full transition-all"
-                        style={{ backgroundColor: 'var(--color-success)' }}
-                        style={{ width: `${result.percentage}%` }}
-                      />
-                    </div>
-                  </div>
+                    <LinearProgress
+                      variant="determinate"
+                      value={result.percentage}
+                      color="success"
+                      sx={{ height: 12, borderRadius: 1, mt: 1 }}
+                    />
+                  </Box>
                 ))}
-              </div>
+              </Box>
             )}
 
             {/* Ex-aequo (si plusieurs gagnants à égalité) */}
             {hasExAequo && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4 text-orange-700">
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" fontWeight="semibold" color="warning.main" sx={{ mb: 2 }}>
                   ⚖️ Ex-aequo ({winners.length} propositions à égalité)
-                </h3>
-                <div className="space-y-3">
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   {winners.map((result) => (
-                    <div
+                    <Box
                       key={result.proposal.id}
-                      className="border-2 border-orange-400 bg-orange-50 rounded-lg p-4"
+                      sx={{ border: 2, borderColor: 'warning.main', backgroundColor: 'warning.light', borderRadius: 2, p: 2 }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-2xl">⚖️</span>
                             <span className="font-bold text-lg">{result.proposal.title}</span>
-                            <span className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-medium">
-                              EX-AEQUO
-                            </span>
+                            <Chip label="EX-AEQUO" size="small" color="warning" sx={{ fontWeight: 'medium' }} />
                           </div>
                           {result.proposal.description && (
-                            <p className="text-sm text-gray-600 mt-1">{result.proposal.description}</p>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{result.proposal.description}</Typography>
                           )}
                         </div>
                         <div className="text-right ml-4">
                           <div className="text-2xl font-bold">{result.voteCount}</div>
-                          <div className="text-sm text-gray-600">
+                          <Typography variant="body2" color="text.secondary">
                             {result.percentage.toFixed(1)}%
-                          </div>
+                          </Typography>
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-                        <div
-                          className="h-3 rounded-full bg-orange-500 transition-all"
-                          style={{ width: `${result.percentage}%` }}
-                        />
-                      </div>
-                    </div>
+                      <LinearProgress
+                        variant="determinate"
+                        value={result.percentage}
+                        color="warning"
+                        sx={{ height: 12, borderRadius: 1, mt: 1 }}
+                      />
+                    </Box>
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
 
             {/* Autres propositions (sans numérotation) */}
             {otherProposals.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-700">
+              <Box>
+                <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2 }}>
                   Autres propositions
-                </h3>
-                <div className="space-y-3">
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   {otherProposals.map((result) => (
-                    <div
+                    <Box
                       key={result.proposal.id}
-                      className="border rounded-lg p-4 bg-gray-50"
+                      sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2, backgroundColor: 'background.secondary' }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
@@ -290,84 +287,79 @@ export default function ResultsPageClient({
                             {result.proposal.title}
                           </div>
                           {result.proposal.description && (
-                            <p className="text-sm text-gray-600">{result.proposal.description}</p>
+                            <Typography variant="body2" color="text.secondary">{result.proposal.description}</Typography>
                           )}
                         </div>
                         <div className="text-right ml-4">
                           <div className="text-2xl font-bold">{result.voteCount}</div>
-                          <div className="text-sm text-gray-600">
+                          <Typography variant="body2" color="text.secondary">
                             {result.percentage.toFixed(1)}%
-                          </div>
+                          </Typography>
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-                        <div
-                          className="h-3 rounded-full transition-all"
-                          style={{ backgroundColor: 'var(--color-primary)' }}
-                          style={{ width: `${result.percentage}%` }}
-                        />
-                      </div>
-                    </div>
+                      <LinearProgress
+                        variant="determinate"
+                        value={result.percentage}
+                        color="primary"
+                        sx={{ height: 12, borderRadius: 1, mt: 1 }}
+                      />
+                    </Box>
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
 
             {decision.status === 'OPEN' && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="text-sm text-blue-800">
-                  Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
-                </p>
-              </div>
+              <Alert severity="info" sx={{ mt: 3 }}>
+                Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
+              </Alert>
             )}
-          </div>
+          </Box>
         );
       })()}
 
       {/* Résultats vote nuancé  */}
       {decision.decisionType === 'NUANCED_VOTE' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Résultats du vote nuancé</h2>
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultats du vote nuancé</Typography>
 
-          <div className="mb-6">
-            <p className="text-gray-600">
+          <Box sx={{ mb: 3 }}>
+            <Typography color="text.secondary">
               {decision.participants.filter(p => p.hasVoted).length} vote{decision.participants.filter(p => p.hasVoted).length > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
               {decision.nuancedWinnerCount && decision.nuancedWinnerCount > 1 &&
                 ` • ${decision.nuancedWinnerCount} propositions gagnantes`}
-            </p>
-          </div>
+            </Typography>
+          </Box>
 
           {/* Propositions gagnantes */}
           {decision.nuancedWinnerCount && nuancedResults.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 text-green-700">
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" fontWeight="semibold" color="success.main" sx={{ mb: 2 }}>
                 🏆 {decision.nuancedWinnerCount === 1 ? 'Proposition gagnante' : `${decision.nuancedWinnerCount} propositions gagnantes`}
-              </h3>
-              <div className="space-y-3">
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {nuancedResults.slice(0, decision.nuancedWinnerCount).map((result) => {
                   const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
                   const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
                   const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
 
                   return (
-                    <div
+                    <Box
                       key={result.proposalId}
-                      className="border-2 border-green-500 bg-green-50 rounded-lg p-4"
+                      sx={{ border: 2, borderColor: 'success.main', backgroundColor: 'success.light', borderRadius: 2, p: 2 }}
                     >
                       {/* En-tête */}
-                      <div className="mb-3">
+                      <Box sx={{ mb: 1.5 }}>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-2xl">🏆</span>
                           <span className="font-bold text-lg">{result.rank}. {result.title}</span>
-                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
-                            GAGNANT
-                          </span>
+                          <Chip label="GAGNANT" size="small" color="success" sx={{ fontWeight: 'medium' }} />
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Mention médiane :</span>
+                          <Typography variant="body2" color="text.secondary">Mention médiane :</Typography>
                           <span
                             className="px-3 py-1 rounded-lg text-sm font-semibold text-white"
                             style={{ backgroundColor: mentionColor }}
@@ -375,17 +367,17 @@ export default function ResultsPageClient({
                             {mentionLabel}
                           </span>
                         </div>
-                      </div>
+                      </Box>
 
                       {/* Barre de distribution unique segmentée */}
-                      <div className="space-y-3">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                           Distribution des mentions ({totalMentions} vote{totalMentions > 1 ? 's' : ''})
-                        </p>
+                        </Typography>
 
                         {/* Barre segmentée avec ligne médiane */}
-                        <div className="relative">
-                          <div className="w-full h-10 flex rounded-lg overflow-hidden border border-gray-300">
+                        <Box sx={{ position: 'relative' }}>
+                          <Box sx={{ width: '100%', height: 40, display: 'flex', borderRadius: 2, overflow: 'hidden', border: 1, borderColor: 'divider' }}>
                             {Object.entries(result.mentionProfile)
                               .sort((a, b) => {
                                 // Trier par ordre des mentions (meilleure en premier)
@@ -412,7 +404,7 @@ export default function ResultsPageClient({
                                   </div>
                                 );
                               })}
-                          </div>
+                          </Box>
                           {/* Lignes verticales médianes à 50% avec gap */}
                           {/* Ligne du haut */}
                           <div
@@ -440,10 +432,10 @@ export default function ResultsPageClient({
                               pointerEvents: 'none',
                             }}
                           />
-                        </div>
+                        </Box>
 
                         {/* Légende détaillée */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
                           {Object.entries(result.mentionProfile)
                             .filter(([mention]) => {
                               // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
@@ -465,29 +457,29 @@ export default function ResultsPageClient({
                                     className="w-3 h-3 rounded-sm flex-shrink-0"
                                     style={{ backgroundColor: color }}
                                   />
-                                  <span className="text-gray-700 flex-1">{label}</span>
-                                  <span className="font-medium text-gray-900">
-                                    {count} <span className="text-gray-500">({percentage.toFixed(0)}%)</span>
-                                  </span>
+                                  <Typography variant="caption" sx={{ flex: 1 }}>{label}</Typography>
+                                  <Typography variant="caption" fontWeight="medium">
+                                    {count} <Typography component="span" variant="caption" color="text.secondary">({percentage.toFixed(0)}%)</Typography>
+                                  </Typography>
                                 </div>
                               );
                             })}
-                        </div>
-                      </div>
-                    </div>
+                        </Box>
+                      </Box>
+                    </Box>
                   );
                 })}
-              </div>
-            </div>
+              </Box>
+            </Box>
           )}
 
           {/* Toutes les propositions avec leur profil de mérite */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Typography variant="h6" fontWeight="semibold">
               {decision.nuancedWinnerCount && nuancedResults.length > decision.nuancedWinnerCount
                 ? 'Autres propositions'
                 : 'Classement complet'}
-            </h3>
+            </Typography>
 
             {nuancedResults.map((result) => {
               const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
@@ -496,21 +488,25 @@ export default function ResultsPageClient({
               const isWinner = decision.nuancedWinnerCount && result.rank <= decision.nuancedWinnerCount;
 
               return (
-                <div
+                <Box
                   key={result.proposalId}
-                  className={`border rounded-lg p-4 ${
-                    isWinner ? 'bg-green-50 border-green-200' : 'bg-gray-50'
-                  }`}
+                  sx={{
+                    border: isWinner ? 2 : 1,
+                    borderColor: isWinner ? 'success.light' : 'divider',
+                    backgroundColor: isWinner ? 'success.light' : 'background.secondary',
+                    borderRadius: 2,
+                    p: 2
+                  }}
                 >
                   {/* En-tête de la proposition */}
-                  <div className="mb-3">
+                  <Box sx={{ mb: 1.5 }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold text-lg">
                         {result.rank}. {result.title}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Mention médiane :</span>
+                      <Typography variant="body2" color="text.secondary">Mention médiane :</Typography>
                       <span
                         className="px-2 py-1 rounded text-sm font-semibold text-white"
                         style={{ backgroundColor: mentionColor }}
@@ -518,17 +514,17 @@ export default function ResultsPageClient({
                         {mentionLabel}
                       </span>
                     </div>
-                  </div>
+                  </Box>
 
                   {/* Barre de distribution unique segmentée */}
-                  <div className="space-y-3">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                       Distribution des mentions ({totalMentions} vote{totalMentions > 1 ? 's' : ''})
-                    </p>
+                    </Typography>
 
                     {/* Barre segmentée avec ligne médiane */}
-                    <div className="relative">
-                      <div className="w-full h-10 flex rounded-lg overflow-hidden border border-gray-300">
+                    <Box sx={{ position: 'relative' }}>
+                      <Box sx={{ width: '100%', height: 40, display: 'flex', borderRadius: 2, overflow: 'hidden', border: 1, borderColor: 'divider' }}>
                         {Object.entries(result.mentionProfile)
                           .sort((a, b) => {
                             // Trier par ordre des mentions (meilleure en premier)
@@ -555,7 +551,7 @@ export default function ResultsPageClient({
                               </div>
                             );
                           })}
-                      </div>
+                      </Box>
                       {/* Lignes verticales médianes à 50% avec gap */}
                       {/* Ligne du haut */}
                       <div
@@ -583,10 +579,10 @@ export default function ResultsPageClient({
                           pointerEvents: 'none',
                         }}
                       />
-                    </div>
+                    </Box>
 
                     {/* Légende détaillée */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
                       {Object.entries(result.mentionProfile)
                         .filter(([mention]) => {
                           // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
@@ -608,133 +604,129 @@ export default function ResultsPageClient({
                                 className="w-3 h-3 rounded-sm flex-shrink-0"
                                 style={{ backgroundColor: color }}
                               />
-                              <span className="text-gray-700 flex-1">{label}</span>
-                              <span className="font-medium text-gray-900">
-                                {count} <span className="text-gray-500">({percentage.toFixed(0)}%)</span>
-                              </span>
+                              <Typography variant="caption" sx={{ flex: 1 }}>{label}</Typography>
+                              <Typography variant="caption" fontWeight="medium">
+                                {count} <Typography component="span" variant="caption" color="text.secondary">({percentage.toFixed(0)}%)</Typography>
+                              </Typography>
                             </div>
                           );
                         })}
-                    </div>
-                  </div>
-                </div>
+                    </Box>
+                  </Box>
+                </Box>
               );
             })}
-          </div>
+          </Box>
 
           {decision.status === 'OPEN' && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-              <p className="text-sm text-blue-800">
-                Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
-              </p>
-            </div>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
+            </Alert>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Résultats consensus */}
       {decision.decisionType === 'CONSENSUS' && (
         <>
           {/* Proposition finale */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Proposition</h2>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Proposition</Typography>
 
             {decision.initialProposal && decision.proposal && decision.initialProposal !== decision.proposal ? (
-              <div>
-                <h3 className="font-medium text-blue-700 mb-2">Proposition actuelle</h3>
-                <div className="p-4 bg-blue-50 rounded border border-blue-200">
+              <Box>
+                <Typography variant="body1" fontWeight="medium" color="primary.main" sx={{ mb: 1 }}>Proposition actuelle</Typography>
+                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1, border: 1, borderColor: 'primary.main' }}>
                   <p className="whitespace-pre-wrap">{decision.proposal}</p>
-                </div>
+                </Box>
                 <details className="mt-4">
-                  <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+                  <summary className="cursor-pointer text-sm" style={{ color: 'var(--mui-palette-text-secondary)' }}>
                     Voir la proposition initiale
                   </summary>
-                  <div className="p-4 bg-gray-50 rounded border mt-2">
+                  <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider', mt: 1 }}>
                     <p className="whitespace-pre-wrap">{decision.initialProposal}</p>
-                  </div>
+                  </Box>
                 </details>
-              </div>
+              </Box>
             ) : (
-              <div>
-                <h3 className="font-medium text-gray-700 mb-2">Proposition</h3>
-                <div className="p-4 bg-gray-50 rounded border">
+              <Box>
+                <Typography variant="body1" fontWeight="medium" sx={{ mb: 1 }}>Proposition</Typography>
+                <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   <p className="whitespace-pre-wrap">{decision.proposal || decision.initialProposal}</p>
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
-          </div>
+          </Box>
 
           {/* Discussion */}
           {decision.comments.length > 0 && (
-            <div className="bg-white border rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Historique de la discussion</h2>
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Historique de la discussion</Typography>
 
-              <div className="space-y-4">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {decision.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
+                  <Box key={comment.id} sx={{ borderLeft: 4, borderColor: 'divider', pl: 2 }}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
-                      <span className="text-xs text-gray-500">
+                      <Typography variant="caption" color="text.secondary">
                         {new Date(comment.createdAt).toLocaleString('fr-FR')}
                         {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
-                      </span>
+                      </Typography>
                     </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
-                  </div>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
+                  </Box>
                 ))}
-              </div>
-            </div>
+              </Box>
+            </Box>
           )}
 
           {/* Résultat du vote */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Résultat du vote</h2>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultat du vote</Typography>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="rounded-lg p-4 text-center" style={{ backgroundColor: 'var(--color-success)', opacity: 0.1, border: '1px solid var(--color-success)' }}>
-                <div className="text-3xl font-bold text-green-700">{agreeCount}</div>
-                <div className="text-sm text-green-600">D'accord</div>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-red-700">{disagreeCount}</div>
-                <div className="text-sm text-red-600">Pas d'accord</div>
-              </div>
-            </div>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+              <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'success.light', border: 1, borderColor: 'success.main' }}>
+                <Typography variant="h3" fontWeight="bold" color="success.dark">{agreeCount}</Typography>
+                <Typography variant="body2" color="success.dark">D'accord</Typography>
+              </Box>
+              <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
+                <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
+                <Typography variant="body2" color="error.dark">Pas d'accord</Typography>
+              </Box>
+            </Box>
 
-            <div className="text-center">
+            <Box sx={{ textAlign: 'center' }}>
               {consensusReached ? (
-                <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                  <div className="text-lg font-semibold text-green-800 mb-1">
+                <Box sx={{ backgroundColor: 'success.light', border: 1, borderColor: 'success.main', borderRadius: 2, p: 2 }}>
+                  <Typography variant="body1" fontWeight="semibold" color="success.dark" sx={{ mb: 0.5 }}>
                     ✓ Consensus atteint
-                  </div>
-                  <p className="text-sm text-green-700">
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
                     Tous les participants sont d'accord avec la proposition
-                  </p>
-                </div>
+                  </Typography>
+                </Box>
               ) : (
-                <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
-                  <div className="text-lg font-semibold text-orange-800 mb-1">
+                <Box sx={{ backgroundColor: 'warning.light', border: 1, borderColor: 'warning.main', borderRadius: 2, p: 2 }}>
+                  <Typography variant="body1" fontWeight="semibold" color="warning.dark" sx={{ mb: 0.5 }}>
                     Consensus non atteint
-                  </div>
-                  <p className="text-sm text-orange-700">
+                  </Typography>
+                  <Typography variant="body2" color="warning.dark">
                     {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d'accord
-                  </p>
-                </div>
+                  </Typography>
+                </Box>
               )}
-            </div>
+            </Box>
 
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
               {totalConsensusVotes} vote{totalConsensusVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
-            </div>
+            </Typography>
 
             {decision.status === 'OPEN' && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="text-sm text-blue-800">
-                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
-                </p>
-              </div>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
+              </Alert>
             )}
-          </div>
+          </Box>
         </>
       )}
 
@@ -742,37 +734,39 @@ export default function ResultsPageClient({
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <>
           {/* Statut de la décision */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Statut</h2>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h5" fontWeight="semibold">Statut</Typography>
               {decision.result && (
-                <span
-                  className={`px-4 py-2 rounded-lg font-medium ${
+                <Chip
+                  label={
                     decision.result === 'WITHDRAWN'
-                      ? 'bg-red-100 text-red-800'
+                      ? 'Proposition retirée'
                       : decision.result === 'APPROVED'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {decision.result === 'WITHDRAWN'
-                    ? 'Proposition retirée'
-                    : decision.result === 'APPROVED'
-                    ? 'Décision finale validée après sollicitation d\'avis'
-                    : DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]}
-                </span>
+                      ? 'Décision finale validée après sollicitation d\'avis'
+                      : DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]
+                  }
+                  color={
+                    decision.result === 'WITHDRAWN'
+                      ? 'error'
+                      : decision.result === 'APPROVED'
+                      ? 'success'
+                      : 'default'
+                  }
+                  sx={{ px: 2, py: 1, fontWeight: 'medium' }}
+                />
               )}
-            </div>
+            </Box>
 
-            <div className="text-sm text-gray-600">
+            <Typography variant="body2" color="text.secondary">
               {decision.status === 'OPEN' && (
-                <p>
+                <>
                   {opinionResponses.length} avis reçu{opinionResponses.length > 1 ? 's' : ''} sur{' '}
                   {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}
-                </p>
+                </>
               )}
               {decision.status === 'CLOSED' && decision.decidedAt && (
-                <p>
+                <>
                   Décision finalisée le{' '}
                   {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
                     year: 'numeric',
@@ -781,26 +775,26 @@ export default function ResultsPageClient({
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
-                </p>
+                </>
               )}
-            </div>
-          </div>
+            </Typography>
+          </Box>
 
           {/* Proposition de décision */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
-            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Proposition de décision</Typography>
+            <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider', whiteSpace: 'pre-wrap' }}>
               {decision.proposal || decision.initialProposal}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
           {/* Avis reçus */}
           {opinionResponses.length > 0 && (
-            <div className="bg-white border rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>
                 Avis reçus ({opinionResponses.length}/{decision.participants.length})
-              </h2>
-              <div className="space-y-6">
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {opinionResponses.map((opinion) => {
                   const authorName =
                     opinion.user?.name ||
@@ -808,33 +802,33 @@ export default function ResultsPageClient({
                     'Anonyme';
 
                   return (
-                    <div key={opinion.id} className="border-l-4 border-blue-500 pl-4">
+                    <Box key={opinion.id} sx={{ borderLeft: 4, borderColor: 'primary.main', pl: 2 }}>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-lg">{authorName}</span>
-                        <span className="text-xs text-gray-500">
+                        <Typography variant="caption" color="text.secondary">
                           {new Date(opinion.createdAt).toLocaleString('fr-FR')}
                           {new Date(opinion.updatedAt) > new Date(opinion.createdAt) &&
                             ' (modifié)'}
-                        </span>
+                        </Typography>
                       </div>
-                      <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      <Typography sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                         {opinion.content}
-                      </div>
-                    </div>
+                      </Typography>
+                    </Box>
                   );
                 })}
-              </div>
-            </div>
+              </Box>
+            </Box>
           )}
 
           {/* Avis en attente */}
           {decision.status === 'OPEN' &&
             opinionResponses.length < decision.participants.length && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-yellow-900 mb-2">
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
                   Avis en attente ({decision.participants.length - opinionResponses.length})
-                </h3>
-                <div className="text-sm text-yellow-800">
+                </Typography>
+                <Typography variant="body2">
                   {decision.participants
                     .filter(
                       (p) =>
@@ -850,78 +844,87 @@ export default function ResultsPageClient({
                         (o) => o.userId === p.userId && o.userId !== null
                       )
                   ).length > 0 && "n'ont pas encore donné leur avis"}
-                </div>
-              </div>
+                </Typography>
+              </Alert>
             )}
 
           {/* Décision finale (dans conclusion si status CLOSED) */}
           {decision.status === 'CLOSED' &&
             decision.result === 'APPROVED' &&
             decision.conclusion && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-green-900">
+              <Box sx={{ backgroundColor: 'success.light', border: 1, borderColor: 'success.main', borderRadius: 2, p: 3, mb: 3 }}>
+                <Typography variant="h5" fontWeight="semibold" color="success.dark" sx={{ mb: 2 }}>
                   Décision finale
-                </h2>
-                <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                </Typography>
+                <Typography sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                   {decision.conclusion}
-                </div>
-              </div>
+                </Typography>
+              </Box>
             )}
         </>
       )}
 
       {/* Détails du résultat */}
       {decision.resultDetails && (
-        <div className="bg-gray-50 border rounded-lg p-6 mb-6">
-          <h3 className="font-medium mb-2">Détails</h3>
-          <p className="text-gray-700">{decision.resultDetails}</p>
-        </div>
+        <Box sx={{ backgroundColor: 'background.secondary', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <Typography variant="body1" fontWeight="medium" sx={{ mb: 1 }}>Détails</Typography>
+          <Typography>{decision.resultDetails}</Typography>
+        </Box>
       )}
 
       {/* Conclusion (pour types de décision autres qu'ADVICE_SOLICITATION) */}
       {decision.conclusion && decision.decisionType !== 'ADVICE_SOLICITATION' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-blue-900">Conclusion</h2>
-          <div className="prose max-w-none text-gray-800">
-            <p className="whitespace-pre-wrap">{decision.conclusion}</p>
-          </div>
-        </div>
+        <Box sx={{ backgroundColor: 'primary.light', border: 1, borderColor: 'primary.main', borderRadius: 2, p: 3, mb: 3 }}>
+          <Typography variant="h5" fontWeight="semibold" color="primary.dark" sx={{ mb: 2 }}>Conclusion</Typography>
+          <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+            {decision.conclusion}
+          </Typography>
+        </Box>
       )}
 
       {/* Navigation */}
-      <div className="flex gap-4">
-        <Link
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Button
+          component={Link}
           href={`/organizations/${slug}`}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          variant="outlined"
+          sx={{ px: 3, py: 1 }}
         >
           Retour aux décisions
-        </Link>
+        </Button>
         {/* Bouton "Retour au vote" uniquement pour les décisions INVITED avec status OPEN */}
         {decision.status === 'OPEN' && votingMode !== 'PUBLIC_LINK' && (
-          <Link
+          <Button
+            component={Link}
             href={`/organizations/${slug}/decisions/${decision.id}/vote`}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            variant="contained"
+            color="primary"
+            sx={{ px: 3, py: 1 }}
           >
             Retour au vote
-          </Link>
+          </Button>
         )}
         {isCreator && votingMode === 'PUBLIC_LINK' && decision.status === 'OPEN' && (
-          <Link
+          <Button
+            component={Link}
             href={`/organizations/${slug}/decisions/${decision.id}/share`}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            variant="outlined"
+            sx={{ px: 3, py: 1 }}
           >
             Retour au partage
-          </Link>
+          </Button>
         )}
         {isCreator && votingMode !== 'PUBLIC_LINK' && (
-          <Link
+          <Button
+            component={Link}
             href={`/organizations/${slug}/decisions/${decision.id}/admin`}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            variant="outlined"
+            sx={{ px: 3, py: 1 }}
           >
             Administrer
-          </Link>
+          </Button>
         )}
-      </div>
+      </Box>
     </div>
   );
 }
