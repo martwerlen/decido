@@ -28,6 +28,7 @@ import {
   useMediaQuery,
   useTheme,
   Tooltip,
+  Collapse,
 } from "@mui/material"
 import {
   ChevronLeft,
@@ -51,6 +52,8 @@ import {
   QrCode2,
   Dashboard as DashboardIcon,
   Menu as MenuIcon,
+  ExpandMore,
+  ExpandLess,
 } from "@mui/icons-material"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
@@ -142,6 +145,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
   const [open, setOpen] = useState(true)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [organization, setOrganization] = useState(currentOrgSlug || "")
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
@@ -358,7 +362,13 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     return (
       <>
         {/* AppBar avec logo à gauche + bouton hamburger à droite */}
-        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <AppBar
+          position="fixed"
+          sx={{
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            backgroundColor: isDarkMode ? 'grey.900' : 'primary.main',
+          }}
+        >
           <Toolbar sx={{ minHeight: { xs: 56 }, px: 2 }}>
             {/* Logo Decidoo à gauche */}
             <Box
@@ -543,54 +553,75 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                 </ListItemButton>
               </ListItem>
 
+              {/* Paramètres avec sous-menu déroulant */}
               <ListItem disablePadding>
-                <ListItemButton onClick={handleSettingsClick}>
+                <ListItemButton onClick={() => setSettingsExpanded(!settingsExpanded)}>
                   <ListItemIcon>
                     <Settings />
                   </ListItemIcon>
                   <ListItemText primary="Paramètres" />
+                  {settingsExpanded ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
               </ListItem>
+              <Collapse in={settingsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  <ListItemButton
+                    sx={{ pl: 4 }}
+                    onClick={() => {
+                      handleProfileSettings()
+                      closeMobileDrawer()
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Person fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Modifier mon profil" />
+                  </ListItemButton>
+                  {(currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && (
+                    <ListItemButton
+                      sx={{ pl: 4 }}
+                      onClick={() => {
+                        handleOrganizationSettings()
+                        closeMobileDrawer()
+                      }}
+                      disabled={!organization}
+                    >
+                      <ListItemIcon>
+                        <AdminPanelSettings fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText primary="Paramètres de l'organisation" />
+                    </ListItemButton>
+                  )}
+                  <ListItemButton
+                    sx={{ pl: 4 }}
+                    onClick={() => {
+                      handleMembers()
+                      closeMobileDrawer()
+                    }}
+                    disabled={!organization}
+                  >
+                    <ListItemIcon>
+                      <Group fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Gérer les membres" />
+                  </ListItemButton>
+                  <ListItemButton
+                    sx={{ pl: 4 }}
+                    onClick={() => {
+                      handleLogoutFromMenu()
+                      closeMobileDrawer()
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Logout fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Se déconnecter" />
+                  </ListItemButton>
+                </List>
+              </Collapse>
             </List>
-
-            <Box sx={{ flexGrow: 1 }} />
           </Box>
         </Drawer>
-
-        {/* Menu des paramètres */}
-        <Menu
-          anchorEl={settingsMenuAnchor}
-          open={Boolean(settingsMenuAnchor)}
-          onClose={handleSettingsMenuClose}
-        >
-          <MenuItem onClick={handleProfileSettings}>
-            <ListItemIcon>
-              <Person fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Modifier mon profil</ListItemText>
-          </MenuItem>
-          {(currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && (
-            <MenuItem onClick={handleOrganizationSettings} disabled={!organization}>
-              <ListItemIcon>
-                <AdminPanelSettings fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Paramètres de l&apos;organisation</ListItemText>
-            </MenuItem>
-          )}
-          <MenuItem onClick={handleMembers} disabled={!organization}>
-            <ListItemIcon>
-              <Group fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Gérer les membres</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleLogoutFromMenu}>
-            <ListItemIcon>
-              <Logout fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Se déconnecter</ListItemText>
-          </MenuItem>
-        </Menu>
       </>
     )
   }
