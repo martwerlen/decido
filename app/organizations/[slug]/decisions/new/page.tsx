@@ -8,7 +8,7 @@ import {
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
-import { Tooltip, CircularProgress, Checkbox } from '@mui/material';
+import { Tooltip, CircularProgress, Checkbox, Box, Alert, Chip, Typography } from '@mui/material';
 import {
   Save as SaveIcon,
   CheckCircle as CheckCircleIcon,
@@ -679,7 +679,7 @@ export default function NewDecisionPage({
       <div className="container mx-auto px-4 py-8 max-w-2xl flex justify-center items-center min-h-screen">
         <div className="flex flex-col items-center gap-4">
           <CircularProgress />
-          <p className="text-gray-600">Chargement...</p>
+          <Typography color="text.secondary">Chargement...</Typography>
         </div>
       </div>
     );
@@ -733,7 +733,19 @@ export default function NewDecisionPage({
               Mode de participation *
             </label>
             <div className="space-y-3">
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
                 <input
                   type="radio"
                   name="votingMode"
@@ -744,13 +756,25 @@ export default function NewDecisionPage({
                 />
                 <div>
                   <div className="font-medium">Sur invitation</div>
-                  <div className="text-sm text-gray-600">
+                  <Typography variant="body2" color="text.secondary">
                     Vous invitez spécifiquement les participants (internes ou externes). Vous gérez la liste des votants.
-                  </div>
+                  </Typography>
                 </div>
-              </label>
+              </Box>
 
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
                 <input
                   type="radio"
                   name="votingMode"
@@ -761,11 +785,11 @@ export default function NewDecisionPage({
                 />
                 <div>
                   <div className="font-medium">Vote anonyme via URL</div>
-                  <div className="text-sm text-gray-600">
+                  <Typography variant="body2" color="text.secondary">
                     Créez un lien public que vous pouvez partager. Les votes sont anonymes.
-                  </div>
+                  </Typography>
                 </div>
-              </label>
+              </Box>
             </div>
 
           {/* Champ publicSlug si mode PUBLIC_LINK */}
@@ -793,22 +817,22 @@ export default function NewDecisionPage({
                 minLength={3}
                 maxLength={50}
               />
-              <p className="text-sm text-gray-600 mt-1">
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 Le slug doit contenir entre 3 et 50 caractères (lettres, chiffres, tirets uniquement).
-              </p>
+              </Typography>
               {formData.publicSlug && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium">
-                    Aperçu de l'URL : <span className="text-blue-600">/public-vote/{slug}/{formData.publicSlug}</span>
-                  </p>
-                  {checkingSlug && <p className="text-sm text-gray-500 mt-1">Vérification...</p>}
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="body2" fontWeight="medium">
+                    Aperçu de l'URL : <Typography component="span" color="primary" fontWeight="medium">/public-vote/{slug}/{formData.publicSlug}</Typography>
+                  </Typography>
+                  {checkingSlug && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Vérification...</Typography>}
                   {!checkingSlug && slugAvailable === true && (
-                    <p className="text-sm text-green-600 mt-1">✓ Ce slug est disponible</p>
+                    <Typography variant="body2" color="success.main" sx={{ mt: 0.5 }}>✓ Ce slug est disponible</Typography>
                   )}
                   {!checkingSlug && slugAvailable === false && (
-                    <p className="text-sm text-red-600 mt-1">✗ Ce slug est déjà utilisé</p>
+                    <Typography variant="body2" color="error.main" sx={{ mt: 0.5 }}>✗ Ce slug est déjà utilisé</Typography>
                   )}
-                </div>
+                </Box>
               )}
             </div>
           )}
@@ -826,7 +850,19 @@ export default function NewDecisionPage({
               arrow
               placement="right"
             >
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
                 <input
                   type="radio"
                   name="decisionType"
@@ -836,7 +872,7 @@ export default function NewDecisionPage({
                   className="mt-1 mr-3"
                 />
                 <div className="font-medium">{DecisionTypeLabels.MAJORITY}</div>
-              </label>
+              </Box>
             </Tooltip>
 
             <Tooltip
@@ -844,7 +880,19 @@ export default function NewDecisionPage({
               arrow
               placement="right"
             >
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
                 <input
                   type="radio"
                   name="decisionType"
@@ -854,7 +902,7 @@ export default function NewDecisionPage({
                   className="mt-1 mr-3"
                 />
                 <div className="font-medium">{DecisionTypeLabels.CONSENSUS}</div>
-              </label>
+              </Box>
             </Tooltip>
 
             <Tooltip
@@ -862,7 +910,19 @@ export default function NewDecisionPage({
               arrow
               placement="right"
             >
-              <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
                 <input
                   type="radio"
                   name="decisionType"
@@ -872,7 +932,7 @@ export default function NewDecisionPage({
                   className="mt-1 mr-3"
                 />
                 <div className="font-medium">{DecisionTypeLabels.NUANCED_VOTE}</div>
-              </label>
+              </Box>
             </Tooltip>
 
             {/* Masquer ADVICE_SOLICITATION si PUBLIC_LINK est sélectionné */}
@@ -882,7 +942,19 @@ export default function NewDecisionPage({
                 arrow
                 placement="right"
               >
-                <label className="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <Box
+                  component="label"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    p: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'action.hover' }
+                  }}
+                >
                   <input
                     type="radio"
                     name="decisionType"
@@ -892,7 +964,7 @@ export default function NewDecisionPage({
                     className="mt-1 mr-3"
                   />
                   <div className="font-medium">{DecisionTypeLabels.ADVICE_SOLICITATION}</div>
-                </label>
+                </Box>
               </Tooltip>
             )}
           </div>
@@ -909,17 +981,18 @@ export default function NewDecisionPage({
               </label>
               <div className="space-y-4">
                 {majorityProposals.map((proposal, index) => (
-                  <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                  <Box key={index} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2, backgroundColor: 'background.secondary' }}>
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="font-medium">Proposition {index + 1}</h4>
                       {majorityProposals.length > 2 && (
-                        <button
+                        <Box
+                          component="button"
                           type="button"
                           onClick={() => removeMajorityProposal(index)}
-                          className="text-red-600 hover:text-red-800 text-sm"
+                          sx={{ color: 'error.main', '&:hover': { color: 'error.dark' }, fontSize: '0.875rem', border: 0, background: 'transparent', cursor: 'pointer' }}
                         >
                           Supprimer
-                        </button>
+                        </Box>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -939,7 +1012,7 @@ export default function NewDecisionPage({
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                  </div>
+                  </Box>
                 ))}
               </div>
               {majorityProposals.length < 25 && (
@@ -991,9 +1064,9 @@ export default function NewDecisionPage({
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Partagez votre intention de décision avant de solliciter l'avis de personnes compétentes..."
             />
-            <p className="text-sm text-gray-600 mt-1">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Décrivez clairement votre intention afin que les personnes sollicitées puissent vous donner un avis éclairé.
-            </p>
+            </Typography>
           </div>
         )}
 
@@ -1033,9 +1106,9 @@ export default function NewDecisionPage({
                 onChange={(e) => setFormData({ ...formData, nuancedWinnerCount: parseInt(e.target.value) || 1 })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-sm text-gray-600 mt-1">
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 Combien de propositions souhaitez-vous désigner comme gagnantes ?
-              </p>
+              </Typography>
             </div>
 
 
@@ -1046,17 +1119,18 @@ export default function NewDecisionPage({
               </label>
               <div className="space-y-4">
                 {nuancedProposals.map((proposal, index) => (
-                  <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                  <Box key={index} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2, backgroundColor: 'background.secondary' }}>
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="font-medium">Proposition {index + 1}</h4>
                       {nuancedProposals.length > 2 && (
-                        <button
+                        <Box
+                          component="button"
                           type="button"
                           onClick={() => removeNuancedProposal(index)}
-                          className="text-red-600 hover:text-red-800 text-sm"
+                          sx={{ color: 'error.main', '&:hover': { color: 'error.dark' }, fontSize: '0.875rem', border: 0, background: 'transparent', cursor: 'pointer' }}
                         >
                           Supprimer
-                        </button>
+                        </Box>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1076,7 +1150,7 @@ export default function NewDecisionPage({
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                  </div>
+                  </Box>
                 ))}
               </div>
               {nuancedProposals.length < 25 && (
@@ -1110,9 +1184,9 @@ export default function NewDecisionPage({
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-sm text-gray-600 mt-1">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Doit être au moins 24h dans le futur
-            </p>
+            </Typography>
           </div>
         )}
 
@@ -1126,44 +1200,56 @@ export default function NewDecisionPage({
             </h3>
 
             {formData.decisionType === 'ADVICE_SOLICITATION' && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded mb-4">
-                <p className="font-medium text-blue-900 mb-2">
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight="medium" gutterBottom>
                   💡 Conseil : Sélectionnez au moins {minimumParticipants} {minimumParticipants > 1 ? 'personnes compétentes et/ou impactées' : 'personne compétente et/ou impactée'}
-                </p>
-                <p className="text-sm text-blue-800">
+                </Typography>
+                <Typography variant="body2">
                   {members.length === 1 && 'Votre organisation ne compte qu\'un membre. Vous devez inviter au moins 1 personne externe.'}
                   {members.length >= 2 && members.length <= 4 && 'Votre organisation compte 2 à 4 membres. Sollicitez au moins 1 personne (membre interne ou externe).'}
                   {members.length >= 5 && 'Votre organisation compte 5 membres ou plus. Sollicitez au moins 3 personnes (membres internes ou externes).'}
-                </p>
-              </div>
+                </Typography>
+              </Alert>
             )}
 
             <div className="space-y-4">
               {/* Onglets */}
-              <div className="flex gap-2 border-b pb-2">
-                <button
+              <Box sx={{ display: 'flex', gap: 1, borderBottom: 1, borderColor: 'divider', pb: 1 }}>
+                <Box
+                  component="button"
                   type="button"
                   onClick={() => setParticipantMode('teams')}
-                  className={`px-4 py-2 rounded ${
-                    participantMode === 'teams'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'hover:bg-gray-100'
-                  }`}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 1,
+                    border: 0,
+                    cursor: 'pointer',
+                    backgroundColor: participantMode === 'teams' ? 'primary.light' : 'transparent',
+                    color: participantMode === 'teams' ? 'primary.dark' : 'text.primary',
+                    '&:hover': { backgroundColor: participantMode === 'teams' ? 'primary.light' : 'action.hover' }
+                  }}
                 >
                   Équipes et membres
-                </button>
-                <button
+                </Box>
+                <Box
+                  component="button"
                   type="button"
                   onClick={() => setParticipantMode('external')}
-                  className={`px-4 py-2 rounded ${
-                    participantMode === 'external'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'hover:bg-gray-100'
-                  }`}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 1,
+                    border: 0,
+                    cursor: 'pointer',
+                    backgroundColor: participantMode === 'external' ? 'primary.light' : 'transparent',
+                    color: participantMode === 'external' ? 'primary.dark' : 'text.primary',
+                    '&:hover': { backgroundColor: participantMode === 'external' ? 'primary.light' : 'action.hover' }
+                  }}
                 >
                   Invitations externes
-                </button>
-              </div>
+                </Box>
+              </Box>
 
               {/* Onglet Équipes et membres */}
               {participantMode === 'teams' && (
@@ -1173,7 +1259,7 @@ export default function NewDecisionPage({
                     const filteredMembersWithoutTeam = getMembersWithoutTeam().filter(m => filteredMemberIds.has(m.id));
 
                     if (getFilteredTeams().length === 0 && filteredMembersWithoutTeam.length === 0) {
-                      return <p className="text-sm text-gray-500 italic p-4">Aucun membre disponible</p>;
+                      return <Typography variant="body2" color="text.secondary" fontStyle="italic" sx={{ p: 2 }}>Aucun membre disponible</Typography>;
                     }
 
                     return (
@@ -1185,20 +1271,31 @@ export default function NewDecisionPage({
                         const isExpanded = expandedTeamIds.includes(team.id);
 
                         return (
-                          <div key={team.id} className="border-b last:border-b-0">
+                          <Box key={team.id} sx={{ borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                             {/* Ligne de l'équipe */}
-                            <div className="flex items-center py-2 px-3 hover:bg-gray-50">
-                              <button
+                            <Box sx={{ display: 'flex', alignItems: 'center', py: 1, px: 1.5, '&:hover': { backgroundColor: 'action.hover' } }}>
+                              <Box
+                                component="button"
                                 type="button"
                                 onClick={() => toggleTeamExpansion(team.id)}
-                                className="mr-2 text-gray-600 hover:text-gray-900"
+                                sx={{
+                                  mr: 1,
+                                  color: 'text.secondary',
+                                  border: 0,
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  p: 0,
+                                  '&:hover': { color: 'text.primary' }
+                                }}
                               >
                                 {isExpanded ? (
                                   <ExpandMoreIcon fontSize="small" />
                                 ) : (
                                   <ChevronRightIcon fontSize="small" />
                                 )}
-                              </button>
+                              </Box>
                               <Checkbox
                                 checked={checkboxState === 'checked'}
                                 indeterminate={checkboxState === 'indeterminate'}
@@ -1206,16 +1303,16 @@ export default function NewDecisionPage({
                                 size="small"
                               />
                               <span className="font-medium text-sm">{team.name}</span>
-                              <span className="text-xs text-gray-600 ml-2">({teamMembers.length} membres)</span>
-                            </div>
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>({teamMembers.length} membres)</Typography>
+                            </Box>
 
                             {/* Membres de l'équipe (si dépliée) */}
                             {isExpanded && (
-                              <div className="bg-gray-50">
+                              <Box sx={{ backgroundColor: 'background.secondary' }}>
                                 {teamMembers.map((member) => (
-                                  <div
+                                  <Box
                                     key={member.id}
-                                    className="flex items-center py-2 px-3 pl-12 hover:bg-gray-100"
+                                    sx={{ display: 'flex', alignItems: 'center', py: 1, px: 1.5, pl: 6, '&:hover': { backgroundColor: 'action.hover' } }}
                                   >
                                     <Checkbox
                                       checked={isUserSelected(member.userId)}
@@ -1223,12 +1320,12 @@ export default function NewDecisionPage({
                                       size="small"
                                     />
                                     <span className="text-sm">{member.user.name || 'Sans nom'}</span>
-                                    <span className="text-xs text-gray-600 ml-2">({member.user.email})</span>
-                                  </div>
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>({member.user.email})</Typography>
+                                  </Box>
                                 ))}
-                              </div>
+                              </Box>
                             )}
-                          </div>
+                          </Box>
                         );
                       })}
 
@@ -1242,20 +1339,31 @@ export default function NewDecisionPage({
                         const checkboxState = allSelected ? 'checked' : (someSelected ? 'indeterminate' : 'unchecked');
 
                         return (
-                          <div className="border-b last:border-b-0">
+                          <Box sx={{ borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
                             {/* Ligne "Sans équipe" */}
-                            <div className="flex items-center py-2 px-3 hover:bg-gray-50">
-                              <button
+                            <Box sx={{ display: 'flex', alignItems: 'center', py: 1, px: 1.5, '&:hover': { backgroundColor: 'action.hover' } }}>
+                              <Box
+                                component="button"
                                 type="button"
                                 onClick={() => toggleTeamExpansion('no-team')}
-                                className="mr-2 text-gray-600 hover:text-gray-900"
+                                sx={{
+                                  mr: 1,
+                                  color: 'text.secondary',
+                                  border: 0,
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  p: 0,
+                                  '&:hover': { color: 'text.primary' }
+                                }}
                               >
                                 {isExpanded ? (
                                   <ExpandMoreIcon fontSize="small" />
                                 ) : (
                                   <ChevronRightIcon fontSize="small" />
                                 )}
-                              </button>
+                              </Box>
                               <Checkbox
                                 checked={checkboxState === 'checked'}
                                 indeterminate={checkboxState === 'indeterminate'}
@@ -1278,17 +1386,17 @@ export default function NewDecisionPage({
                                 }}
                                 size="small"
                               />
-                              <span className="font-medium text-sm text-gray-600 italic">Sans équipe</span>
-                              <span className="text-xs text-gray-600 ml-2">({filteredMembersWithoutTeam.length} membres)</span>
-                            </div>
+                              <Typography variant="body2" fontWeight="medium" color="text.secondary" fontStyle="italic">Sans équipe</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>({filteredMembersWithoutTeam.length} membres)</Typography>
+                            </Box>
 
                             {/* Membres sans équipe (si dépliée) */}
                             {isExpanded && (
-                              <div className="bg-gray-50">
+                              <Box sx={{ backgroundColor: 'background.secondary' }}>
                                 {filteredMembersWithoutTeam.map((member) => (
-                                  <div
+                                  <Box
                                     key={member.id}
-                                    className="flex items-center py-2 px-3 pl-12 hover:bg-gray-100"
+                                    sx={{ display: 'flex', alignItems: 'center', py: 1, px: 1.5, pl: 6, '&:hover': { backgroundColor: 'action.hover' } }}
                                   >
                                     <Checkbox
                                       checked={isUserSelected(member.userId)}
@@ -1296,12 +1404,12 @@ export default function NewDecisionPage({
                                       size="small"
                                     />
                                     <span className="text-sm">{member.user.name || 'Sans nom'}</span>
-                                    <span className="text-xs text-gray-600 ml-2">({member.user.email})</span>
-                                  </div>
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>({member.user.email})</Typography>
+                                  </Box>
                                 ))}
-                              </div>
+                              </Box>
                             )}
-                          </div>
+                          </Box>
                         );
                       })()}
                       </div>
@@ -1313,9 +1421,9 @@ export default function NewDecisionPage({
               {/* Onglet Invitations externes */}
               {participantMode === 'external' && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
+                  <Typography variant="body2" color="text.secondary">
                     Ajoutez des personnes externes par email (elles ne seront pas membres de l'organisation)
-                  </p>
+                  </Typography>
 
                   {/* Champs côte à côte (responsive) */}
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -1348,36 +1456,37 @@ export default function NewDecisionPage({
 
                   {/* Card unique pour tous les participants externes */}
                   {externalParticipants.length > 0 && (
-                    <div className="border rounded-lg bg-gray-50 p-3">
-                      <p className="text-sm font-medium mb-3">Participants externes ajoutés :</p>
+                    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, backgroundColor: 'background.secondary', p: 1.5 }}>
+                      <Typography variant="body2" fontWeight="medium" sx={{ mb: 1.5 }}>Participants externes ajoutés :</Typography>
                       <div className="space-y-2">
                         {externalParticipants.map((participant, index) => (
-                          <div
+                          <Box
                             key={index}
-                            className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200"
+                            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, px: 1.5, backgroundColor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}
                           >
                             <div className="flex-1">
                               <span className="text-sm font-medium">{participant.name}</span>
-                              <span className="text-sm text-gray-600 ml-2">({participant.email})</span>
+                              <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>({participant.email})</Typography>
                             </div>
-                            <button
+                            <Box
+                              component="button"
                               type="button"
                               onClick={() => handleRemoveExternalParticipant(participant.email)}
-                              className="text-red-600 hover:text-red-800 text-sm ml-2"
+                              sx={{ color: 'error.main', '&:hover': { color: 'error.dark' }, fontSize: '0.875rem', ml: 1, border: 0, background: 'transparent', cursor: 'pointer' }}
                             >
                               Retirer
-                            </button>
-                          </div>
+                            </Box>
+                          </Box>
                         ))}
                       </div>
-                    </div>
+                    </Box>
                   )}
                 </div>
               )}
 
               {/* Résumé des participants sélectionnés */}
-              <div className="p-3 bg-gray-50 border rounded">
-                <p className="text-sm font-medium">
+              <Box sx={{ p: 1.5, backgroundColor: 'background.secondary', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="body2" fontWeight="medium">
                   {formData.decisionType === 'ADVICE_SOLICITATION' ? (
                     <>
                       {getTotalParticipants().internal} membres internes et {getTotalParticipants().external} invités externes sont sollicités pour leur avis
@@ -1387,23 +1496,23 @@ export default function NewDecisionPage({
                       {getTotalParticipants().internal} membres internes et {getTotalParticipants().external} invités externes participent à la décision
                     </>
                   )}
-                </p>
+                </Typography>
                 {formData.decisionType === 'ADVICE_SOLICITATION' && getTotalParticipants().total < minimumParticipants && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <Typography variant="body2" color="error.main" sx={{ mt: 0.5 }}>
                     ⚠️ Minimum requis : {minimumParticipants} personne(s)
-                  </p>
+                  </Typography>
                 )}
-              </div>
+              </Box>
             </div>
           </div>
         )}
 
         {/* Indicateur de sauvegarde */}
         {!isSaving && lastSavedAt && (
-          <div className="flex items-center gap-2 text-sm text-green-600 pt-4">
-            <CheckCircleIcon fontSize="small" />
-            <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
-          </div>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 2 }}>
+            <CheckCircleIcon fontSize="small" sx={{ color: 'success.main' }} />
+            <Typography variant="body2" color="success.main">Sauvegardé à {lastSavedAt.toLocaleTimeString()}</Typography>
+          </Box>
         )}
 
         {/* Affichage des erreurs */}
@@ -1415,13 +1524,14 @@ export default function NewDecisionPage({
 
         {/* Boutons */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-          <button
+          <Box
+            component="button"
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            sx={{ px: 3, py: 1, border: 1, borderColor: 'divider', borderRadius: 2, cursor: 'pointer', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'action.hover' } }}
           >
             Annuler
-          </button>
+          </Box>
           <button
             type="button"
             onClick={handleManualSave}

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TextField, Button, Box } from '@mui/material';
+import { TextField, Button, Box, Chip, Typography } from '@mui/material';
 import { Add, Search } from '@mui/icons-material';
 import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
 import DraftCard from './DraftCard';
@@ -222,75 +222,90 @@ export default function DashboardContent({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                         <Link
                           href={targetUrl}
-                          className="text-sm font-semibold hover:text-blue-600 truncate"
+                          className="text-sm font-semibold truncate"
+                          style={{ color: 'inherit', textDecoration: 'none' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
                         >
                           {decision.title}
                         </Link>
                         {!hasVoted && !isClosed && !isPublicLink && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }}>
-                            Action requise
-                          </span>
+                          <Chip
+                            label="Action requise"
+                            size="small"
+                            color="warning"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
                         )}
                         {hasVoted && !isClosed && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}>
-                            ✓ Participé
-                          </span>
+                          <Chip
+                            label="✓ Participé"
+                            size="small"
+                            color="success"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
                         )}
                         {isPublicLink && (
-                          <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">
-                            Vote anonyme
-                          </span>
+                          <Chip
+                            label="Vote anonyme"
+                            size="small"
+                            color="secondary"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
                         )}
-                      </div>
+                      </Box>
 
-                      <div className="flex gap-2 text-xs text-gray-500 flex-wrap">
-                        <span className="px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
-                          {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-                        </span>
+                      <Box sx={{ display: 'flex', gap: 1, fontSize: '0.75rem', flexWrap: 'wrap', color: 'text.secondary' }}>
+                        <Chip
+                          label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
                         {decision.team && (
-                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded whitespace-nowrap">
-                            {decision.team.name}
-                          </span>
+                          <Chip
+                            label={decision.team.name}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
                         )}
                         {isClosed && decision.result && (
-                          <span
-                            className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
-                            style={{
-                              backgroundColor: decision.result === 'APPROVED' ? 'var(--color-success)' : 'var(--color-error)',
-                              color: 'white'
-                            }}
-                          >
-                            {decision.result === 'APPROVED' ? 'Approuvée' : decision.result === 'WITHDRAWN' ? 'Retirée' : 'Rejetée'}
-                          </span>
+                          <Chip
+                            label={decision.result === 'APPROVED' ? 'Approuvée' : decision.result === 'WITHDRAWN' ? 'Retirée' : 'Rejetée'}
+                            size="small"
+                            color={decision.result === 'APPROVED' ? 'success' : 'error'}
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
                         )}
                         {decision.endDate && !isClosed && (
-                          <span className="text-gray-600 whitespace-nowrap">
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
                             Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
-                          </span>
+                          </Typography>
                         )}
                         {isClosed && decision.decidedAt && (
-                          <span className="text-gray-600 whitespace-nowrap">
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
                             {new Date(decision.decidedAt).toLocaleDateString('fr-FR')}
-                          </span>
+                          </Typography>
                         )}
-                      </div>
+                      </Box>
                     </div>
 
-                    <Link
+                    <Button
+                      component={Link}
                       href={targetUrl}
-                      className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap ${
-                        !hasVoted && !isClosed && !isPublicLink
-                          ? 'bg-orange-600 text-white hover:bg-orange-700'
-                          : isPublicLink
-                          ? 'bg-purple-600 text-white hover:bg-purple-700'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
+                      color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
+                      size="small"
+                      sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
                     >
                       {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
-                    </Link>
+                    </Button>
                   </div>
                 </Box>
               );

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Box } from '@mui/material';
+import { Box, Chip, Button } from '@mui/material';
 import { DecisionTypeLabels } from '@/types/enums';
 
 interface DraftCardProps {
@@ -82,24 +82,29 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
             <h3 className="text-sm font-semibold truncate">{draft.title || 'Brouillon sans titre'}</h3>
-            <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">
-              Brouillon
-            </span>
-          </div>
+            <Chip label="Brouillon" size="small" sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }} />
+          </Box>
 
-          <div className="flex gap-2 text-xs flex-wrap" style={{ color: 'var(--color-text-secondary)' }}>
-            <span className="px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
-              {DecisionTypeLabels[draft.decisionType as keyof typeof DecisionTypeLabels]}
-            </span>
-            <span className="bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
-              {draft.votingMode === 'INVITED' ? 'Sur invitation' : 'Vote anonyme'}
-            </span>
+          <Box sx={{ display: 'flex', gap: 1, fontSize: '0.75rem', flexWrap: 'wrap', color: 'text.secondary' }}>
+            <Chip
+              label={DecisionTypeLabels[draft.decisionType as keyof typeof DecisionTypeLabels]}
+              size="small"
+              color="primary"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+            />
+            <Chip
+              label={draft.votingMode === 'INVITED' ? 'Sur invitation' : 'Vote anonyme'}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+            />
             <span className="whitespace-nowrap">
               Modifié {getTimeAgo(draft.updatedAt)}
             </span>
-          </div>
+          </Box>
         </div>
 
         <div className="flex gap-2 flex-col sm:flex-row">
@@ -110,13 +115,16 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
           >
             Continuer
           </Link>
-          <button
+          <Button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="px-3 py-1.5 rounded text-xs font-medium border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            variant="outlined"
+            color="error"
+            size="small"
+            sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem' }}
           >
             {isDeleting ? 'Suppression...' : 'Supprimer'}
-          </button>
+          </Button>
         </div>
       </div>
     </Box>

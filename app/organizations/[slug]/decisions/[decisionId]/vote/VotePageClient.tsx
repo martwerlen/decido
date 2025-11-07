@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Box, Chip, Typography, Button, Alert } from '@mui/material';
 import {
   DecisionStatusLabels,
   DecisionTypeLabels,
@@ -434,24 +435,29 @@ export default function VotePageClient({
       />
 
       {/* En-tête */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
-          <span>Créée par</span>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="body2" color="text.secondary">Créée par</Typography>
           <UserAvatar user={decision.creator} size="small" />
-          <span className="font-medium">{decision.creator.name}</span>
-        </div>
+          <Typography variant="body2" fontWeight="medium">{decision.creator.name}</Typography>
+        </Box>
         <h1 className="text-3xl font-bold">{decision.title}</h1>
-        <p className="text-gray-600 mt-2">{decision.description}</p>
-        <div className="flex gap-2 mt-4">
-          <span className="bg-gray-100 px-3 py-1 rounded text-sm">
-            {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
-          </span>
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
-            {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-          </span>
-        </div>
+        <Typography color="text.secondary" sx={{ mt: 1 }}>{decision.description}</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Chip
+            label={DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
+            size="small"
+            variant="outlined"
+          />
+          <Chip
+            label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+        </Box>
         {decision.endDate && (
-          <p className="text-sm text-gray-600 mt-2">
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Date limite : {new Date(decision.endDate).toLocaleDateString('fr-FR', {
               year: 'numeric',
               month: 'long',
@@ -459,20 +465,20 @@ export default function VotePageClient({
               hour: '2-digit',
               minute: '2-digit',
             })}
-          </p>
+          </Typography>
         )}
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </div>
+        </Alert>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+        <Alert severity="success" sx={{ mb: 2 }}>
           {success}
-        </div>
+        </Alert>
       )}
 
       {!isOpen && (
@@ -974,13 +980,14 @@ export default function VotePageClient({
       )}
 
       {/* Navigation */}
-      <div className="flex gap-4 mt-6">
-        <Link
+      <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+        <Button
+          component={Link}
           href={`/organizations/${slug}/decisions`}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          variant="outlined"
         >
           Retour
-        </Link>
+        </Button>
         {isCreator && (
           <Link
             href={`/organizations/${slug}/decisions/${decision.id}/admin`}
