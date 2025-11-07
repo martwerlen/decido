@@ -346,7 +346,8 @@ export async function POST(
     };
 
     // Ajouter le créateur comme participant uniquement en mode INVITED (brouillon ou lancé)
-    if (votingMode === 'INVITED') {
+    // SAUF pour ADVICE_SOLICITATION où le créateur ne participe pas au vote
+    if (votingMode === 'INVITED' && decisionType !== 'ADVICE_SOLICITATION') {
       decisionData.participants = {
         create: {
           userId: session.user.id,
