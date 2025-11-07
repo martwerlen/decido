@@ -141,7 +141,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const { data: session } = useSession()
   const { isDarkMode } = useDarkMode()
   const theme = useTheme()
-  const isMobile = useMediaQuery('(max-width:800px)') // < 800px
+  const isMobile = useMediaQuery('(max-width:900px)') // < 900px
 
   const [open, setOpen] = useState(true)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
@@ -357,7 +357,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     setMobileDrawerOpen(false)
   }
 
-  // Menu hamburger pour mobile/tablette (< 800px)
+  // Menu hamburger pour mobile/tablette (< 900px)
   if (isMobile) {
     return (
       <>
