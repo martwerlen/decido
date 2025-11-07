@@ -467,7 +467,7 @@ export default function VotePageClient({
             })}
           </Typography>
         )}
-      </div>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
