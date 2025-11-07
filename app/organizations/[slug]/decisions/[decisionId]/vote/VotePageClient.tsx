@@ -1021,7 +1021,7 @@ export default function VotePageClient({
             Voir les résultats
           </Link>
         )}
-      </div>
+      </Box>
     </div>
   );
 }
