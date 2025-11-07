@@ -201,8 +201,8 @@ export default function DecisionAdminClient({
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{decision.title}</h1>
-        <p className="text-gray-600 mt-2">{decision.description}</p>
+        <h1 className="text-2xl font-bold">{decision.title}</h1>
+        <p className="text-sm text-gray-600 mt-2">{decision.description}</p>
         <div className="flex gap-2 mt-4">
           <span className="bg-gray-100 px-3 py-1 rounded text-sm">
             {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
@@ -228,10 +228,10 @@ export default function DecisionAdminClient({
       {/* Section Proposition amendée (CONSENSUS) */}
       {decision.decisionType === 'CONSENSUS' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Propositions</h2>
+          <h2 className="text-base font-semibold mb-4">Propositions</h2>
 
           <div className="mb-4">
-            <h3 className="font-medium mb-2">Proposition initiale</h3>
+            <h3 className="text-sm font-medium mb-2">Proposition initiale</h3>
             <div className="p-4 bg-gray-50 rounded border">
               {decision.initialProposal}
             </div>
@@ -239,7 +239,7 @@ export default function DecisionAdminClient({
 
           {(isOpen || decision.proposal) && (
             <div>
-              <h3 className="font-medium mb-2">Proposition amendée</h3>
+              <h3 className="text-sm font-medium mb-2">Proposition amendée</h3>
               {isOpen ? (
                 <div className="space-y-3">
                   <textarea
@@ -275,7 +275,7 @@ export default function DecisionAdminClient({
       {/* Section Intention de décision (ADVICE_SOLICITATION) */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Intention de décision</h2>
+          <h2 className="text-base font-semibold mb-4">Intention de décision</h2>
 
           {isOpen && opinionsReceived === 0 && (
             <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
@@ -317,7 +317,7 @@ export default function DecisionAdminClient({
 
       {/* Section Participants */}
       <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">
+        <h2 className="text-base font-semibold mb-4">
           {decision.decisionType === 'ADVICE_SOLICITATION'
             ? `Personnes sollicitées pour avis (${decision.participants.length})`
             : `Participants (${decision.participants.length})`}
@@ -326,17 +326,17 @@ export default function DecisionAdminClient({
         {decision.participants.length > 0 && (
           <div className="space-y-2">
             {decision.participants.map((participant) => (
-              <div key={participant.id} className="flex items-center justify-between p-3 border rounded">
+              <div key={participant.id} className="flex items-center justify-between p-3 border rounded text-sm">
                 <div className="flex-1">
                   {participant.user ? (
                     <div>
                       <span className="font-medium">{participant.user.name || 'Sans nom'}</span>
-                      <span className="text-sm text-gray-600 ml-2">({participant.user.email})</span>
+                      <span className="text-sm text-gray-600 ml-2 hidden sm:inline">({participant.user.email})</span>
                     </div>
                   ) : (
                     <div>
                       <span className="font-medium">{participant.externalName}</span>
-                      <span className="text-sm text-gray-600 ml-2">
+                      <span className="text-sm text-gray-600 ml-2 hidden sm:inline">
                         ({participant.externalEmail}) - Externe
                       </span>
                     </div>
@@ -358,7 +358,7 @@ export default function DecisionAdminClient({
       {/* Section Conclusion/Décision finale */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && isOpen && opinionsReceived === decision.participants.length && decision.participants.length > 0 ? (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Décision finale</h2>
+          <h2 className="text-base font-semibold mb-4">Décision finale</h2>
           <p className="text-sm text-gray-600 mb-4">
             Tous les avis ont été reçus. Rédigez maintenant votre décision finale en tenant compte des avis sollicités.
           </p>
@@ -374,7 +374,7 @@ export default function DecisionAdminClient({
         </div>
       ) : decision.decisionType !== 'ADVICE_SOLICITATION' && isVotingFinished ? (
         <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
+          <h2 className="text-base font-semibold mb-4">Conclusion</h2>
           <p className="text-sm text-gray-600 mb-4">
             Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
           </p>
@@ -401,7 +401,7 @@ export default function DecisionAdminClient({
       ) : null}
 
       {/* Actions */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <button
           onClick={() => router.push(`/organizations/${slug}`)}
           className="px-6 py-2 border rounded-lg hover:bg-gray-50"
@@ -455,7 +455,7 @@ export default function DecisionAdminClient({
 
       {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-          <h3 className="font-medium text-blue-900 mb-2">Statut de la sollicitation d'avis :</h3>
+          <h3 className="text-sm font-medium text-blue-900 mb-2">Statut de la sollicitation d'avis :</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• {opinionsReceived} avis reçu{opinionsReceived > 1 ? 's' : ''} sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}</li>
             {opinionsReceived < decision.participants.length && (

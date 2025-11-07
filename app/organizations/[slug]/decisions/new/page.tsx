@@ -1414,7 +1414,7 @@ export default function NewDecisionPage({
         )}
 
         {/* Boutons */}
-        <div className="flex gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <button
             type="button"
             onClick={() => router.back()}
@@ -1426,7 +1426,7 @@ export default function NewDecisionPage({
             type="button"
             onClick={handleManualSave}
             disabled={isSaving || !formData.title.trim()}
-            className="px-6 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
             style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
             onMouseEnter={(e) => !isSaving && formData.title.trim() && (e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)')}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}

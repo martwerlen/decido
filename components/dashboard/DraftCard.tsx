@@ -102,10 +102,10 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-col sm:flex-row">
           <Link
             href={`/organizations/${orgSlug}/decisions/new?draft=${draft.id}`}
-            className="px-3 py-1.5 rounded text-xs font-medium text-white whitespace-nowrap"
+            className="px-3 py-1.5 rounded text-xs font-medium text-white whitespace-nowrap text-center"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
             Continuer
