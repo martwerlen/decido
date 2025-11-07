@@ -1,15 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import DecisionFilters from './DecisionFilters';
+import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
 import DraftCard from './DraftCard';
 import UserAvatar from '@/components/common/UserAvatar';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 
+interface Team {
+  id: string;
+  name: string;
+}
+
 interface DashboardContentProps {
   slug: string;
   organization: { name: string };
+  userTeams: Team[];
+  userId: string;
   draftDecisions: any[];
   myActiveDecisions: any[];
   publicLinkDecisions: any[];
@@ -19,16 +26,90 @@ interface DashboardContentProps {
 export default function DashboardContent({
   slug,
   organization,
+  userTeams,
+  userId,
   draftDecisions,
   myActiveDecisions,
   publicLinkDecisions,
   closedDecisions,
 }: DashboardContentProps) {
-  const [filters, setFilters] = useState({
-    showDrafts: false,
-    showActive: true, // Par défaut : En cours uniquement
-    showClosed: false,
+  const [filters, setFilters] = useState<DecisionFiltersType>({
+    statusFilter: ['OPEN'], // Par défaut : En cours uniquement
+    scopeFilter: 'ALL', // Par défaut : Toute l'organisation
+    typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
+
+  // Combiner toutes les décisions avec leurs métadonnées
+  const allDecisions = useMemo(() => {
+    const decisions = [];
+
+    // Ajouter les brouillons
+    for (const decision of draftDecisions) {
+      decisions.push({
+        ...decision,
+        status: 'DRAFT',
+        _meta: { category: 'draft' },
+      });
+    }
+
+    // Ajouter les décisions INVITED en cours
+    for (const decision of myActiveDecisions) {
+      decisions.push({
+        ...decision,
+        status: 'OPEN',
+        _meta: { category: 'active' },
+      });
+    }
+
+    // Ajouter les décisions PUBLIC_LINK en cours
+    for (const decision of publicLinkDecisions) {
+      decisions.push({
+        ...decision,
+        status: 'OPEN',
+        _meta: { category: 'publicLink' },
+      });
+    }
+
+    // Ajouter les décisions terminées
+    for (const decision of closedDecisions) {
+      decisions.push({
+        ...decision,
+        _meta: { category: 'closed' },
+      });
+    }
+
+    return decisions;
+  }, [draftDecisions, myActiveDecisions, publicLinkDecisions, closedDecisions]);
+
+  // Filtrer les décisions en fonction des filtres
+  const filteredDecisions = useMemo(() => {
+    return allDecisions.filter((decision) => {
+      // Filtre 1: Statut
+      const statusMatches = filters.statusFilter.includes(decision.status);
+      if (!statusMatches) return false;
+
+      // Filtre 2: Périmètre
+      if (filters.scopeFilter !== 'ALL') {
+        if (filters.scopeFilter === 'ME') {
+          // Montrer seulement les décisions créées par l'utilisateur
+          if (decision.creator?.id !== userId && decision.creatorId !== userId) {
+            return false;
+          }
+        } else {
+          // Filtrer par équipe
+          if (!decision.team || decision.team.id !== filters.scopeFilter) {
+            return false;
+          }
+        }
+      }
+
+      // Filtre 3: Type
+      const typeMatches = filters.typeFilter.includes(decision.decisionType);
+      if (!typeMatches) return false;
+
+      return true;
+    });
+  }, [allDecisions, filters, userId]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -38,282 +119,122 @@ export default function DashboardContent({
       </div>
 
       {/* Filtres */}
-      <DecisionFilters onFilterChange={setFilters} />
+      <DecisionFilters userTeams={userTeams} onFilterChange={setFilters} />
 
-      {/* Brouillons */}
-      {filters.showDrafts && draftDecisions.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-2xl font-semibold">
-              Brouillons
-              <span className="ml-2 text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
-                {draftDecisions.length}
-              </span>
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Décisions en cours de création que vous pourrez finaliser et lancer
-            </p>
+      {/* Décisions filtrées */}
+      <section className="mb-8">
+        {filteredDecisions.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-600">
+            Aucune décision ne correspond aux filtres sélectionnés
           </div>
+        ) : (
+          <div className="grid gap-2">
+            {filteredDecisions.map((decision) => {
+              // Décisions brouillons : utiliser DraftCard
+              if (decision._meta.category === 'draft') {
+                return <DraftCard key={decision.id} draft={decision} orgSlug={slug} />;
+              }
 
-          <div className="grid gap-3">
-            {draftDecisions.map((draft) => (
-              <DraftCard key={draft.id} draft={draft} orgSlug={slug} />
-            ))}
-          </div>
-        </section>
-      )}
+              // Pour toutes les autres décisions : afficher une card compacte
+              const hasVoted = decision.participants?.[0]?.hasVoted || false;
+              const isPublicLink = decision._meta.category === 'publicLink';
+              const isClosed = decision._meta.category === 'closed';
 
-      {/* Décisions en cours */}
-      {filters.showActive && (
-        <>
-          {/* Décisions INVITED en cours */}
-          <section className="mb-8">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold">
-                En cours
-                {myActiveDecisions.length > 0 && (
-                  <span className="ml-2 text-sm px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--color-accent-light)', color: 'var(--color-accent)' }}>
-                    {myActiveDecisions.length}
-                  </span>
-                )}
-              </h2>
-            </div>
+              // Déterminer l'URL de destination
+              let targetUrl = '';
+              if (isPublicLink) {
+                targetUrl = `/organizations/${slug}/decisions/${decision.id}/share`;
+              } else if (isClosed) {
+                targetUrl = `/organizations/${slug}/decisions/${decision.id}/results`;
+              } else {
+                targetUrl = `/organizations/${slug}/decisions/${decision.id}/vote`;
+              }
 
-            {myActiveDecisions.length === 0 ? (
-              <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-600">
-                Aucune décision en attente de votre participation
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {myActiveDecisions.map((decision) => {
-                  const hasVoted = decision.participants[0]?.hasVoted || false;
-
-                  return (
-                    <div
-                      key={decision.id}
-                      className={`bg-white border-2 rounded-lg p-5 hover:shadow-md transition ${
-                        !hasVoted ? 'border-orange-300' : 'border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Link
-                              href={`/organizations/${slug}/decisions/${decision.id}/vote`}
-                              className="text-lg font-semibold hover:text-blue-600"
-                            >
-                              {decision.title}
-                            </Link>
-                            {!hasVoted && (
-                              <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }}>
-                                Action requise
-                              </span>
-                            )}
-                            {hasVoted && (
-                              <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}>
-                                ✓ Vous avez participé
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-gray-600 text-sm mb-3">{decision.description}</p>
-
-                          <div className="flex gap-3 text-sm text-gray-500">
-                            <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
-                              {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-                            </span>
-                            {decision.team && (
-                              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                {decision.team.name}
-                              </span>
-                            )}
-                            {decision.endDate && (
-                              <span className="text-gray-600">
-                                Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                            <span>{decision._count.participants} participants</span>
-                            {decision.decisionType === 'CONSENSUS' && (
-                              <span>{decision._count.comments} commentaires</span>
-                            )}
-                            {decision._count.votes > 0 && (
-                              <span>{decision._count.votes} votes</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                            <span>Créée par</span>
-                            <UserAvatar user={decision.creator} size="small" />
-                            <span>{decision.creator.name}</span>
-                          </div>
-                        </div>
-
-                        <Link
-                          href={`/organizations/${slug}/decisions/${decision.id}/vote`}
-                          className={`px-4 py-2 rounded-lg font-medium text-sm ml-4 ${
-                            !hasVoted
-                              ? 'bg-orange-600 text-white hover:bg-orange-700'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {!hasVoted ? 'Participer' : 'Voir'}
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Décisions PUBLIC_LINK en cours */}
-          {publicLinkDecisions.length > 0 && (
-            <section className="mb-8">
-              <div className="mb-4">
-                <h2 className="text-2xl font-semibold">
-                  Décisions en cours via URL anonyme
-                  <span className="ml-2 text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                    {publicLinkDecisions.length}
-                  </span>
-                </h2>
-              </div>
-
-              <div className="grid gap-4">
-                {publicLinkDecisions.map((decision) => (
-                  <div
-                    key={decision.id}
-                    className="bg-white border-2 border-purple-200 rounded-lg p-5 hover:shadow-md transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Link
-                            href={`/organizations/${slug}/decisions/${decision.id}/share`}
-                            className="text-lg font-semibold hover:text-blue-600"
-                          >
-                            {decision.title}
-                          </Link>
-                          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">
-                            Vote anonyme
-                          </span>
-                        </div>
-
-                        <p className="text-gray-600 text-sm mb-3">{decision.description}</p>
-
-                        <div className="flex gap-3 text-sm text-gray-500">
-                          <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
-                            {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-                          </span>
-                          {decision.team && (
-                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                              {decision.team.name}
-                            </span>
-                          )}
-                          {decision.endDate && (
-                            <span className="text-gray-600">
-                              Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                          <span>{decision._count.anonymousVoteLogs} votes anonymes</span>
-                          <span className="text-purple-600">
-                            URL : /public-vote/{slug}/{decision.publicSlug}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                          <span>Créée par</span>
-                          <UserAvatar user={decision.creator} size="small" />
-                          <span>{decision.creator.name}</span>
-                        </div>
-                      </div>
-
-                      <Link
-                        href={`/organizations/${slug}/decisions/${decision.id}/share`}
-                        className="px-4 py-2 rounded-lg font-medium text-sm ml-4 bg-purple-600 text-white hover:bg-purple-700"
-                      >
-                        Gérer
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-
-      {/* Décisions terminées */}
-      {filters.showClosed && (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Décisions terminées</h2>
-
-          {closedDecisions.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-600">
-              Aucune décision terminée pour le moment
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {closedDecisions.map((decision) => (
+              return (
                 <div
                   key={decision.id}
-                  className="bg-white border rounded-lg p-4 hover:shadow-sm transition"
+                  className={`bg-white border rounded-lg p-3 hover:shadow-sm transition ${
+                    !hasVoted && !isClosed && !isPublicLink ? 'border-orange-300' : 'border-gray-200'
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <Link
-                        href={`/organizations/${slug}/decisions/${decision.id}/results`}
-                        className="font-medium hover:text-blue-600"
-                      >
-                        {decision.title}
-                      </Link>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <Link
+                          href={targetUrl}
+                          className="text-sm font-semibold hover:text-blue-600 truncate"
+                        >
+                          {decision.title}
+                        </Link>
+                        {!hasVoted && !isClosed && !isPublicLink && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }}>
+                            Action requise
+                          </span>
+                        )}
+                        {hasVoted && !isClosed && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}>
+                            ✓ Participé
+                          </span>
+                        )}
+                        {isPublicLink && (
+                          <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">
+                            Vote anonyme
+                          </span>
+                        )}
+                      </div>
 
-                      <div className="flex gap-2 mt-2 text-xs">
-                        <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
-                          {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
-                        </span>
-                        <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
+                      <div className="flex gap-2 text-xs text-gray-500 flex-wrap">
+                        <span className="px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
                           {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
                         </span>
-                        {decision.result && (
+                        {decision.team && (
+                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded whitespace-nowrap">
+                            {decision.team.name}
+                          </span>
+                        )}
+                        {isClosed && decision.result && (
                           <span
-                            className="px-2 py-1 rounded text-xs font-medium"
+                            className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
                             style={{
                               backgroundColor: decision.result === 'APPROVED' ? 'var(--color-success)' : 'var(--color-error)',
                               color: 'white'
                             }}
                           >
-                            {decision.result === 'APPROVED' ? 'Approuvée' : 'Rejetée'}
+                            {decision.result === 'APPROVED' ? 'Approuvée' : decision.result === 'WITHDRAWN' ? 'Retirée' : 'Rejetée'}
+                          </span>
+                        )}
+                        {decision.endDate && !isClosed && (
+                          <span className="text-gray-600 whitespace-nowrap">
+                            Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
+                          </span>
+                        )}
+                        {isClosed && decision.decidedAt && (
+                          <span className="text-gray-600 whitespace-nowrap">
+                            {new Date(decision.decidedAt).toLocaleDateString('fr-FR')}
                           </span>
                         )}
                       </div>
-
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                        <span>Créée par</span>
-                        <UserAvatar user={decision.creator} size="small" />
-                        <span>{decision.creator.name}</span>
-                      </div>
                     </div>
 
-                    <div className="text-right text-sm text-gray-500 ml-4">
-                      {decision.decidedAt && (
-                        <span>
-                          {new Date(decision.decidedAt).toLocaleDateString('fr-FR')}
-                        </span>
-                      )}
-                    </div>
+                    <Link
+                      href={targetUrl}
+                      className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap ${
+                        !hasVoted && !isClosed && !isPublicLink
+                          ? 'bg-orange-600 text-white hover:bg-orange-700'
+                          : isPublicLink
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
+                    </Link>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

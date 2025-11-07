@@ -22,6 +22,12 @@ import {
   CircularProgress,
   Alert,
   Menu,
+  AppBar,
+  Toolbar,
+  Button,
+  useMediaQuery,
+  useTheme,
+  Tooltip,
 } from "@mui/material"
 import {
   ChevronLeft,
@@ -43,6 +49,7 @@ import {
   ErrorOutline,
   MoreHoriz,
   QrCode2,
+  Dashboard as DashboardIcon,
 } from "@mui/icons-material"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
@@ -129,6 +136,9 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const { isDarkMode } = useDarkMode()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg')) // < 1024px
+
   const [open, setOpen] = useState(true)
   const [organization, setOrganization] = useState(currentOrgSlug || "")
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -142,6 +152,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
   const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null)
+  const [orgMenuAnchor, setOrgMenuAnchor] = useState<null | HTMLElement>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const { refreshTrigger } = useSidebarRefresh()
   const decisionsContainerRef = useRef<HTMLDivElement>(null)
@@ -162,7 +173,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       if (currentOrgSlug) {
         setOrganization(currentOrgSlug)
       } else if (data.length > 0) {
-        // Vérifier si organization n'est pas déjà défini via setState callback
         setOrganization(prev => prev || data[0].slug)
       }
     } catch (err: any) {
@@ -193,7 +203,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   // Charger les organisations au mount uniquement
   useEffect(() => {
     fetchOrganizations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Charger les décisions quand l'organisation change
@@ -201,7 +210,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     if (organization) {
       fetchDecisions()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organization])
 
   // Rafraîchir quand le trigger change (après un vote ou changement de statut)
@@ -209,7 +217,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     if (refreshTrigger > 0 && organization) {
       fetchDecisions()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger])
 
   // Mettre à jour le rôle de l'utilisateur dans l'organisation courante
@@ -235,9 +242,9 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       if (!decisionsContainerRef.current) return
 
       const containerHeight = decisionsContainerRef.current.clientHeight
-      const itemHeight = 40 // Hauteur approximative d'un item de décision (réduite)
-      const sectionHeaderHeight = 40 // Hauteur du titre de section
-      const availableHeight = containerHeight - (sectionHeaderHeight * 2) // 2 sections
+      const itemHeight = 40
+      const sectionHeaderHeight = 40
+      const availableHeight = containerHeight - (sectionHeaderHeight * 2)
 
       const maxPerSection = Math.floor(availableHeight / 2 / itemHeight)
       setMaxDecisions({ ongoing: maxPerSection, completed: maxPerSection })
@@ -261,9 +268,25 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
 
     setOrganization(selectedSlug)
-
-    // Rediriger vers la page de l'organisation pour forcer le rafraîchissement
     router.push(`/organizations/${selectedSlug}`)
+  }
+
+  const handleOrgMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setOrgMenuAnchor(event.currentTarget)
+  }
+
+  const handleOrgMenuClose = () => {
+    setOrgMenuAnchor(null)
+  }
+
+  const handleOrgSelect = (slug: string) => {
+    if (slug === "__new__") {
+      router.push("/organizations/new")
+    } else {
+      setOrganization(slug)
+      router.push(`/organizations/${slug}`)
+    }
+    handleOrgMenuClose()
   }
 
   const handleLogout = () => {
@@ -308,6 +331,175 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }
 
+  const handleNewDecision = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}/decisions/new`)
+    }
+  }
+
+  const handleDashboard = () => {
+    if (organization) {
+      router.push(`/organizations/${organization}`)
+    }
+  }
+
+  // Menu horizontal pour mobile/tablette
+  if (isMobile) {
+    return (
+      <>
+        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+          <Toolbar sx={{ gap: 1, minHeight: { xs: 56, sm: 64 }, px: { xs: 1, sm: 2 } }}>
+            {/* Logo Decidoo */}
+            <Box
+              sx={{ display: "flex", alignItems: "center", cursor: "pointer", mr: 1 }}
+              onClick={handleDashboard}
+            >
+              <Image
+                src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
+                alt="Decidoo"
+                width={100}
+                height={30}
+                style={{ objectFit: "contain" }}
+                priority
+              />
+            </Box>
+
+            {/* Nom de l'organisation (dropdown) */}
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <>
+                <Button
+                  onClick={handleOrgMenuOpen}
+                  startIcon={<Business />}
+                  sx={{
+                    textTransform: 'none',
+                    color: 'inherit',
+                    display: { xs: 'none', sm: 'flex' },
+                    maxWidth: 200,
+                  }}
+                >
+                  <Typography variant="body2" noWrap>
+                    {organizations.find(o => o.slug === organization)?.name || ''}
+                  </Typography>
+                </Button>
+                <IconButton
+                  onClick={handleOrgMenuOpen}
+                  sx={{ display: { xs: 'flex', sm: 'none' } }}
+                  color="inherit"
+                >
+                  <Business />
+                </IconButton>
+                <Menu
+                  anchorEl={orgMenuAnchor}
+                  open={Boolean(orgMenuAnchor)}
+                  onClose={handleOrgMenuClose}
+                >
+                  {organizations.map((org) => (
+                    <MenuItem key={org.id} onClick={() => handleOrgSelect(org.slug)}>
+                      {org.name}
+                    </MenuItem>
+                  ))}
+                  <Divider />
+                  <MenuItem onClick={() => handleOrgSelect("__new__")}>
+                    <Add fontSize="small" sx={{ mr: 1 }} />
+                    Nouvelle organisation
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+
+            <Box sx={{ flexGrow: 1 }} />
+
+            {/* Équipes */}
+            <Tooltip title="Équipes">
+              <IconButton onClick={handleTeams} color="inherit" disabled={!organization}>
+                <AccountTree />
+              </IconButton>
+            </Tooltip>
+
+            {/* Nouvelle décision */}
+            <Button
+              onClick={handleNewDecision}
+              variant="contained"
+              startIcon={<Add />}
+              disabled={!organization}
+              sx={{
+                display: { xs: 'none', sm: 'flex' },
+                textTransform: 'none',
+              }}
+            >
+              Nouvelle décision
+            </Button>
+            <Tooltip title="Nouvelle décision">
+              <IconButton
+                onClick={handleNewDecision}
+                color="inherit"
+                disabled={!organization}
+                sx={{ display: { xs: 'flex', sm: 'none' } }}
+              >
+                <Add />
+              </IconButton>
+            </Tooltip>
+
+            {/* Recherche */}
+            <Tooltip title="Rechercher">
+              <IconButton color="inherit">
+                <Search />
+              </IconButton>
+            </Tooltip>
+
+            {/* Paramètres */}
+            <Tooltip title="Paramètres">
+              <IconButton onClick={handleSettingsClick} color="inherit">
+                <Settings />
+              </IconButton>
+            </Tooltip>
+          </Toolbar>
+        </AppBar>
+
+        {/* Spacer pour le contenu */}
+        <Toolbar />
+
+        {/* Menu des paramètres */}
+        <Menu
+          anchorEl={settingsMenuAnchor}
+          open={Boolean(settingsMenuAnchor)}
+          onClose={handleSettingsMenuClose}
+        >
+          <MenuItem onClick={handleProfileSettings}>
+            <ListItemIcon>
+              <Person fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Modifier mon profil</ListItemText>
+          </MenuItem>
+          {(currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && (
+            <MenuItem onClick={handleOrganizationSettings} disabled={!organization}>
+              <ListItemIcon>
+                <AdminPanelSettings fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Paramètres de l&apos;organisation</ListItemText>
+            </MenuItem>
+          )}
+          <MenuItem onClick={handleMembers} disabled={!organization}>
+            <ListItemIcon>
+              <Group fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Gérer les membres</ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleLogoutFromMenu}>
+            <ListItemIcon>
+              <Logout fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Se déconnecter</ListItemText>
+          </MenuItem>
+        </Menu>
+      </>
+    )
+  }
+
+  // Sidebar pour desktop
   return (
     <Drawer
       variant="permanent"
@@ -370,285 +562,320 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
         <Divider />
 
-        {/* Header avec toggle - SUPPRIMÉ car maintenant dans le logo */}
-        {/* <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            p: 1,
+        {/* Icônes verticales quand rétractée */}
+        {!open && (
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, py: 2 }}>
+            <Tooltip title="Décisions" placement="right">
+              <IconButton onClick={handleDashboard} disabled={!organization}>
+                <DashboardIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Organisation" placement="right">
+              <IconButton onClick={handleOrgMenuOpen}>
+                <Business />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Équipes" placement="right">
+              <IconButton onClick={handleTeams} disabled={!organization}>
+                <AccountTree />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Nouvelle décision" placement="right">
+              <IconButton onClick={handleNewDecision} disabled={!organization}>
+                <Add />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Rechercher" placement="right">
+              <IconButton>
+                <Search />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Paramètres" placement="right">
+              <IconButton onClick={handleSettingsClick}>
+                <Settings />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+
+        {/* Menu dropdown pour sélection d'organisation (mode rétracté) */}
+        <Menu
+          anchorEl={orgMenuAnchor}
+          open={Boolean(orgMenuAnchor) && !open}
+          onClose={handleOrgMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
           }}
         >
-          <IconButton onClick={handleDrawerToggle}>
-            {open ? <ChevronLeft /> : <ChevronRight />}
-          </IconButton>
-        </Box>
+          {organizations.map((org) => (
+            <MenuItem key={org.id} onClick={() => handleOrgSelect(org.slug)}>
+              {org.name}
+            </MenuItem>
+          ))}
+          <Divider />
+          <MenuItem onClick={() => handleOrgSelect("__new__")}>
+            <Add fontSize="small" sx={{ mr: 1 }} />
+            Nouvelle organisation
+          </MenuItem>
+        </Menu>
 
-        <Divider /> */}
-
-        {/* Sélecteur d'organisation */}
+        {/* Sélecteur d'organisation (mode étendu) */}
         {open && (
-          <Box sx={{ p: 2 }}>
-            {loading ? (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : error ? (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            ) : (
-              <FormControl fullWidth size="small">
-                <Select
-                  value={organization || ""}
-                  onChange={handleOrganizationChange}
-                  startAdornment={<Business sx={{ mr: 1, color: "action.active" }} />}
-                  displayEmpty
-                >
-                  {organizations.map((org) => (
-                    <MenuItem key={org.id} value={org.slug}>
-                      {org.name}
+          <>
+            <Box sx={{ p: 2 }}>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              ) : (
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={organization || ""}
+                    onChange={handleOrganizationChange}
+                    startAdornment={<Business sx={{ mr: 1, color: "action.active" }} />}
+                    displayEmpty
+                  >
+                    {organizations.map((org) => (
+                      <MenuItem key={org.id} value={org.slug}>
+                        {org.name}
+                      </MenuItem>
+                    ))}
+                    <Divider />
+                    <MenuItem value="__new__">
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Add fontSize="small" />
+                        <span>Nouvelle organisation</span>
+                      </Box>
                     </MenuItem>
-                  ))}
-                  <Divider />
-                  <MenuItem value="__new__">
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Add fontSize="small" />
-                      <span>Nouvelle organisation</span>
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          </Box>
-        )}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
 
-        {!open && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-            <Business />
-          </Box>
-        )}
+            <Divider />
 
-        <Divider />
-
-        {/* Organigramme */}
-        {open && (
-          <Box sx={{ p: 2 }}>
-            <List dense>
-              <ListItem disablePadding>
-                <ListItemButton onClick={handleTeams} disabled={!organization}>
-                  <ListItemIcon>
-                    <AccountTree fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Organigramme"
-                    primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Box>
-        )}
-
-        <Divider />
-
-        {/* Nouvelle décision */}
-        {open && (
-          <Box sx={{ p: 2, pb: 0 }}>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => organization && router.push(`/organizations/${organization}/decisions/new`)}
-                disabled={!organization}
-                sx={{
-                  backgroundColor: "primary.main",
-                  color: "white",
-                  borderRadius: 1,
-                  "&:hover": {
-                    backgroundColor: "primary.dark",
-                  },
-                  "&.Mui-disabled": {
-                    backgroundColor: "action.disabledBackground",
-                    color: "action.disabled",
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>
-                  <Add fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Nouvelle décision"
-                  primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
-                />
-              </ListItemButton>
-            </ListItem>
-          </Box>
-        )}
-
-        {/* Container pour les décisions (avec ref pour calculer la hauteur) */}
-        {open && (
-          <Box ref={decisionsContainerRef} sx={{ flexGrow: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            {/* Décisions en cours */}
-            <Box sx={{ p: 2, pb: 1 }}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                gutterBottom
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  "&:hover": { color: "primary.main" }
-                }}
-                onClick={() => router.push(`/organizations/${organization}`)}
-              >
-                <span>En cours</span>
-                {decisions.ongoingTotal > maxDecisions.ongoing && (
-                  <IconButton size="small" sx={{ p: 0 }}>
-                    <MoreHoriz fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <List dense sx={{ py: 0 }}>
-                {decisionsLoading ? (
-                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                    <CircularProgress size={20} />
-                  </Box>
-                ) : decisions.ongoing.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
-                    Aucune décision en cours
-                  </Typography>
-                ) : (
-                  <>
-                    {decisions.ongoing.slice(0, maxDecisions.ongoing).map((decision) => {
-                      const { Icon, color } = getOngoingIcon(decision)
-                      // Déterminer l'URL de destination
-                      const targetUrl = decision.votingMode === 'PUBLIC_LINK' && decision.isCreator
-                        ? `/organizations/${organization}/decisions/${decision.id}/share`
-                        : `/organizations/${organization}/decisions/${decision.id}/vote`
-
-                      return (
-                        <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
-                          <ListItemButton
-                            onClick={() => router.push(targetUrl)}
-                            sx={{
-                              py: 0.5,
-                              px: 1,
-                              borderRadius: 0.5,
-                              minHeight: 36
-                            }}
-                          >
-                            <ListItemIcon sx={{ minWidth: 32 }}>
-                              <Icon fontSize="small" sx={{ color }} />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={decision.title}
-                              primaryTypographyProps={{
-                                variant: "caption",
-                                noWrap: true,
-                                sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
-                              }}
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      )
-                    })}
-                  </>
-                )}
+            {/* Équipes */}
+            <Box sx={{ p: 2 }}>
+              <List dense>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleTeams} disabled={!organization}>
+                    <ListItemIcon>
+                      <AccountTree fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Équipes"
+                      primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                    />
+                  </ListItemButton>
+                </ListItem>
               </List>
             </Box>
 
             <Divider />
 
-            {/* Décisions terminées */}
-            <Box sx={{ p: 2, pt: 1 }}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                gutterBottom
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  "&:hover": { color: "primary.main" }
-                }}
-                onClick={() => router.push(`/organizations/${organization}`)}
-              >
-                <span>Terminées</span>
-                {decisions.completedTotal > maxDecisions.completed && (
-                  <IconButton size="small" sx={{ p: 0 }}>
-                    <MoreHoriz fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <List dense sx={{ py: 0 }}>
-                {decisionsLoading ? (
-                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                    <CircularProgress size={20} />
-                  </Box>
-                ) : decisions.completed.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
-                    Aucune décision terminée
-                  </Typography>
-                ) : (
-                  <>
-                    {decisions.completed.slice(0, maxDecisions.completed).map((decision) => {
-                      const { Icon, color } = getCompletedIcon(decision)
-                      return (
-                        <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
-                          <ListItemButton
-                            onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}
-                            sx={{
-                              py: 0.5,
-                              px: 1,
-                              borderRadius: 0.5,
-                              minHeight: 36
-                            }}
-                          >
-                            <ListItemIcon sx={{ minWidth: 32 }}>
-                              <Icon fontSize="small" sx={{ color }} />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={decision.title}
-                              primaryTypographyProps={{
-                                variant: "caption",
-                                noWrap: true,
-                                sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
-                              }}
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      )
-                    })}
-                  </>
-                )}
-              </List>
+            {/* Nouvelle décision */}
+            <Box sx={{ p: 2, pb: 0 }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={handleNewDecision}
+                  disabled={!organization}
+                  sx={{
+                    backgroundColor: "primary.main",
+                    color: "white",
+                    borderRadius: 1,
+                    "&:hover": {
+                      backgroundColor: "primary.dark",
+                    },
+                    "&.Mui-disabled": {
+                      backgroundColor: "action.disabledBackground",
+                      color: "action.disabled",
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>
+                    <Add fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Nouvelle décision"
+                    primaryTypographyProps={{ variant: "body2", fontWeight: 500 }}
+                  />
+                </ListItemButton>
+              </ListItem>
             </Box>
-          </Box>
+
+            {/* Container pour les décisions */}
+            <Box ref={decisionsContainerRef} sx={{ flexGrow: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              {/* Décisions en cours */}
+              <Box sx={{ p: 2, pb: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    "&:hover": { color: "primary.main" }
+                  }}
+                  onClick={() => router.push(`/organizations/${organization}`)}
+                >
+                  <span>En cours</span>
+                  {decisions.ongoingTotal > maxDecisions.ongoing && (
+                    <IconButton size="small" sx={{ p: 0 }}>
+                      <MoreHoriz fontSize="small" />
+                    </IconButton>
+                  )}
+                </Typography>
+                <List dense sx={{ py: 0 }}>
+                  {decisionsLoading ? (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  ) : decisions.ongoing.length === 0 ? (
+                    <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
+                      Aucune décision en cours
+                    </Typography>
+                  ) : (
+                    <>
+                      {decisions.ongoing.slice(0, maxDecisions.ongoing).map((decision) => {
+                        const { Icon, color } = getOngoingIcon(decision)
+                        const targetUrl = decision.votingMode === 'PUBLIC_LINK' && decision.isCreator
+                          ? `/organizations/${organization}/decisions/${decision.id}/share`
+                          : `/organizations/${organization}/decisions/${decision.id}/vote`
+
+                        return (
+                          <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
+                            <ListItemButton
+                              onClick={() => router.push(targetUrl)}
+                              sx={{
+                                py: 0.5,
+                                px: 1,
+                                borderRadius: 0.5,
+                                minHeight: 36
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 32 }}>
+                                <Icon fontSize="small" sx={{ color }} />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={decision.title}
+                                primaryTypographyProps={{
+                                  variant: "caption",
+                                  noWrap: true,
+                                  sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
+                                }}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        )
+                      })}
+                    </>
+                  )}
+                </List>
+              </Box>
+
+              <Divider />
+
+              {/* Décisions terminées */}
+              <Box sx={{ p: 2, pt: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    "&:hover": { color: "primary.main" }
+                  }}
+                  onClick={() => router.push(`/organizations/${organization}`)}
+                >
+                  <span>Terminées</span>
+                  {decisions.completedTotal > maxDecisions.completed && (
+                    <IconButton size="small" sx={{ p: 0 }}>
+                      <MoreHoriz fontSize="small" />
+                    </IconButton>
+                  )}
+                </Typography>
+                <List dense sx={{ py: 0 }}>
+                  {decisionsLoading ? (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  ) : decisions.completed.length === 0 ? (
+                    <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5, fontStyle: "italic", display: "block" }}>
+                      Aucune décision terminée
+                    </Typography>
+                  ) : (
+                    <>
+                      {decisions.completed.slice(0, maxDecisions.completed).map((decision) => {
+                        const { Icon, color } = getCompletedIcon(decision)
+                        return (
+                          <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
+                            <ListItemButton
+                              onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}
+                              sx={{
+                                py: 0.5,
+                                px: 1,
+                                borderRadius: 0.5,
+                                minHeight: 36
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 32 }}>
+                                <Icon fontSize="small" sx={{ color }} />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={decision.title}
+                                primaryTypographyProps={{
+                                  variant: "caption",
+                                  noWrap: true,
+                                  sx: { overflow: 'hidden', textOverflow: 'ellipsis' }
+                                }}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        )
+                      })}
+                    </>
+                  )}
+                </List>
+              </Box>
+            </Box>
+
+            <Divider />
+
+            {/* Rechercher et Paramètres */}
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton>
+                  <ListItemIcon>
+                    <Search />
+                  </ListItemIcon>
+                  <ListItemText primary="Rechercher" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton onClick={handleSettingsClick}>
+                  <ListItemIcon>
+                    <Settings />
+                  </ListItemIcon>
+                  <ListItemText primary="Paramètres" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </>
         )}
-
-        <Divider />
-
-        {/* Rechercher et Paramètres */}
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                <Search />
-              </ListItemIcon>
-              {open && <ListItemText primary="Rechercher" />}
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleSettingsClick}>
-              <ListItemIcon>
-                <Settings />
-              </ListItemIcon>
-              {open && <ListItemText primary="Paramètres" />}
-            </ListItemButton>
-          </ListItem>
-        </List>
 
         {/* Menu déroulant des paramètres */}
         <Menu
