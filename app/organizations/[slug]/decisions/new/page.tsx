@@ -172,13 +172,11 @@ export default function NewDecisionPage({
 
   // Filtrer les équipes pour ne garder que celles avec des membres filtrés
   const getFilteredTeams = (): Team[] => {
-    const filteredMembers = getFilteredMembers();
+    const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
     return teams.filter(team => {
-      const teamMembers = members.filter(m =>
-        m.teamMembers.some(tm => tm.team.id === team.id)
-      );
+      const teamMembers = getTeamMembers(team.id);
       // Garder l'équipe si elle a au moins un membre filtré
-      return teamMembers.some(m => filteredMembers.includes(m));
+      return teamMembers.some(m => filteredMemberIds.has(m.id));
     });
   };
 
