@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { TextField, Button, Box } from '@mui/material';
+import { Add, Search } from '@mui/icons-material';
 import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
 import DraftCard from './DraftCard';
 import UserAvatar from '@/components/common/UserAvatar';
@@ -33,6 +36,8 @@ export default function DashboardContent({
   publicLinkDecisions,
   closedDecisions,
 }: DashboardContentProps) {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<DecisionFiltersType>({
     statusFilter: ['OPEN'], // Par défaut : En cours uniquement
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
@@ -81,7 +86,7 @@ export default function DashboardContent({
     return decisions;
   }, [draftDecisions, myActiveDecisions, publicLinkDecisions, closedDecisions]);
 
-  // Filtrer les décisions en fonction des filtres
+  // Filtrer les décisions en fonction des filtres et de la recherche
   const filteredDecisions = useMemo(() => {
     return allDecisions.filter((decision) => {
       // Filtre 1: Statut
@@ -107,16 +112,66 @@ export default function DashboardContent({
       const typeMatches = filters.typeFilter.includes(decision.decisionType);
       if (!typeMatches) return false;
 
+      // Filtre 4: Recherche (titre, description, proposition)
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const titleMatch = decision.title?.toLowerCase().includes(query);
+        const descriptionMatch = decision.description?.toLowerCase().includes(query);
+        const proposalMatch = decision.proposal?.toLowerCase().includes(query);
+        const initialProposalMatch = decision.initialProposal?.toLowerCase().includes(query);
+
+        if (!titleMatch && !descriptionMatch && !proposalMatch && !initialProposalMatch) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [allDecisions, filters, userId]);
+  }, [allDecisions, filters, userId, searchQuery]);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{organization.name}</h1>
-        <p className="text-gray-600 mt-2">Actualités et décisions</p>
-      </div>
+      {/* En-tête avec titre, recherche et bouton */}
+      <Box sx={{ mb: 4 }}>
+        {/* Titre */}
+        <h1 className="text-3xl font-bold mb-4">Décisions - {organization.name}</h1>
+
+        {/* Barre de recherche + Bouton Nouvelle décision */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'flex-end',
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Rechercher une décision..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
+            }}
+            sx={{
+              flex: { xs: '1 1 auto', sm: '0 1 300px' },
+              backgroundColor: 'background.paper',
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => router.push(`/organizations/${slug}/decisions/new`)}
+            sx={{
+              whiteSpace: 'nowrap',
+              px: 3,
+            }}
+          >
+            Nouvelle décision
+          </Button>
+        </Box>
+      </Box>
 
       {/* Filtres */}
       <DecisionFilters userTeams={userTeams} onFilterChange={setFilters} />
@@ -124,9 +179,9 @@ export default function DashboardContent({
       {/* Décisions filtrées */}
       <section className="mb-8">
         {filteredDecisions.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-600">
+          <Box sx={{ backgroundColor: 'background.secondary', borderRadius: 2, p: 3, textAlign: 'center', color: 'text.secondary' }}>
             Aucune décision ne correspond aux filtres sélectionnés
-          </div>
+          </Box>
         ) : (
           <div className="grid gap-2">
             {filteredDecisions.map((decision) => {
@@ -151,11 +206,19 @@ export default function DashboardContent({
               }
 
               return (
-                <div
+                <Box
                   key={decision.id}
-                  className={`bg-white border rounded-lg p-3 hover:shadow-sm transition ${
-                    !hasVoted && !isClosed && !isPublicLink ? 'border-orange-300' : 'border-gray-200'
-                  }`}
+                  sx={{
+                    backgroundColor: 'background.paper',
+                    border: 1,
+                    borderColor: !hasVoted && !isClosed && !isPublicLink ? 'warning.main' : 'divider',
+                    borderRadius: 2,
+                    p: 1.5,
+                    transition: 'box-shadow 0.2s',
+                    '&:hover': {
+                      boxShadow: 1,
+                    },
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -229,7 +292,7 @@ export default function DashboardContent({
                       {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
                     </Link>
                   </div>
-                </div>
+                </Box>
               );
             })}
           </div>

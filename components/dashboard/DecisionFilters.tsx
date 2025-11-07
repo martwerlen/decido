@@ -75,13 +75,13 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
   };
 
   return (
-    <Box className="mb-6 p-4 bg-white border rounded-lg">
+    <Box sx={{ mb: 3, p: 2, backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2 }}>
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
         Filtrer les décisions
       </h3>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
         {/* Filtre 1: Statut */}
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
           <InputLabel id="status-filter-label">Statut</InputLabel>
           <Select
             labelId="status-filter-label"
@@ -100,23 +100,23 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
             }}
             MenuProps={MenuProps}
           >
-            <MenuItem value="DRAFT">
+            <MenuItem value="DRAFT" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={statusFilter.indexOf('DRAFT') > -1} />
-              <ListItemText primary="Brouillon" />
+              <ListItemText primary="Brouillon" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
-            <MenuItem value="OPEN">
+            <MenuItem value="OPEN" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={statusFilter.indexOf('OPEN') > -1} />
-              <ListItemText primary="En cours" />
+              <ListItemText primary="En cours" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
-            <MenuItem value="CLOSED">
+            <MenuItem value="CLOSED" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={statusFilter.indexOf('CLOSED') > -1} />
-              <ListItemText primary="Terminé" />
+              <ListItemText primary="Terminé" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
           </Select>
         </FormControl>
 
         {/* Filtre 2: Périmètre */}
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
           <InputLabel id="scope-filter-label">Périmètre</InputLabel>
           <Select
             labelId="scope-filter-label"
@@ -125,18 +125,18 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
             onChange={handleScopeChange}
             label="Périmètre"
           >
-            <MenuItem value="ALL">Toute l'organisation</MenuItem>
+            <MenuItem value="ALL" sx={{ fontSize: '0.875rem' }}>Toute l'organisation</MenuItem>
             {userTeams.map((team) => (
-              <MenuItem key={team.id} value={team.id}>
+              <MenuItem key={team.id} value={team.id} sx={{ fontSize: '0.875rem' }}>
                 {team.name}
               </MenuItem>
             ))}
-            <MenuItem value="ME">Moi</MenuItem>
+            <MenuItem value="ME" sx={{ fontSize: '0.875rem' }}>Moi</MenuItem>
           </Select>
         </FormControl>
 
         {/* Filtre 3: Type de décision */}
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }} size="small">
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: '1 1 200px' }} size="small">
           <InputLabel id="type-filter-label">Type</InputLabel>
           <Select
             labelId="type-filter-label"
@@ -156,21 +156,21 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
             }}
             MenuProps={MenuProps}
           >
-            <MenuItem value="ADVICE_SOLICITATION">
+            <MenuItem value="ADVICE_SOLICITATION" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('ADVICE_SOLICITATION') > -1} />
-              <ListItemText primary="Sollicitation d'avis" />
+              <ListItemText primary="Sollicitation d'avis" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
-            <MenuItem value="CONSENSUS">
+            <MenuItem value="CONSENSUS" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('CONSENSUS') > -1} />
-              <ListItemText primary="Consensus" />
+              <ListItemText primary="Consensus" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
-            <MenuItem value="MAJORITY">
+            <MenuItem value="MAJORITY" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('MAJORITY') > -1} />
-              <ListItemText primary="Majorité" />
+              <ListItemText primary="Majorité" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
-            <MenuItem value="NUANCED_VOTE">
+            <MenuItem value="NUANCED_VOTE" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('NUANCED_VOTE') > -1} />
-              <ListItemText primary="Vote nuancé" />
+              <ListItemText primary="Vote nuancé" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
           </Select>
         </FormControl>

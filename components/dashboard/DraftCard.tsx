@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Box } from '@mui/material';
 import { DecisionTypeLabels } from '@/types/enums';
 
 interface DraftCardProps {
@@ -65,37 +66,46 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
   };
 
   return (
-    <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 hover:shadow-sm transition">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-medium text-gray-800">{draft.title || 'Brouillon sans titre'}</h3>
-            <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+    <Box
+      sx={{
+        backgroundColor: 'background.paper',
+        border: 2,
+        borderStyle: 'dashed',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 1.5,
+        transition: 'box-shadow 0.2s',
+        '&:hover': {
+          boxShadow: 1,
+        },
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 className="text-sm font-semibold truncate">{draft.title || 'Brouillon sans titre'}</h3>
+            <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">
               Brouillon
             </span>
           </div>
 
-          {draft.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{draft.description}</p>
-          )}
-
-          <div className="flex gap-3 text-xs text-gray-500">
-            <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
+          <div className="flex gap-2 text-xs flex-wrap" style={{ color: 'var(--color-text-secondary)' }}>
+            <span className="px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
               {DecisionTypeLabels[draft.decisionType as keyof typeof DecisionTypeLabels]}
             </span>
-            <span className="px-2 py-1 rounded bg-gray-100">
+            <span className="bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
               {draft.votingMode === 'INVITED' ? 'Sur invitation' : 'Vote anonyme'}
             </span>
-            <span className="text-gray-500">
+            <span className="whitespace-nowrap">
               Modifié {getTimeAgo(draft.updatedAt)}
             </span>
           </div>
         </div>
 
-        <div className="flex gap-2 ml-4">
+        <div className="flex gap-2">
           <Link
             href={`/organizations/${orgSlug}/decisions/new?draft=${draft.id}`}
-            className="px-4 py-2 rounded-lg font-medium text-sm text-white"
+            className="px-3 py-1.5 rounded text-xs font-medium text-white whitespace-nowrap"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
             Continuer
@@ -103,12 +113,12 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
           <button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-lg font-medium text-sm border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded text-xs font-medium border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {isDeleting ? 'Suppression...' : 'Supprimer'}
           </button>
         </div>
       </div>
-    </div>
+    </Box>
   );
 }
