@@ -2,13 +2,19 @@
 
 import { use, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   DecisionTypeLabels,
   NuancedScaleLabels
 } from '@/types/enums';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
-import { Tooltip, CircularProgress } from '@mui/material';
-import { Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Tooltip, CircularProgress, Checkbox } from '@mui/material';
+import {
+  Save as SaveIcon,
+  CheckCircle as CheckCircleIcon,
+  ChevronRight as ChevronRightIcon,
+  ExpandMore as ExpandMoreIcon
+} from '@mui/icons-material';
 
 type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE' | 'ADVICE_SOLICITATION';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
@@ -42,6 +48,12 @@ interface Member {
     name: string | null;
     email: string;
   };
+  teamMembers: Array<{
+    team: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 export default function NewDecisionPage({
@@ -52,6 +64,7 @@ export default function NewDecisionPage({
   const { slug } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const { refreshSidebar } = useSidebarRefresh();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -95,9 +108,10 @@ export default function NewDecisionPage({
   const [isSaving, setIsSaving] = useState(false);
 
   // Participants state
-  const [participantMode, setParticipantMode] = useState<'teams' | 'users' | 'external'>('teams');
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [participantMode, setParticipantMode] = useState<'teams' | 'external'>('teams');
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [expandedTeamIds, setExpandedTeamIds] = useState<string[]>([]);
   const [externalParticipants, setExternalParticipants] = useState<Array<{ email: string; name: string }>>([]);
   const [externalEmail, setExternalEmail] = useState('');
   const [externalName, setExternalName] = useState('');
@@ -134,6 +148,133 @@ export default function NewDecisionPage({
     }
   };
 
+  // ===== FONCTIONS HELPERS POUR LA SÉLECTION DES PARTICIPANTS =====
+
+  // Obtenir tous les membres d'une équipe
+  const getTeamMembers = (teamId: string): Member[] => {
+    return members.filter(member =>
+      member.teamMembers.some(tm => tm.team.id === teamId)
+    );
+  };
+
+  // Obtenir les membres sans équipe
+  const getMembersWithoutTeam = (): Member[] => {
+    return members.filter(member => member.teamMembers.length === 0);
+  };
+
+  // Filtrer l'utilisateur connecté si nécessaire (ADVICE_SOLICITATION)
+  const getFilteredMembers = (): Member[] => {
+    if (formData.decisionType === 'ADVICE_SOLICITATION' && session?.user?.id) {
+      return members.filter(m => m.userId !== session.user.id);
+    }
+    return members;
+  };
+
+  // Filtrer les équipes pour ne garder que celles avec des membres filtrés
+  const getFilteredTeams = (): Team[] => {
+    const filteredMembers = getFilteredMembers();
+    return teams.filter(team => {
+      const teamMembers = members.filter(m =>
+        m.teamMembers.some(tm => tm.team.id === team.id)
+      );
+      // Garder l'équipe si elle a au moins un membre filtré
+      return teamMembers.some(m => filteredMembers.includes(m));
+    });
+  };
+
+  // Vérifier si un user est sélectionné (via équipe OU individuellement)
+  const isUserSelected = (userId: string): boolean => {
+    // Vérifier si sélectionné individuellement
+    if (selectedUserIds.includes(userId)) {
+      return true;
+    }
+
+    // Vérifier si sélectionné via une équipe
+    const member = members.find(m => m.userId === userId);
+    if (!member) return false;
+
+    return member.teamMembers.some(tm =>
+      selectedTeamIds.includes(tm.team.id)
+    );
+  };
+
+  // Obtenir l'état de la checkbox d'une équipe
+  const getTeamCheckboxState = (teamId: string): 'checked' | 'indeterminate' | 'unchecked' => {
+    const teamMembers = getTeamMembers(teamId);
+    const filteredTeamMembers = teamMembers.filter(m => getFilteredMembers().includes(m));
+
+    if (filteredTeamMembers.length === 0) return 'unchecked';
+
+    const selectedCount = filteredTeamMembers.filter(m => isUserSelected(m.userId)).length;
+
+    if (selectedCount === 0) return 'unchecked';
+    if (selectedCount === filteredTeamMembers.length) return 'checked';
+    return 'indeterminate';
+  };
+
+  // Obtenir tous les users sélectionnés (pour envoi à l'API)
+  const getEffectiveSelectedUsers = (): string[] => {
+    const result = new Set<string>();
+
+    // Ajouter les users sélectionnés individuellement
+    selectedUserIds.forEach(id => result.add(id));
+
+    // Ajouter les users des équipes sélectionnées
+    selectedTeamIds.forEach(teamId => {
+      const teamMembers = getTeamMembers(teamId);
+      teamMembers.forEach(m => result.add(m.userId));
+    });
+
+    return Array.from(result);
+  };
+
+  // Toggle une équipe
+  const toggleTeam = (teamId: string) => {
+    const state = getTeamCheckboxState(teamId);
+    const teamMembers = getTeamMembers(teamId);
+    const filteredTeamMembers = teamMembers.filter(m => getFilteredMembers().includes(m));
+
+    if (state === 'unchecked' || state === 'indeterminate') {
+      // Cocher l'équipe : ajouter teamId, retirer les membres individuels de cette équipe
+      setSelectedTeamIds([...selectedTeamIds, teamId]);
+      setSelectedUserIds(selectedUserIds.filter(userId =>
+        !filteredTeamMembers.some(m => m.userId === userId)
+      ));
+    } else {
+      // Décocher l'équipe : retirer teamId et tous ses membres
+      setSelectedTeamIds(selectedTeamIds.filter(id => id !== teamId));
+      setSelectedUserIds(selectedUserIds.filter(userId =>
+        !filteredTeamMembers.some(m => m.userId === userId)
+      ));
+    }
+  };
+
+  // Toggle un user
+  const toggleUser = (userId: string) => {
+    const member = members.find(m => m.userId === userId);
+    if (!member) return;
+
+    if (isUserSelected(userId)) {
+      // Décocher : retirer de selectedUserIds et de toutes les équipes sélectionnées
+      setSelectedUserIds(selectedUserIds.filter(id => id !== userId));
+      // Retirer l'utilisateur des équipes sélectionnées (décocher les équipes qui le contiennent)
+      const userTeamIds = member.teamMembers.map(tm => tm.team.id);
+      setSelectedTeamIds(selectedTeamIds.filter(teamId => !userTeamIds.includes(teamId)));
+    } else {
+      // Cocher : ajouter à selectedUserIds
+      setSelectedUserIds([...selectedUserIds, userId]);
+    }
+  };
+
+  // Toggle l'expansion d'une équipe
+  const toggleTeamExpansion = (teamId: string) => {
+    if (expandedTeamIds.includes(teamId)) {
+      setExpandedTeamIds(expandedTeamIds.filter(id => id !== teamId));
+    } else {
+      setExpandedTeamIds([...expandedTeamIds, teamId]);
+    }
+  };
+
   // Charger les teams et members
   useEffect(() => {
     const fetchData = async () => {
@@ -160,6 +301,24 @@ export default function NewDecisionPage({
 
     fetchData();
   }, [slug]);
+
+  // Pré-sélectionner l'utilisateur connecté (sauf pour ADVICE_SOLICITATION)
+  useEffect(() => {
+    if (
+      session?.user?.id &&
+      members.length > 0 &&
+      formData.decisionType !== 'ADVICE_SOLICITATION' &&
+      formData.votingMode === 'INVITED' &&
+      !selectedUserIds.includes(session.user.id) &&
+      !draftId // Ne pas pré-sélectionner si on reprend un brouillon
+    ) {
+      // Vérifier que l'utilisateur est bien dans les membres
+      const currentUserMember = members.find(m => m.userId === session.user.id);
+      if (currentUserMember) {
+        setSelectedUserIds([session.user.id]);
+      }
+    }
+  }, [session, members, formData.decisionType, formData.votingMode, draftId]);
 
   // Sauvegarder manuellement le brouillon
   const handleManualSave = async () => {
@@ -292,22 +451,15 @@ export default function NewDecisionPage({
   const minimumParticipants = getMinimumParticipants();
 
   // Calculer le nombre total de participants sélectionnés
-  const getTotalParticipants = (): number => {
-    let total = 0;
+  const getTotalParticipants = (): { internal: number; external: number; total: number } => {
+    const internalCount = getEffectiveSelectedUsers().length;
+    const externalCount = externalParticipants.length;
 
-    // Compter les membres des équipes sélectionnées
-    selectedTeams.forEach(teamId => {
-      const team = teams.find(t => t.id === teamId);
-      if (team) total += team._count.members;
-    });
-
-    // Compter les membres individuels
-    total += selectedUsers.length;
-
-    // Compter les participants externes
-    total += externalParticipants.length;
-
-    return total;
+    return {
+      internal: internalCount,
+      external: externalCount,
+      total: internalCount + externalCount,
+    };
   };
 
   // Ajouter un participant externe à la liste
@@ -394,7 +546,7 @@ export default function NewDecisionPage({
 
       // Validation des participants (mode INVITED uniquement)
       if (formData.votingMode === 'INVITED') {
-        const totalParticipants = getTotalParticipants();
+        const { total: totalParticipants } = getTotalParticipants();
 
         if (totalParticipants === 0) {
           setError('Vous devez ajouter au moins un participant');
@@ -426,8 +578,8 @@ export default function NewDecisionPage({
 
       // Ajouter les participants (mode INVITED uniquement)
       if (formData.votingMode === 'INVITED') {
-        body.teamIds = selectedTeams;
-        body.userIds = selectedUsers;
+        body.teamIds = selectedTeamIds;
+        body.userIds = selectedUserIds;
         body.externalParticipants = externalParticipants;
       }
 
@@ -991,18 +1143,7 @@ export default function NewDecisionPage({
                       : 'hover:bg-gray-100'
                   }`}
                 >
-                  Équipes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setParticipantMode('users')}
-                  className={`px-4 py-2 rounded ${
-                    participantMode === 'users'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  Membres
+                  Équipes et membres
                 </button>
                 <button
                   type="button"
@@ -1013,77 +1154,150 @@ export default function NewDecisionPage({
                       : 'hover:bg-gray-100'
                   }`}
                 >
-                  Externes
+                  Invitations externes
                 </button>
               </div>
 
-              {/* Sélection d'équipes */}
+              {/* Onglet Équipes et membres */}
               {participantMode === 'teams' && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Sélectionnez les équipes à inviter (tous les membres seront ajoutés)
-                  </p>
-                  {teams.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic">Aucune équipe disponible</p>
+                <div className="border rounded-lg max-h-[600px] overflow-y-auto">
+                  {getFilteredTeams().length === 0 && getMembersWithoutTeam().filter(m => getFilteredMembers().includes(m)).length === 0 ? (
+                    <p className="text-sm text-gray-500 italic p-4">Aucun membre disponible</p>
                   ) : (
-                    teams.map((team) => (
-                      <label key={team.id} className="flex items-center p-3 border rounded hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={selectedTeams.includes(team.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTeams([...selectedTeams, team.id]);
-                            } else {
-                              setSelectedTeams(selectedTeams.filter((id) => id !== team.id));
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <span className="font-medium">{team.name}</span>
-                        <span className="text-sm text-gray-600 ml-2">
-                          ({team._count.members} membres)
-                        </span>
-                      </label>
-                    ))
+                    <div>
+                      {/* Équipes */}
+                      {getFilteredTeams().map((team) => {
+                        const teamMembers = getTeamMembers(team.id).filter(m => getFilteredMembers().includes(m));
+                        const checkboxState = getTeamCheckboxState(team.id);
+                        const isExpanded = expandedTeamIds.includes(team.id);
+
+                        return (
+                          <div key={team.id} className="border-b last:border-b-0">
+                            {/* Ligne de l'équipe */}
+                            <div className="flex items-center py-2 px-3 hover:bg-gray-50">
+                              <button
+                                type="button"
+                                onClick={() => toggleTeamExpansion(team.id)}
+                                className="mr-2 text-gray-600 hover:text-gray-900"
+                              >
+                                {isExpanded ? (
+                                  <ExpandMoreIcon fontSize="small" />
+                                ) : (
+                                  <ChevronRightIcon fontSize="small" />
+                                )}
+                              </button>
+                              <Checkbox
+                                checked={checkboxState === 'checked'}
+                                indeterminate={checkboxState === 'indeterminate'}
+                                onChange={() => toggleTeam(team.id)}
+                                size="small"
+                              />
+                              <span className="font-medium text-sm">{team.name}</span>
+                              <span className="text-xs text-gray-600 ml-2">({teamMembers.length} membres)</span>
+                            </div>
+
+                            {/* Membres de l'équipe (si dépliée) */}
+                            {isExpanded && (
+                              <div className="bg-gray-50">
+                                {teamMembers.map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center py-2 px-3 pl-12 hover:bg-gray-100"
+                                  >
+                                    <Checkbox
+                                      checked={isUserSelected(member.userId)}
+                                      onChange={() => toggleUser(member.userId)}
+                                      size="small"
+                                    />
+                                    <span className="text-sm">{member.user.name || 'Sans nom'}</span>
+                                    <span className="text-xs text-gray-600 ml-2">({member.user.email})</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Section "Sans équipe" */}
+                      {(() => {
+                        const membersWithoutTeam = getMembersWithoutTeam().filter(m => getFilteredMembers().includes(m));
+                        if (membersWithoutTeam.length === 0) return null;
+
+                        const isExpanded = expandedTeamIds.includes('no-team');
+                        const allSelected = membersWithoutTeam.every(m => isUserSelected(m.userId));
+                        const someSelected = membersWithoutTeam.some(m => isUserSelected(m.userId));
+                        const checkboxState = allSelected ? 'checked' : (someSelected ? 'indeterminate' : 'unchecked');
+
+                        return (
+                          <div className="border-b last:border-b-0">
+                            {/* Ligne "Sans équipe" */}
+                            <div className="flex items-center py-2 px-3 hover:bg-gray-50">
+                              <button
+                                type="button"
+                                onClick={() => toggleTeamExpansion('no-team')}
+                                className="mr-2 text-gray-600 hover:text-gray-900"
+                              >
+                                {isExpanded ? (
+                                  <ExpandMoreIcon fontSize="small" />
+                                ) : (
+                                  <ChevronRightIcon fontSize="small" />
+                                )}
+                              </button>
+                              <Checkbox
+                                checked={checkboxState === 'checked'}
+                                indeterminate={checkboxState === 'indeterminate'}
+                                onChange={() => {
+                                  if (allSelected) {
+                                    // Décocher tous
+                                    membersWithoutTeam.forEach(m => {
+                                      if (isUserSelected(m.userId)) {
+                                        toggleUser(m.userId);
+                                      }
+                                    });
+                                  } else {
+                                    // Cocher tous
+                                    membersWithoutTeam.forEach(m => {
+                                      if (!isUserSelected(m.userId)) {
+                                        toggleUser(m.userId);
+                                      }
+                                    });
+                                  }
+                                }}
+                                size="small"
+                              />
+                              <span className="font-medium text-sm text-gray-600 italic">Sans équipe</span>
+                              <span className="text-xs text-gray-600 ml-2">({membersWithoutTeam.length} membres)</span>
+                            </div>
+
+                            {/* Membres sans équipe (si dépliée) */}
+                            {isExpanded && (
+                              <div className="bg-gray-50">
+                                {membersWithoutTeam.map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center py-2 px-3 pl-12 hover:bg-gray-100"
+                                  >
+                                    <Checkbox
+                                      checked={isUserSelected(member.userId)}
+                                      onChange={() => toggleUser(member.userId)}
+                                      size="small"
+                                    />
+                                    <span className="text-sm">{member.user.name || 'Sans nom'}</span>
+                                    <span className="text-xs text-gray-600 ml-2">({member.user.email})</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* Sélection de membres */}
-              {participantMode === 'users' && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Sélectionnez les membres à inviter individuellement
-                  </p>
-                  {members.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic">Aucun membre disponible</p>
-                  ) : (
-                    members.map((member) => (
-                      <label key={member.id} className="flex items-center p-3 border rounded hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(member.userId)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUsers([...selectedUsers, member.userId]);
-                            } else {
-                              setSelectedUsers(selectedUsers.filter((id) => id !== member.userId));
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <span className="font-medium">{member.user.name || 'Sans nom'}</span>
-                        <span className="text-sm text-gray-600 ml-2">
-                          ({member.user.email})
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {/* Participants externes */}
+              {/* Onglet Invitations externes */}
               {participantMode === 'external' && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">
@@ -1141,9 +1355,17 @@ export default function NewDecisionPage({
               {/* Résumé des participants sélectionnés */}
               <div className="p-3 bg-gray-50 border rounded">
                 <p className="text-sm font-medium">
-                  Total de participants sélectionnés : <span className="text-blue-600">{getTotalParticipants()}</span>
+                  {formData.decisionType === 'ADVICE_SOLICITATION' ? (
+                    <>
+                      {getTotalParticipants().internal} membres internes et {getTotalParticipants().external} invités externes sont sollicités pour leur avis
+                    </>
+                  ) : (
+                    <>
+                      {getTotalParticipants().internal} membres internes et {getTotalParticipants().external} invités externes participent à la décision
+                    </>
+                  )}
                 </p>
-                {formData.decisionType === 'ADVICE_SOLICITATION' && getTotalParticipants() < minimumParticipants && (
+                {formData.decisionType === 'ADVICE_SOLICITATION' && getTotalParticipants().total < minimumParticipants && (
                   <p className="text-sm text-red-600 mt-1">
                     ⚠️ Minimum requis : {minimumParticipants} personne(s)
                   </p>

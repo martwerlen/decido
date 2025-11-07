@@ -721,9 +721,20 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
      - **NUANCED_VOTE**: Multiple proposals + scale selection (3/5/7 levels)
    - Deadline field (required for all except ADVICE_SOLICITATION, hidden for ADVICE_SOLICITATION)
    - **Participants section** (only for INVITED mode, hidden for PUBLIC_LINK):
-     - Teams selection (adds all team members)
-     - Individual members selection
-     - External participants (email + name)
+     - **Two tabs**: "Équipes et membres" and "Invitations externes"
+     - **Équipes et membres tab**:
+       - Hierarchical view with collapsible teams (chevron icons)
+       - Each team shows checkbox (supports indeterminate state) + expand/collapse button
+       - Team members visible when expanded, indented with individual checkboxes
+       - "Sans équipe" section at bottom for members not in any team
+       - Selecting a team selects all its members; deselecting removes all
+       - Members can appear in multiple teams; selecting them in one reflects in all
+       - **For ADVICE_SOLICITATION**: Current user (decision creator) is filtered out and cannot be selected
+       - **For other types (CONSENSUS, MAJORITY, NUANCED_VOTE)**: Current user appears in list and is pre-selected by default (can be unchecked)
+       - Max height 600px with scroll for long lists
+       - Compact design with hover effects
+     - **Invitations externes tab**: Add external participants by email + name
+     - **Summary**: Shows "X membres internes et Y invités externes participent à la décision" (or "sont sollicités pour leur avis" for ADVICE_SOLICITATION)
      - Validation of ADVICE_SOLICITATION constraints (minimum participants based on org size)
 3. User clicks "Lancer la décision" (not "Créer et configurer" anymore)
 4. API creates decision with `status='OPEN'` + creates all participants + sends emails to external participants
@@ -740,6 +751,10 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Drafts accessible from dashboard → "Continuer" reopens `/new` with pre-filled data (except participants)
 
 **API Endpoint Changes:**
+- `GET /api/organizations/[slug]/members` now includes team memberships:
+  - Returns `members` with `teamMembers` relation populated
+  - Each member includes `teamMembers: Array<{ team: { id, name } }>`
+  - Used by `/new` page to build hierarchical team/member selection UI
 - `POST /api/organizations/[slug]/decisions` now accepts:
   - `launch: boolean` flag (default: false)
   - `teamIds: string[]` (team IDs to invite)
