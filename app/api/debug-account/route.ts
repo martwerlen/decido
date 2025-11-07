@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // 3. Compter les décisions créées
     const decisionsCreated = await prisma.decision.count({
-      where: { createdById: user.id }
+      where: { creatorId: user.id }
     })
 
     // 4. Compter les votes
