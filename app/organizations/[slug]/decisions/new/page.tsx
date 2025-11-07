@@ -534,12 +534,6 @@ export default function NewDecisionPage({
         </h1>
       </div>
 
-      {error && (
-        <div className="px-4 py-3 rounded mb-4" style={{ backgroundColor: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)' }}>
-          {error}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Titre */}
         <div>
@@ -560,7 +554,7 @@ export default function NewDecisionPage({
         {/* Description */}
         <div>
           <label htmlFor="description" className="block font-medium mb-2">
-            Description *
+            Contexte et enjeux *
           </label>
           <textarea
             id="description"
@@ -569,7 +563,7 @@ export default function NewDecisionPage({
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Décrivez le contexte et l'objet de la décision..."
+            placeholder="Décrivez le contexte et les enjeux"
           />
         </div>
 
@@ -1164,6 +1158,13 @@ export default function NewDecisionPage({
           <div className="flex items-center gap-2 text-sm text-green-600 pt-4">
             <CheckCircleIcon fontSize="small" />
             <span>Sauvegardé à {lastSavedAt.toLocaleTimeString()}</span>
+          </div>
+        )}
+
+        {/* Affichage des erreurs */}
+        {error && (
+          <div className="px-4 py-3 rounded mb-4" style={{ backgroundColor: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)' }}>
+            {error}
           </div>
         )}
 
