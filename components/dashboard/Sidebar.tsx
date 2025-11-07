@@ -50,6 +50,7 @@ import {
   MoreHoriz,
   QrCode2,
   Dashboard as DashboardIcon,
+  Menu as MenuIcon,
 } from "@mui/icons-material"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
@@ -137,9 +138,10 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const { data: session } = useSession()
   const { isDarkMode } = useDarkMode()
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('lg')) // < 1024px
+  const isMobile = useMediaQuery('(max-width:800px)') // < 800px
 
   const [open, setOpen] = useState(true)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [organization, setOrganization] = useState(currentOrgSlug || "")
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
@@ -343,123 +345,228 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     }
   }
 
-  // Menu horizontal pour mobile/tablette
+  const toggleMobileDrawer = () => {
+    setMobileDrawerOpen(!mobileDrawerOpen)
+  }
+
+  const closeMobileDrawer = () => {
+    setMobileDrawerOpen(false)
+  }
+
+  // Menu hamburger pour mobile/tablette (< 800px)
   if (isMobile) {
     return (
       <>
+        {/* AppBar avec logo + bouton hamburger */}
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-          <Toolbar sx={{ gap: 1, minHeight: { xs: 56, sm: 64 }, px: { xs: 1, sm: 2 } }}>
+          <Toolbar sx={{ minHeight: { xs: 56 }, px: 2 }}>
+            {/* Bouton hamburger */}
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={toggleMobileDrawer}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+
             {/* Logo Decidoo */}
             <Box
-              sx={{ display: "flex", alignItems: "center", cursor: "pointer", mr: 1 }}
+              sx={{ display: "flex", alignItems: "center", cursor: "pointer", flexGrow: 1 }}
               onClick={handleDashboard}
             >
               <Image
                 src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
                 alt="Decidoo"
-                width={100}
-                height={30}
+                width={120}
+                height={32}
                 style={{ objectFit: "contain" }}
                 priority
               />
             </Box>
-
-            {/* Nom de l'organisation (dropdown) */}
-            {loading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <>
-                <Button
-                  onClick={handleOrgMenuOpen}
-                  startIcon={<Business />}
-                  sx={{
-                    textTransform: 'none',
-                    color: 'inherit',
-                    display: { xs: 'none', sm: 'flex' },
-                    maxWidth: 200,
-                  }}
-                >
-                  <Typography variant="body2" noWrap>
-                    {organizations.find(o => o.slug === organization)?.name || ''}
-                  </Typography>
-                </Button>
-                <IconButton
-                  onClick={handleOrgMenuOpen}
-                  sx={{ display: { xs: 'flex', sm: 'none' } }}
-                  color="inherit"
-                >
-                  <Business />
-                </IconButton>
-                <Menu
-                  anchorEl={orgMenuAnchor}
-                  open={Boolean(orgMenuAnchor)}
-                  onClose={handleOrgMenuClose}
-                >
-                  {organizations.map((org) => (
-                    <MenuItem key={org.id} onClick={() => handleOrgSelect(org.slug)}>
-                      {org.name}
-                    </MenuItem>
-                  ))}
-                  <Divider />
-                  <MenuItem onClick={() => handleOrgSelect("__new__")}>
-                    <Add fontSize="small" sx={{ mr: 1 }} />
-                    Nouvelle organisation
-                  </MenuItem>
-                </Menu>
-              </>
-            )}
-
-            <Box sx={{ flexGrow: 1 }} />
-
-            {/* Équipes */}
-            <Tooltip title="Équipes">
-              <IconButton onClick={handleTeams} color="inherit" disabled={!organization}>
-                <AccountTree />
-              </IconButton>
-            </Tooltip>
-
-            {/* Nouvelle décision */}
-            <Button
-              onClick={handleNewDecision}
-              variant="contained"
-              startIcon={<Add />}
-              disabled={!organization}
-              sx={{
-                display: { xs: 'none', sm: 'flex' },
-                textTransform: 'none',
-              }}
-            >
-              Nouvelle décision
-            </Button>
-            <Tooltip title="Nouvelle décision">
-              <IconButton
-                onClick={handleNewDecision}
-                color="inherit"
-                disabled={!organization}
-                sx={{ display: { xs: 'flex', sm: 'none' } }}
-              >
-                <Add />
-              </IconButton>
-            </Tooltip>
-
-            {/* Recherche */}
-            <Tooltip title="Rechercher">
-              <IconButton color="inherit">
-                <Search />
-              </IconButton>
-            </Tooltip>
-
-            {/* Paramètres */}
-            <Tooltip title="Paramètres">
-              <IconButton onClick={handleSettingsClick} color="inherit">
-                <Settings />
-              </IconButton>
-            </Tooltip>
           </Toolbar>
         </AppBar>
 
         {/* Spacer pour le contenu */}
         <Toolbar />
+
+        {/* Drawer vertical qui s'ouvre/ferme */}
+        <Drawer
+          variant="temporary"
+          open={mobileDrawerOpen}
+          onClose={closeMobileDrawer}
+          ModalProps={{
+            keepMounted: true, // Meilleure performance sur mobile
+          }}
+          sx={{
+            display: { xs: 'block', sm: 'block' },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: 280,
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            {/* Header avec logo */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                p: 2,
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Image
+                src={isDarkMode ? "/logo-dark.svg" : "/logo.svg"}
+                alt="Decidoo"
+                width={150}
+                height={40}
+                style={{ objectFit: "contain" }}
+                priority
+              />
+            </Box>
+
+            {/* Sélecteur d'organisation */}
+            <Box sx={{ p: 2 }}>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              ) : (
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={organization || ""}
+                    onChange={(e) => {
+                      handleOrganizationChange(e)
+                      closeMobileDrawer()
+                    }}
+                    startAdornment={<Business sx={{ mr: 1, color: "action.active" }} />}
+                    displayEmpty
+                  >
+                    {organizations.map((org) => (
+                      <MenuItem key={org.id} value={org.slug}>
+                        {org.name}
+                      </MenuItem>
+                    ))}
+                    <Divider />
+                    <MenuItem value="__new__">
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Add fontSize="small" />
+                        <span>Nouvelle organisation</span>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+
+            <Divider />
+
+            {/* Menu de navigation */}
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    handleDashboard()
+                    closeMobileDrawer()
+                  }}
+                  disabled={!organization}
+                >
+                  <ListItemIcon>
+                    <DashboardIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Décisions" />
+                </ListItemButton>
+              </ListItem>
+
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    handleTeams()
+                    closeMobileDrawer()
+                  }}
+                  disabled={!organization}
+                >
+                  <ListItemIcon>
+                    <AccountTree />
+                  </ListItemIcon>
+                  <ListItemText primary="Équipes" />
+                </ListItemButton>
+              </ListItem>
+
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    handleNewDecision()
+                    closeMobileDrawer()
+                  }}
+                  disabled={!organization}
+                  sx={{
+                    backgroundColor: "primary.main",
+                    color: "white",
+                    mx: 2,
+                    my: 1,
+                    borderRadius: 1,
+                    "&:hover": {
+                      backgroundColor: "primary.dark",
+                    },
+                    "&.Mui-disabled": {
+                      backgroundColor: "action.disabledBackground",
+                      color: "action.disabled",
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: "inherit" }}>
+                    <Add />
+                  </ListItemIcon>
+                  <ListItemText primary="Nouvelle décision" />
+                </ListItemButton>
+              </ListItem>
+
+              <Divider sx={{ my: 1 }} />
+
+              <ListItem disablePadding>
+                <ListItemButton onClick={closeMobileDrawer}>
+                  <ListItemIcon>
+                    <Search />
+                  </ListItemIcon>
+                  <ListItemText primary="Rechercher" />
+                </ListItemButton>
+              </ListItem>
+
+              <ListItem disablePadding>
+                <ListItemButton onClick={handleSettingsClick}>
+                  <ListItemIcon>
+                    <Settings />
+                  </ListItemIcon>
+                  <ListItemText primary="Paramètres" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+
+            <Box sx={{ flexGrow: 1 }} />
+
+            <Divider />
+
+            {/* Déconnexion */}
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton onClick={handleLogoutFromMenu}>
+                  <ListItemIcon>
+                    <Logout />
+                  </ListItemIcon>
+                  <ListItemText primary="Se déconnecter" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+        </Drawer>
 
         {/* Menu des paramètres */}
         <Menu
