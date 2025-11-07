@@ -469,6 +469,13 @@ export default function NewDecisionPage({
       return;
     }
 
+    // Valider le format de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(externalEmail)) {
+      setError('Veuillez saisir une adresse email valide');
+      return;
+    }
+
     // Vérifier que l'email n'est pas déjà dans la liste
     if (externalParticipants.some(p => p.email === externalEmail)) {
       setError('Cet email est déjà dans la liste');
@@ -1309,24 +1316,29 @@ export default function NewDecisionPage({
                   <p className="text-sm text-gray-600">
                     Ajoutez des personnes externes par email (elles ne seront pas membres de l'organisation)
                   </p>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={externalEmail}
-                    onChange={(e) => setExternalEmail(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nom complet"
-                    value={externalName}
-                    onChange={(e) => setExternalName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
+
+                  {/* Champs côte à côte (responsive) */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={externalEmail}
+                      onChange={(e) => setExternalEmail(e.target.value)}
+                      className="flex-1 sm:w-[60%] px-3 py-2 border rounded-lg text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Nom complet"
+                      value={externalName}
+                      onChange={(e) => setExternalName(e.target.value)}
+                      className="flex-1 sm:w-[40%] px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleAddExternalParticipant}
-                    className="px-4 py-2 border rounded-lg"
+                    className="px-4 py-2 border rounded-lg text-sm"
                     style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -1334,25 +1346,30 @@ export default function NewDecisionPage({
                     + Ajouter à la liste
                   </button>
 
-                  {/* Liste des participants externes ajoutés */}
+                  {/* Card unique pour tous les participants externes */}
                   {externalParticipants.length > 0 && (
-                    <div className="space-y-2 mt-4">
-                      <p className="text-sm font-medium">Participants externes ajoutés :</p>
-                      {externalParticipants.map((participant, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded bg-gray-50">
-                          <div>
-                            <span className="font-medium">{participant.name}</span>
-                            <span className="text-sm text-gray-600 ml-2">({participant.email})</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveExternalParticipant(participant.email)}
-                            className="text-red-600 hover:text-red-800 text-sm"
+                    <div className="border rounded-lg bg-gray-50 p-3">
+                      <p className="text-sm font-medium mb-3">Participants externes ajoutés :</p>
+                      <div className="space-y-2">
+                        {externalParticipants.map((participant, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200"
                           >
-                            Retirer
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex-1">
+                              <span className="text-sm font-medium">{participant.name}</span>
+                              <span className="text-sm text-gray-600 ml-2">({participant.email})</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExternalParticipant(participant.email)}
+                              className="text-red-600 hover:text-red-800 text-sm ml-2"
+                            >
+                              Retirer
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
