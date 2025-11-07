@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        organizations: {
+        memberships: {
           include: {
             organization: true
           }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Organisations
-    const organizations = user.organizations.map(membership => ({
+    const organizations = user.memberships.map(membership => ({
       name: membership.organization.name,
       slug: membership.organization.slug,
       slugLength: membership.organization.slug.length,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       id: user.id,
       email: user.email,
       name: user.name,
-      lastOrganizationSlug: user.organizations[0]?.organization.slug || null
+      lastOrganizationSlug: user.memberships[0]?.organization.slug || null
     }
     const jwtSize = JSON.stringify(jwtData).length
 
@@ -80,9 +80,9 @@ export async function GET(request: NextRequest) {
     if (user.id.length > 50) warnings.push(`ID utilisateur anormalement long (${user.id.length} caractères)`)
     if (user.name && user.name.length > 100) warnings.push(`Nom anormalement long (${user.name.length} caractères)`)
     if (user.email.length > 100) warnings.push(`Email anormalement long (${user.email.length} caractères)`)
-    if (user.organizations.some(m => m.organization.slug.length > 100)) {
+    if (user.memberships.some(m => m.organization.slug.length > 100)) {
       warnings.push(`Un ou plusieurs slugs d'organisation anormalement longs`)
-      user.organizations.forEach(m => {
+      user.memberships.forEach(m => {
         if (m.organization.slug.length > 100) {
           warnings.push(`  ${m.organization.name}: ${m.organization.slug.length} caractères`)
         }
