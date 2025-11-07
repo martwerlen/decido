@@ -283,7 +283,7 @@ export default function NewDecisionPage({
         const teamsRes = await fetch(`/api/organizations/${slug}/teams`);
         if (teamsRes.ok) {
           const teamsData = await teamsRes.json();
-          setTeams(teamsData.teams || []);
+          setTeams(teamsData || []); // API retourne directement le tableau
         }
 
         // Fetch members
