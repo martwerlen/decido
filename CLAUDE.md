@@ -733,7 +733,11 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
        - **For other types (CONSENSUS, MAJORITY, NUANCED_VOTE)**: Current user appears in list and is pre-selected by default (can be unchecked)
        - Max height 600px with scroll for long lists
        - Compact design with hover effects
-     - **Invitations externes tab**: Add external participants by email + name
+     - **Invitations externes tab**:
+       - Email (60%) and Name (40%) fields side-by-side in wide mode, stacked on mobile
+       - Email validation with regex before adding to list
+       - Single card displaying all added external participants
+       - Consistent text-sm font size throughout
      - **Summary**: Shows "X membres internes et Y invités externes participent à la décision" (or "sont sollicités pour leur avis" for ADVICE_SOLICITATION)
      - Validation of ADVICE_SOLICITATION constraints (minimum participants based on org size)
 3. User clicks "Lancer la décision" (not "Créer et configurer" anymore)
