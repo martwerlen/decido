@@ -510,11 +510,22 @@ export async function POST(
         }
       }
 
+      // Dédupliquer les participants (SQLite ne supporte pas skipDuplicates)
+      // Garder seulement le premier participant par userId
+      const uniqueParticipants = [];
+      const seenUserIds = new Set<string>();
+
+      for (const participant of participantsToCreate) {
+        if (!seenUserIds.has(participant.userId)) {
+          seenUserIds.add(participant.userId);
+          uniqueParticipants.push(participant);
+        }
+      }
+
       // Créer tous les participants internes en une seule requête
-      if (participantsToCreate.length > 0) {
+      if (uniqueParticipants.length > 0) {
         await prisma.decisionParticipant.createMany({
-          data: participantsToCreate,
-          skipDuplicates: true,
+          data: uniqueParticipants,
         });
       }
 
