@@ -23,10 +23,6 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce brouillon ?')) {
-      return;
-    }
-
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/organizations/${orgSlug}/decisions/${draft.id}`, {
@@ -108,13 +104,16 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
         </div>
 
         <div className="flex gap-2 flex-col sm:flex-row">
-          <Link
+          <Button
+            component={Link}
             href={`/organizations/${orgSlug}/decisions/new?draft=${draft.id}`}
-            className="px-3 py-1.5 rounded text-xs font-medium text-white whitespace-nowrap text-center"
-            style={{ backgroundColor: 'var(--color-primary)' }}
+            variant="outlined"
+            color="primary"
+            size="small"
+            sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
           >
             Continuer
-          </Link>
+          </Button>
           <Button
             onClick={handleDelete}
             disabled={isDeleting}

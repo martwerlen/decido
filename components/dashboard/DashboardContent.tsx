@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TextField, Button, Box, Chip, Typography } from '@mui/material';
-import { Add, Search } from '@mui/icons-material';
+import { Add, Search, QrCode2 } from '@mui/icons-material';
 import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
 import DraftCard from './DraftCard';
 import UserAvatar from '@/components/common/UserAvatar';
@@ -20,10 +20,8 @@ interface DashboardContentProps {
   organization: { name: string };
   userTeams: Team[];
   userId: string;
-  draftDecisions: any[];
-  myActiveDecisions: any[];
-  publicLinkDecisions: any[];
-  closedDecisions: any[];
+  initialDecisions: any[];
+  totalCount: number;
 }
 
 export default function DashboardContent({
@@ -31,10 +29,8 @@ export default function DashboardContent({
   organization,
   userTeams,
   userId,
-  draftDecisions,
-  myActiveDecisions,
-  publicLinkDecisions,
-  closedDecisions,
+  initialDecisions,
+  totalCount,
 }: DashboardContentProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,52 +39,52 @@ export default function DashboardContent({
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
     typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
+  const [allDecisions, setAllDecisions] = useState(initialDecisions);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Combiner toutes les décisions avec leurs métadonnées
-  const allDecisions = useMemo(() => {
-    const decisions = [];
+  const decisionsWithMeta = useMemo(() => {
+    return allDecisions.map((decision) => {
+      // Déterminer la catégorie de la décision
+      let category = 'closed';
+      if (decision.status === 'DRAFT') {
+        category = 'draft';
+      } else if (decision.status === 'OPEN') {
+        if (decision.votingMode === 'PUBLIC_LINK') {
+          category = 'publicLink';
+        } else {
+          category = 'active';
+        }
+      }
 
-    // Ajouter les brouillons
-    for (const decision of draftDecisions) {
-      decisions.push({
+      return {
         ...decision,
-        status: 'DRAFT',
-        _meta: { category: 'draft' },
-      });
-    }
+        _meta: { category },
+      };
+    });
+  }, [allDecisions]);
 
-    // Ajouter les décisions INVITED en cours
-    for (const decision of myActiveDecisions) {
-      decisions.push({
-        ...decision,
-        status: 'OPEN',
-        _meta: { category: 'active' },
-      });
+  // Fonction pour charger plus de décisions
+  const loadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions?skip=${allDecisions.length}&take=20`
+      );
+      const data = await response.json();
+      if (data.decisions) {
+        setAllDecisions([...allDecisions, ...data.decisions]);
+      }
+    } catch (error) {
+      console.error('Error loading more decisions:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
-
-    // Ajouter les décisions PUBLIC_LINK en cours
-    for (const decision of publicLinkDecisions) {
-      decisions.push({
-        ...decision,
-        status: 'OPEN',
-        _meta: { category: 'publicLink' },
-      });
-    }
-
-    // Ajouter les décisions terminées
-    for (const decision of closedDecisions) {
-      decisions.push({
-        ...decision,
-        _meta: { category: 'closed' },
-      });
-    }
-
-    return decisions;
-  }, [draftDecisions, myActiveDecisions, publicLinkDecisions, closedDecisions]);
+  };
 
   // Filtrer les décisions en fonction des filtres et de la recherche
   const filteredDecisions = useMemo(() => {
-    return allDecisions.filter((decision) => {
+    return decisionsWithMeta.filter((decision) => {
       // Filtre 1: Statut
       const statusMatches = filters.statusFilter.includes(decision.status);
       if (!statusMatches) return false;
@@ -102,7 +98,12 @@ export default function DashboardContent({
           }
         } else {
           // Filtrer par équipe
-          if (!decision.team || decision.team.id !== filters.scopeFilter) {
+          // Vérifier si la décision est dédiée à l'équipe OU si au moins un participant a été invité via cette équipe
+          const isTeamDecision = decision.team?.id === filters.scopeFilter;
+          const hasTeamParticipants = decision.participants?.some(
+            (p: any) => p.teamId === filters.scopeFilter
+          );
+          if (!isTeamDecision && !hasTeamParticipants) {
             return false;
           }
         }
@@ -127,7 +128,7 @@ export default function DashboardContent({
 
       return true;
     });
-  }, [allDecisions, filters, userId, searchQuery]);
+  }, [decisionsWithMeta, filters, userId, searchQuery]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -191,7 +192,8 @@ export default function DashboardContent({
               }
 
               // Pour toutes les autres décisions : afficher une card compacte
-              const hasVoted = decision.participants?.[0]?.hasVoted || false;
+              const userParticipant = decision.participants?.find((p: any) => p.userId === userId);
+              const hasVoted = userParticipant?.hasVoted || false;
               const isPublicLink = decision._meta.category === 'publicLink';
               const isClosed = decision._meta.category === 'closed';
 
@@ -223,6 +225,9 @@ export default function DashboardContent({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                        {decision.votingMode === 'PUBLIC_LINK' && (
+                          <QrCode2 sx={{ fontSize: '1.25rem', color: 'action.active' }} />
+                        )}
                         <Link
                           href={targetUrl}
                           className="text-sm font-semibold truncate"
@@ -248,7 +253,7 @@ export default function DashboardContent({
                             sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
                           />
                         )}
-                        {isPublicLink && (
+                        {isPublicLink && !isClosed && (
                           <Chip
                             label="Vote anonyme"
                             size="small"
@@ -311,6 +316,21 @@ export default function DashboardContent({
               );
             })}
           </div>
+        )}
+
+        {/* Bouton "Charger 20 de plus" */}
+        {filteredDecisions.length > 0 && allDecisions.length < totalCount && (
+          <Box sx={{ mt: 4, textAlign: 'center' }}>
+            <Button
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              variant="outlined"
+              color="primary"
+              size="large"
+            >
+              {isLoadingMore ? 'Chargement...' : `Charger 20 décisions de plus (${allDecisions.length}/${totalCount})`}
+            </Button>
+          </Box>
         )}
       </section>
     </div>

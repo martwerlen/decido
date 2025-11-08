@@ -6,7 +6,7 @@ import { logDecisionCreated } from '@/lib/decision-logger';
 import { sendEmail } from '@/lib/email';
 import crypto from 'crypto';
 
-// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
+// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation avec pagination
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -18,6 +18,9 @@ export async function GET(
     }
 
     const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const skip = parseInt(searchParams.get('skip') || '0', 10);
+    const take = parseInt(searchParams.get('take') || '20', 10);
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -42,7 +45,14 @@ export async function GET(
       return Response.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Récupérer les décisions de l'organisation
+    // Compter le nombre total de décisions
+    const totalCount = await prisma.decision.count({
+      where: {
+        organizationId: organization.id,
+      },
+    });
+
+    // Récupérer les décisions de l'organisation avec pagination
     const decisions = await prisma.decision.findMany({
       where: {
         organizationId: organization.id,
@@ -53,6 +63,7 @@ export async function GET(
             id: true,
             name: true,
             email: true,
+            image: true,
           },
         },
         team: {
@@ -61,20 +72,32 @@ export async function GET(
             name: true,
           },
         },
+        participants: {
+          where: {
+            userId: session.user.id,
+          },
+          select: {
+            hasVoted: true,
+          },
+        },
         _count: {
           select: {
             votes: true,
             comments: true,
             proposals: true,
+            participants: true,
+            anonymousVoteLogs: true,
           },
         },
       },
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take,
     });
 
-    return Response.json({ decisions });
+    return Response.json({ decisions, totalCount });
   } catch (error) {
     console.error('Error fetching decisions:', error);
     return Response.json(
