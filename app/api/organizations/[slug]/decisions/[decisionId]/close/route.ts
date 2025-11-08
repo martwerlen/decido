@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logDecisionClosed } from '@/lib/decision-logger';
+import { calculateFinalDecisionResult } from '@/lib/decision-logic';
 
 /**
  * PATCH /api/organizations/[slug]/decisions/[decisionId]/close
@@ -38,11 +39,34 @@ export async function PATCH(
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Récupérer la décision
+    // Récupérer la décision avec les données nécessaires pour calculer le résultat
     const decision = await prisma.decision.findUnique({
       where: {
         id: decisionId,
         organizationId: org.id
+      },
+      include: {
+        votes: {
+          select: {
+            id: true,
+            value: true,
+          },
+        },
+        proposals: {
+          include: {
+            proposalVotes: true,
+          },
+        },
+        nuancedProposals: {
+          include: {
+            nuancedVotes: {
+              select: {
+                id: true,
+                mention: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -60,11 +84,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'La décision est déjà fermée' }, { status: 400 });
     }
 
+    // Calculer le résultat final
+    const finalResult = calculateFinalDecisionResult(decision);
+
     // Fermer la décision
     const updatedDecision = await prisma.decision.update({
       where: { id: decisionId },
       data: {
         status: 'CLOSED',
+        result: finalResult,
         decidedAt: new Date(),
       },
     });

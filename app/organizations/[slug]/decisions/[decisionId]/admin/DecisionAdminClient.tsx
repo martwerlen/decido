@@ -29,6 +29,8 @@ interface Decision {
   initialProposal: string | null;
   proposal: string | null;
   conclusion: string | null;
+  result: string | null;
+  decidedAt: Date | null;
   endDate: Date | null;
   participants: Participant[];
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TextField, Button, Box, Chip, Typography } from '@mui/material';
-import { Add, Search } from '@mui/icons-material';
+import { Add, Search, QrCode2 } from '@mui/icons-material';
 import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
 import DraftCard from './DraftCard';
 import UserAvatar from '@/components/common/UserAvatar';
@@ -20,10 +20,8 @@ interface DashboardContentProps {
   organization: { name: string };
   userTeams: Team[];
   userId: string;
-  draftDecisions: any[];
-  myActiveDecisions: any[];
-  publicLinkDecisions: any[];
-  closedDecisions: any[];
+  initialDecisions: any[];
+  totalCount: number;
 }
 
 export default function DashboardContent({
@@ -31,10 +29,8 @@ export default function DashboardContent({
   organization,
   userTeams,
   userId,
-  draftDecisions,
-  myActiveDecisions,
-  publicLinkDecisions,
-  closedDecisions,
+  initialDecisions,
+  totalCount,
 }: DashboardContentProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,91 +39,95 @@ export default function DashboardContent({
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
     typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
+  const [decisions, setDecisions] = useState(initialDecisions);
+  const [total, setTotal] = useState(totalCount);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
 
-  // Combiner toutes les décisions avec leurs métadonnées
-  const allDecisions = useMemo(() => {
-    const decisions = [];
-
-    // Ajouter les brouillons
-    for (const decision of draftDecisions) {
-      decisions.push({
-        ...decision,
-        status: 'DRAFT',
-        _meta: { category: 'draft' },
-      });
-    }
-
-    // Ajouter les décisions INVITED en cours
-    for (const decision of myActiveDecisions) {
-      decisions.push({
-        ...decision,
-        status: 'OPEN',
-        _meta: { category: 'active' },
-      });
-    }
-
-    // Ajouter les décisions PUBLIC_LINK en cours
-    for (const decision of publicLinkDecisions) {
-      decisions.push({
-        ...decision,
-        status: 'OPEN',
-        _meta: { category: 'publicLink' },
-      });
-    }
-
-    // Ajouter les décisions terminées
-    for (const decision of closedDecisions) {
-      decisions.push({
-        ...decision,
-        _meta: { category: 'closed' },
-      });
-    }
-
-    return decisions;
-  }, [draftDecisions, myActiveDecisions, publicLinkDecisions, closedDecisions]);
-
-  // Filtrer les décisions en fonction des filtres et de la recherche
-  const filteredDecisions = useMemo(() => {
-    return allDecisions.filter((decision) => {
-      // Filtre 1: Statut
-      const statusMatches = filters.statusFilter.includes(decision.status);
-      if (!statusMatches) return false;
-
-      // Filtre 2: Périmètre
-      if (filters.scopeFilter !== 'ALL') {
-        if (filters.scopeFilter === 'ME') {
-          // Montrer seulement les décisions créées par l'utilisateur
-          if (decision.creator?.id !== userId && decision.creatorId !== userId) {
-            return false;
-          }
+  // Combiner toutes les décisions avec leurs métadonnées (pour l'affichage)
+  const decisionsWithMeta = useMemo(() => {
+    return decisions.map((decision) => {
+      // Déterminer la catégorie de la décision
+      let category = 'closed';
+      if (decision.status === 'DRAFT') {
+        category = 'draft';
+      } else if (decision.status === 'OPEN') {
+        if (decision.votingMode === 'PUBLIC_LINK') {
+          category = 'publicLink';
         } else {
-          // Filtrer par équipe
-          if (!decision.team || decision.team.id !== filters.scopeFilter) {
-            return false;
-          }
+          category = 'active';
         }
       }
 
-      // Filtre 3: Type
-      const typeMatches = filters.typeFilter.includes(decision.decisionType);
-      if (!typeMatches) return false;
-
-      // Filtre 4: Recherche (titre, description, proposition)
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const titleMatch = decision.title?.toLowerCase().includes(query);
-        const descriptionMatch = decision.description?.toLowerCase().includes(query);
-        const proposalMatch = decision.proposal?.toLowerCase().includes(query);
-        const initialProposalMatch = decision.initialProposal?.toLowerCase().includes(query);
-
-        if (!titleMatch && !descriptionMatch && !proposalMatch && !initialProposalMatch) {
-          return false;
-        }
-      }
-
-      return true;
+      return {
+        ...decision,
+        _meta: { category },
+      };
     });
-  }, [allDecisions, filters, userId, searchQuery]);
+  }, [decisions]);
+
+  // Construire les paramètres de requête pour l'API
+  const buildQueryParams = (skip: number) => {
+    const params = new URLSearchParams();
+    params.set('skip', skip.toString());
+    params.set('take', '20');
+    if (filters.statusFilter.length > 0) {
+      params.set('status', filters.statusFilter.join(','));
+    }
+    if (filters.scopeFilter !== 'ALL') {
+      params.set('scope', filters.scopeFilter);
+    }
+    if (filters.typeFilter.length > 0) {
+      params.set('type', filters.typeFilter.join(','));
+    }
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+    return params.toString();
+  };
+
+  // Recharger les décisions depuis le début quand les filtres changent
+  const reloadDecisions = async () => {
+    setIsReloading(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions?${buildQueryParams(0)}`
+      );
+      const data = await response.json();
+      if (data.decisions) {
+        setDecisions(data.decisions);
+        setTotal(data.totalCount || 0);
+      }
+    } catch (error) {
+      console.error('Error reloading decisions:', error);
+    } finally {
+      setIsReloading(false);
+    }
+  };
+
+  // Écouter les changements de filtres et de recherche
+  useEffect(() => {
+    reloadDecisions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchQuery]);
+
+  // Fonction pour charger plus de décisions
+  const loadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions?${buildQueryParams(decisions.length)}`
+      );
+      const data = await response.json();
+      if (data.decisions) {
+        setDecisions([...decisions, ...data.decisions]);
+      }
+    } catch (error) {
+      console.error('Error loading more decisions:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -178,20 +178,25 @@ export default function DashboardContent({
 
       {/* Décisions filtrées */}
       <section className="mb-8">
-        {filteredDecisions.length === 0 ? (
+        {isReloading ? (
+          <Box sx={{ backgroundColor: 'background.secondary', borderRadius: 2, p: 3, textAlign: 'center', color: 'text.secondary' }}>
+            Chargement...
+          </Box>
+        ) : decisionsWithMeta.length === 0 ? (
           <Box sx={{ backgroundColor: 'background.secondary', borderRadius: 2, p: 3, textAlign: 'center', color: 'text.secondary' }}>
             Aucune décision ne correspond aux filtres sélectionnés
           </Box>
         ) : (
           <div className="grid gap-2">
-            {filteredDecisions.map((decision) => {
+            {decisionsWithMeta.map((decision) => {
               // Décisions brouillons : utiliser DraftCard
               if (decision._meta.category === 'draft') {
                 return <DraftCard key={decision.id} draft={decision} orgSlug={slug} />;
               }
 
               // Pour toutes les autres décisions : afficher une card compacte
-              const hasVoted = decision.participants?.[0]?.hasVoted || false;
+              const userParticipant = decision.participants?.find((p: any) => p.userId === userId);
+              const hasVoted = userParticipant?.hasVoted || false;
               const isPublicLink = decision._meta.category === 'publicLink';
               const isClosed = decision._meta.category === 'closed';
 
@@ -223,6 +228,9 @@ export default function DashboardContent({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                        {decision.votingMode === 'PUBLIC_LINK' && (
+                          <QrCode2 sx={{ fontSize: '1.25rem', color: 'action.active' }} />
+                        )}
                         <Link
                           href={targetUrl}
                           className="text-sm font-semibold truncate"
@@ -248,7 +256,7 @@ export default function DashboardContent({
                             sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
                           />
                         )}
-                        {isPublicLink && (
+                        {isPublicLink && !isClosed && (
                           <Chip
                             label="Vote anonyme"
                             size="small"
@@ -277,7 +285,15 @@ export default function DashboardContent({
                         )}
                         {isClosed && decision.result && (
                           <Chip
-                            label={decision.result === 'APPROVED' ? 'Approuvée' : decision.result === 'WITHDRAWN' ? 'Retirée' : 'Rejetée'}
+                            label={
+                              decision.result === 'APPROVED'
+                                ? decision.decisionType === 'MAJORITY' || decision.decisionType === 'NUANCED_VOTE'
+                                  ? 'Décision prise'
+                                  : 'Approuvée'
+                                : decision.result === 'WITHDRAWN'
+                                ? 'Retirée'
+                                : 'Rejetée'
+                            }
                             size="small"
                             color={decision.result === 'APPROVED' ? 'success' : 'error'}
                             sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
@@ -311,6 +327,21 @@ export default function DashboardContent({
               );
             })}
           </div>
+        )}
+
+        {/* Bouton "Charger 20 de plus" */}
+        {!isReloading && decisionsWithMeta.length > 0 && decisions.length < total && (
+          <Box sx={{ mt: 4, textAlign: 'center' }}>
+            <Button
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              variant="outlined"
+              color="primary"
+              size="large"
+            >
+              {isLoadingMore ? 'Chargement...' : `Charger 20 décisions de plus (${decisions.length}/${total})`}
+            </Button>
+          </Box>
         )}
       </section>
     </div>

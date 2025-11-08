@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { calculateNuancedVoteResults } from '@/lib/decision-logic';
+import { calculateNuancedVoteResults, calculateFinalDecisionResult } from '@/lib/decision-logic';
 import { logDecisionClosed } from '@/lib/decision-logger';
 import ResultsPageClient from './ResultsPageClient';
 
@@ -155,11 +155,21 @@ export default async function ResultsPage({
 
   // Mettre à jour le statut automatiquement si le vote est terminé
   if (decision.status === 'OPEN' && isVotingFinished) {
+    // Calculate the final result before closing
+    const finalResult = calculateFinalDecisionResult(decision);
+    const now = new Date();
+
     await prisma.decision.update({
       where: { id: decision.id },
-      data: { status: 'CLOSED' },
+      data: {
+        status: 'CLOSED',
+        result: finalResult,
+        decidedAt: now,
+      },
     });
     decision.status = 'CLOSED';
+    decision.result = finalResult;
+    decision.decidedAt = now;
 
     // Logger la fermeture automatique avec la raison
     const reason = isDeadlinePassed ? 'deadline_reached' : 'all_voted';

@@ -53,183 +53,95 @@ export default async function OrganizationDashboard({
   // Extraire les équipes de l'utilisateur
   const userTeams = membership.teamMembers.map((tm) => tm.team);
 
-  // Paralléliser toutes les requêtes de décisions pour un chargement plus rapide
-  const [draftDecisions, myActiveDecisions, publicLinkDecisions, closedDecisions] = await Promise.all([
-    // Récupérer les brouillons créés par l'utilisateur
-    prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-        status: 'DRAFT',
-        creatorId: session.user.id,
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        proposal: true,
-        initialProposal: true,
-        decisionType: true,
-        votingMode: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-    }),
+  // Filtres par défaut : décisions EN COURS uniquement
+  const defaultStatusFilter = ['OPEN'];
+  const defaultTypeFilter = ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'];
 
-    // Récupérer les décisions en cours où l'utilisateur est invité (mode INVITED uniquement)
-    prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-        status: 'OPEN',
-        votingMode: 'INVITED',
-        participants: {
-          some: {
-            userId: session.user.id,
-          },
-        },
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        proposal: true,
-        initialProposal: true,
-        decisionType: true,
-        status: true,
-        votingMode: true,
-        endDate: true,
-        createdAt: true,
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        participants: {
-          where: {
-            userId: session.user.id,
-          },
-          select: {
-            hasVoted: true,
-          },
-        },
-        _count: {
-          select: {
-            participants: true,
-            votes: true,
-            comments: true,
-          },
-        },
-      },
-      orderBy: {
-        endDate: 'asc',
-      },
-      take: 5,
-    }),
+  // Construire le filtre where (même logique que l'API)
+  const where: any = {
+    organizationId: organization.id,
+    decisionType: { in: defaultTypeFilter },
+  };
 
-    // Récupérer les décisions PUBLIC_LINK en cours créées par l'utilisateur
-    prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-        status: 'OPEN',
-        votingMode: 'PUBLIC_LINK',
-        creatorId: session.user.id,
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        proposal: true,
-        initialProposal: true,
-        decisionType: true,
-        status: true,
-        votingMode: true,
-        publicSlug: true,
-        endDate: true,
-        createdAt: true,
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            votes: true,
-            anonymousVoteLogs: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 5,
-    }),
+  // Filtre par statut (les brouillons sont privés à l'utilisateur)
+  if (defaultStatusFilter.length === 1 && defaultStatusFilter[0] === 'DRAFT') {
+    where.status = 'DRAFT';
+    where.creatorId = session.user.id;
+  } else if (defaultStatusFilter.includes('DRAFT')) {
+    const otherStatuses = defaultStatusFilter.filter(s => s !== 'DRAFT');
+    if (!where.AND) where.AND = [];
+    where.AND.push({
+      OR: [
+        { status: 'DRAFT', creatorId: session.user.id },
+        { status: { in: otherStatuses } }
+      ],
+    });
+  } else {
+    where.status = { in: defaultStatusFilter };
+  }
 
-    // Récupérer les 10 dernières décisions closes (visibles pour tous les membres de l'organisation)
-    prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-        status: {
-          in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'],
+  // Charger les 20 premières décisions avec filtres par défaut
+  const initialDecisions = await prisma.decision.findMany({
+    where,
+    select: {
+      // Champs scalaires de Decision
+      id: true,
+      title: true,
+      description: true,
+      proposal: true,
+      initialProposal: true,
+      context: true,
+      decisionType: true,
+      status: true,
+      result: true,
+      votingMode: true,
+      publicSlug: true,
+      endDate: true,
+      startDate: true,
+      decidedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      creatorId: true,
+      // Relations
+      creator: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
         },
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        proposal: true,
-        initialProposal: true,
-        decisionType: true,
-        status: true,
-        votingMode: true,
-        result: true,
-        decidedAt: true,
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            participants: true,
-            votes: true,
-          },
+      team: {
+        select: {
+          id: true,
+          name: true,
         },
       },
-      orderBy: {
-        decidedAt: 'desc',
+      participants: {
+        select: {
+          userId: true,
+          hasVoted: true,
+          teamId: true,
+        },
       },
-      take: 10,
-    }),
-  ]);
+      _count: {
+        select: {
+          votes: true,
+          comments: true,
+          proposals: true,
+          participants: true,
+          anonymousVoteLogs: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 20,
+  });
+
+  // Compter le nombre total de décisions avec les filtres
+  const totalCount = await prisma.decision.count({ where });
 
   return (
     <DashboardContent
@@ -237,10 +149,8 @@ export default async function OrganizationDashboard({
       organization={organization}
       userTeams={userTeams}
       userId={session.user.id}
-      draftDecisions={draftDecisions}
-      myActiveDecisions={myActiveDecisions}
-      publicLinkDecisions={publicLinkDecisions}
-      closedDecisions={closedDecisions}
+      initialDecisions={initialDecisions}
+      totalCount={totalCount}
     />
   );
 }

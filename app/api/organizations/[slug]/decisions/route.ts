@@ -6,7 +6,7 @@ import { logDecisionCreated } from '@/lib/decision-logger';
 import { sendEmail } from '@/lib/email';
 import crypto from 'crypto';
 
-// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation
+// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation avec pagination et filtres
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -18,6 +18,15 @@ export async function GET(
     }
 
     const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const skip = parseInt(searchParams.get('skip') || '0', 10);
+    const take = parseInt(searchParams.get('take') || '20', 10);
+
+    // Filtres
+    const statusFilter = searchParams.get('status')?.split(',') || [];
+    const scopeFilter = searchParams.get('scope') || 'ALL';
+    const typeFilter = searchParams.get('type')?.split(',') || [];
+    const searchQuery = searchParams.get('search') || '';
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -42,17 +51,112 @@ export async function GET(
       return Response.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Récupérer les décisions de l'organisation
+    // Construire le filtre where
+    const where: any = {
+      organizationId: organization.id,
+    };
+
+    // Filtre par statut (les brouillons sont privés à l'utilisateur)
+    if (statusFilter.length > 0) {
+      if (!where.AND) where.AND = [];
+
+      // Si on filtre uniquement par DRAFT
+      if (statusFilter.length === 1 && statusFilter[0] === 'DRAFT') {
+        where.AND.push({
+          status: 'DRAFT',
+          creatorId: session.user.id, // Seuls SES brouillons
+        });
+      } else if (statusFilter.includes('DRAFT')) {
+        // Si DRAFT est mélangé avec d'autres statuts
+        const otherStatuses = statusFilter.filter(s => s !== 'DRAFT');
+        where.AND.push({
+          OR: [
+            { status: 'DRAFT', creatorId: session.user.id }, // Ses brouillons
+            { status: { in: otherStatuses } } // Toutes les autres décisions
+          ],
+        });
+      } else {
+        // Pas de DRAFT dans le filtre
+        where.AND.push({
+          status: { in: statusFilter },
+        });
+      }
+    }
+
+    // Filtre par périmètre
+    if (scopeFilter !== 'ALL') {
+      if (scopeFilter === 'ME') {
+        // Décisions créées par l'utilisateur
+        where.creatorId = session.user.id;
+      } else {
+        // Filtre par équipe : décision dédiée à l'équipe OU participants invités via l'équipe
+        if (!where.AND) where.AND = [];
+        where.AND.push({
+          OR: [
+            { teamId: scopeFilter },
+            {
+              participants: {
+                some: {
+                  teamId: scopeFilter,
+                },
+              },
+            },
+          ],
+        });
+      }
+    }
+
+    // Filtre par type
+    if (typeFilter.length > 0) {
+      where.decisionType = { in: typeFilter };
+    }
+
+    // Filtre par recherche textuelle
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      if (!where.AND) where.AND = [];
+      where.AND.push({
+        OR: [
+          { title: { contains: searchLower, mode: 'insensitive' } },
+          { description: { contains: searchLower, mode: 'insensitive' } },
+          { proposal: { contains: searchLower, mode: 'insensitive' } },
+          { initialProposal: { contains: searchLower, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // Compter le nombre total de décisions filtrées
+    const totalCount = await prisma.decision.count({ where });
+
+    // Récupérer les décisions avec pagination et filtres
     const decisions = await prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-      },
-      include: {
+      where,
+      select: {
+        // Champs scalaires de Decision
+        id: true,
+        title: true,
+        description: true,
+        proposal: true,
+        initialProposal: true,
+        context: true,
+        decisionType: true,
+        status: true,
+        result: true,
+        votingMode: true,
+        publicSlug: true,
+        endDate: true,
+        startDate: true,
+        decidedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        creatorId: true,
+        // Relations
         creator: {
           select: {
             id: true,
             name: true,
             email: true,
+            image: true,
           },
         },
         team: {
@@ -61,20 +165,31 @@ export async function GET(
             name: true,
           },
         },
+        participants: {
+          select: {
+            userId: true,
+            hasVoted: true,
+            teamId: true,
+          },
+        },
         _count: {
           select: {
             votes: true,
             comments: true,
             proposals: true,
+            participants: true,
+            anonymousVoteLogs: true,
           },
         },
       },
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take,
     });
 
-    return Response.json({ decisions });
+    return Response.json({ decisions, totalCount });
   } catch (error) {
     console.error('Error fetching decisions:', error);
     return Response.json(

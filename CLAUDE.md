@@ -974,6 +974,40 @@ const decision = await prisma.decision.findUnique({
 // Check participants for voting eligibility, votes for existing vote
 ```
 
+**Fetching decisions with pagination (organization dashboard):**
+```typescript
+// Server-side pagination with 20 decisions per page
+const decisions = await prisma.decision.findMany({
+  where: { organizationId: organization.id },
+  include: {
+    creator: { select: { id: true, name: true, email: true, image: true } },
+    team: { select: { id: true, name: true } },
+    participants: {
+      select: {
+        userId: true,
+        hasVoted: true,
+        teamId: true,  // IMPORTANT: Load teamId for team filtering
+      },
+    },
+    _count: { select: { votes: true, comments: true, participants: true } },
+  },
+  orderBy: { createdAt: 'desc' },
+  skip: 0,  // Incremented by 20 for "Load more" button
+  take: 20,
+})
+
+const totalCount = await prisma.decision.count({
+  where: { organizationId: organization.id },
+})
+```
+
+**Team filtering logic:**
+When filtering decisions by team, check BOTH:
+1. `decision.teamId` (decision dedicated to a specific team)
+2. `decision.participants.some(p => p.teamId === teamId)` (participants invited via team)
+
+This is necessary because when inviting an entire team to a decision, the decision itself doesn't have a `teamId`, but each participant has `teamId` set in their `DecisionParticipant` record.
+
 ## Key Files for Understanding Architecture
 
 When onboarding to this codebase or debugging complex issues, read these files in order:
@@ -992,7 +1026,7 @@ When onboarding to this codebase or debugging complex issues, read these files i
 9. `lib/email.ts` - Email system with Resend fallback
 
 **API Patterns (Examples):**
-10. `app/api/organizations/[slug]/decisions/route.ts` - Decision creation with draft auto-save system
+10. `app/api/organizations/[slug]/decisions/route.ts` - Decision creation and pagination (GET supports ?skip=0&take=20)
 11. `app/api/organizations/[slug]/decisions/[decisionId]/vote/route.ts` - Authenticated vote submission for all decision types
 12. `app/api/public-vote/[orgSlug]/[publicSlug]/route.ts` - Anonymous voting with IP hashing and transactions
 13. `app/api/vote/[token]/route.ts` - External participant token-based voting (guest access)

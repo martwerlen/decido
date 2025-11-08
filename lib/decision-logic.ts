@@ -350,3 +350,81 @@ function getMentionRank(scale: string, mention: string): number {
   const mentions = getMentionsForScale(scale)
   return mentions.indexOf(mention)
 }
+
+// ============================================
+// CALCULATE RESULT FOR DECISION CLOSURE
+// ============================================
+
+/**
+ * Calculates the final result when a decision closes
+ * This function is used when auto-closing or manually closing decisions
+ */
+export function calculateFinalDecisionResult(decision: {
+  decisionType: string
+  votes?: Array<{ value: string }>
+  proposals?: Array<{ proposalVotes: any[] }>
+  nuancedProposals?: Array<{
+    id: string
+    title: string
+    nuancedVotes: Array<{ mention: string }>
+  }>
+  nuancedScale?: string | null
+}): 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN' {
+  const { decisionType } = decision
+
+  switch (decisionType) {
+    case 'CONSENSUS': {
+      // For CONSENSUS: all votes must be AGREE to approve
+      const votes = decision.votes || []
+      if (votes.length === 0) return 'WITHDRAWN'
+
+      const agreeCount = votes.filter((v) => v.value === 'AGREE').length
+      const disagreeCount = votes.filter((v) => v.value === 'DISAGREE').length
+      const totalVotes = agreeCount + disagreeCount
+
+      return totalVotes > 0 && disagreeCount === 0 ? 'APPROVED' : 'REJECTED'
+    }
+
+    case 'MAJORITY': {
+      // For MAJORITY: proposal with most votes wins
+      const proposals = decision.proposals || []
+      if (proposals.length === 0) return 'WITHDRAWN'
+
+      const totalVotes = proposals.reduce((sum, p) => sum + p.proposalVotes.length, 0)
+      if (totalVotes === 0) return 'WITHDRAWN'
+
+      const maxVotes = Math.max(...proposals.map((p) => p.proposalVotes.length))
+      return maxVotes > 0 ? 'APPROVED' : 'REJECTED'
+    }
+
+    case 'NUANCED_VOTE': {
+      // For NUANCED_VOTE: there's always a winner (ranked by majority judgment)
+      const nuancedProposals = decision.nuancedProposals || []
+      if (nuancedProposals.length === 0) return 'WITHDRAWN'
+
+      const proposalsWithMentions = nuancedProposals.map(proposal => ({
+        id: proposal.id,
+        title: proposal.title,
+        mentions: proposal.nuancedVotes.map(vote => vote.mention),
+      }))
+
+      // Check if there are any votes at all
+      const totalVotes = proposalsWithMentions.reduce((sum, p) => sum + p.mentions.length, 0)
+      if (totalVotes === 0) return 'WITHDRAWN'
+
+      // For nuanced vote, a decision is always made (top-ranked proposal wins)
+      return 'APPROVED'
+    }
+
+    case 'ADVICE_SOLICITATION': {
+      // For ADVICE_SOLICITATION: always approved when validated
+      // (withdrawal is handled separately via the withdraw endpoint)
+      return 'APPROVED'
+    }
+
+    default:
+      // For other types (CONSENT, SUPERMAJORITY, WEIGHTED_VOTE, ADVISORY, etc.)
+      // These are not currently used in the app but we handle them gracefully
+      return 'APPROVED'
+  }
+}
