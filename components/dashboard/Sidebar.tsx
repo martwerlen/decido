@@ -164,6 +164,12 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const decisionsContainerRef = useRef<HTMLDivElement>(null)
   const [maxDecisions, setMaxDecisions] = useState({ ongoing: 10, completed: 10 })
 
+  // Refs pour le debounce et éviter les appels redondants
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const lastFetchRef = useRef<number>(0)
+  const DEBOUNCE_MS = 300      // Attendre 300ms avant de fetch
+  const MIN_REFETCH_MS = 5000  // Minimum 5s entre 2 fetches
+
   const fetchOrganizations = useCallback(async () => {
     try {
       const response = await fetch("/api/organizations")
@@ -191,20 +197,39 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const fetchDecisions = useCallback(async () => {
     if (!organization) return
 
-    setDecisionsLoading(true)
-    try {
-      const response = await fetch(`/api/organizations/${organization}/decisions/sidebar`)
-      const data = await response.json()
+    const now = Date.now()
 
-      if (response.ok) {
-        setDecisions(data)
-      }
-    } catch (err: any) {
-      console.error("Error fetching decisions:", err)
-    } finally {
-      setDecisionsLoading(false)
+    // Si on a fetch il y a moins de MIN_REFETCH_MS, skip pour éviter les appels redondants
+    if (now - lastFetchRef.current < MIN_REFETCH_MS) {
+      console.log('[Sidebar] Skipping redundant fetch (too soon, last fetch was', Math.round((now - lastFetchRef.current) / 1000), 's ago)')
+      return
     }
-  }, [organization])
+
+    // Clear tout timeout en cours
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current)
+    }
+
+    // Debounce: attendre DEBOUNCE_MS avant de vraiment fetch
+    fetchTimeoutRef.current = setTimeout(async () => {
+      console.log('[Sidebar] Fetching decisions for organization:', organization)
+      lastFetchRef.current = Date.now()
+      setDecisionsLoading(true)
+
+      try {
+        const response = await fetch(`/api/organizations/${organization}/decisions/sidebar`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setDecisions(data)
+        }
+      } catch (err: any) {
+        console.error("Error fetching decisions:", err)
+      } finally {
+        setDecisionsLoading(false)
+      }
+    }, DEBOUNCE_MS)
+  }, [organization, DEBOUNCE_MS, MIN_REFETCH_MS])
 
   // Charger les organisations au mount uniquement
   useEffect(() => {
@@ -224,6 +249,15 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       fetchDecisions()
     }
   }, [refreshTrigger])
+
+  // Cleanup: annuler le timeout en cours lors du unmount
+  useEffect(() => {
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Mettre à jour le rôle de l'utilisateur dans l'organisation courante
   useEffect(() => {

@@ -107,7 +107,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // Récupérer toutes les organisations dont l'utilisateur est membre
+    // Récupérer toutes les organisations dont l'utilisateur est membre (optimisé)
     const organizations = await prisma.organization.findMany({
       where: {
         members: {
@@ -118,14 +118,9 @@ export async function GET(req: Request) {
       },
       include: {
         members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+          select: {
+            userId: true,
+            role: true,
           },
         },
         _count: {

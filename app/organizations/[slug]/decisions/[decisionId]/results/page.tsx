@@ -46,17 +46,7 @@ export default async function ResultsPage({
           order: 'asc',
         },
         include: {
-          proposalVotes: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
+          proposalVotes: true,
         },
       },
       nuancedProposals: {
@@ -65,14 +55,9 @@ export default async function ResultsPage({
         },
         include: {
           nuancedVotes: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+            select: {
+              id: true,
+              mention: true,
             },
           },
         },
@@ -109,14 +94,9 @@ export default async function ResultsPage({
         },
       },
       votes: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+        select: {
+          id: true,
+          value: true,
         },
       },
       participants: {
