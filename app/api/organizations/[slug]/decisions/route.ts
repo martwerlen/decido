@@ -6,7 +6,7 @@ import { logDecisionCreated } from '@/lib/decision-logger';
 import { sendEmail } from '@/lib/email';
 import crypto from 'crypto';
 
-// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation avec pagination
+// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation avec pagination et filtres
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -21,6 +21,12 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const skip = parseInt(searchParams.get('skip') || '0', 10);
     const take = parseInt(searchParams.get('take') || '20', 10);
+
+    // Filtres
+    const statusFilter = searchParams.get('status')?.split(',') || [];
+    const scopeFilter = searchParams.get('scope') || 'ALL';
+    const typeFilter = searchParams.get('type')?.split(',') || [];
+    const searchQuery = searchParams.get('search') || '';
 
     // Récupérer l'organisation par son slug
     const organization = await prisma.organization.findUnique({
@@ -45,18 +51,64 @@ export async function GET(
       return Response.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Compter le nombre total de décisions
-    const totalCount = await prisma.decision.count({
-      where: {
-        organizationId: organization.id,
-      },
-    });
+    // Construire le filtre where
+    const where: any = {
+      organizationId: organization.id,
+    };
 
-    // Récupérer les décisions de l'organisation avec pagination
+    // Filtre par statut
+    if (statusFilter.length > 0) {
+      where.status = { in: statusFilter };
+    }
+
+    // Filtre par périmètre
+    if (scopeFilter !== 'ALL') {
+      if (scopeFilter === 'ME') {
+        // Décisions créées par l'utilisateur
+        where.creatorId = session.user.id;
+      } else {
+        // Filtre par équipe : décision dédiée à l'équipe OU participants invités via l'équipe
+        if (!where.AND) where.AND = [];
+        where.AND.push({
+          OR: [
+            { teamId: scopeFilter },
+            {
+              participants: {
+                some: {
+                  teamId: scopeFilter,
+                },
+              },
+            },
+          ],
+        });
+      }
+    }
+
+    // Filtre par type
+    if (typeFilter.length > 0) {
+      where.decisionType = { in: typeFilter };
+    }
+
+    // Filtre par recherche textuelle
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      if (!where.AND) where.AND = [];
+      where.AND.push({
+        OR: [
+          { title: { contains: searchLower, mode: 'insensitive' } },
+          { description: { contains: searchLower, mode: 'insensitive' } },
+          { proposal: { contains: searchLower, mode: 'insensitive' } },
+          { initialProposal: { contains: searchLower, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // Compter le nombre total de décisions filtrées
+    const totalCount = await prisma.decision.count({ where });
+
+    // Récupérer les décisions avec pagination et filtres
     const decisions = await prisma.decision.findMany({
-      where: {
-        organizationId: organization.id,
-      },
+      where,
       include: {
         creator: {
           select: {
@@ -73,11 +125,10 @@ export async function GET(
           },
         },
         participants: {
-          where: {
-            userId: session.user.id,
-          },
           select: {
+            userId: true,
             hasVoted: true,
+            teamId: true,
           },
         },
         _count: {

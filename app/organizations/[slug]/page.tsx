@@ -53,11 +53,20 @@ export default async function OrganizationDashboard({
   // Extraire les équipes de l'utilisateur
   const userTeams = membership.teamMembers.map((tm) => tm.team);
 
-  // Charger les 20 premières décisions avec pagination
+  // Filtres par défaut : décisions EN COURS uniquement
+  const defaultStatusFilter = ['OPEN'];
+  const defaultTypeFilter = ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'];
+
+  // Construire le filtre where (même logique que l'API)
+  const where: any = {
+    organizationId: organization.id,
+    status: { in: defaultStatusFilter },
+    decisionType: { in: defaultTypeFilter },
+  };
+
+  // Charger les 20 premières décisions avec filtres par défaut
   const initialDecisions = await prisma.decision.findMany({
-    where: {
-      organizationId: organization.id,
-    },
+    where,
     include: {
       creator: {
         select: {
@@ -96,12 +105,8 @@ export default async function OrganizationDashboard({
     take: 20,
   });
 
-  // Compter le nombre total de décisions
-  const totalCount = await prisma.decision.count({
-    where: {
-      organizationId: organization.id,
-    },
-  });
+  // Compter le nombre total de décisions avec les filtres
+  const totalCount = await prisma.decision.count({ where });
 
   return (
     <DashboardContent
