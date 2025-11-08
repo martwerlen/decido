@@ -84,12 +84,70 @@ npm run db:studio          # Open Prisma Studio (database GUI)
 
 **Component Styling Best Practices:**
 - Use Material-UI components for consistency (Button, Card, TextField, etc.)
+- **CRITICAL**: NEVER use hardcoded Tailwind color classes (`bg-gray-50`, `text-blue-600`, etc.) - Always use MUI theme colors
 - Prefer MUI theme colors over hardcoded values
 - For custom components, use Tailwind with theme colors
 - Typography: Use MUI Typography component with proper variants
 - Buttons: Primary (contained), Secondary (outlined), Accent (for important actions)
 - Cards: 12px border-radius, 2px solid border, subtle shadow
 - Spacing: Consistent use of MUI spacing units (multiples of 8px)
+
+**Dark Mode Compatibility - Migration Pattern:**
+
+All major pages have been migrated from hardcoded Tailwind colors to MUI theme-aware components. When working on existing or new pages, follow this pattern:
+
+**❌ OLD (Hardcoded - DO NOT USE):**
+```typescript
+<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+  <h2 className="text-xl font-semibold text-gray-900 mb-2">Title</h2>
+  <p className="text-sm text-gray-600">Description</p>
+  <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded">Badge</div>
+</div>
+```
+
+**✅ NEW (Theme-aware - ALWAYS USE):**
+```typescript
+<Box sx={{ backgroundColor: 'background.secondary', border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
+  <Typography variant="h5" fontWeight="semibold" sx={{ mb: 1 }}>Title</Typography>
+  <Typography variant="body2" color="text.secondary">Description</Typography>
+  <Chip label="Badge" size="small" color="primary" />
+</Box>
+```
+
+**Common Migration Mappings:**
+- `bg-gray-50` / `bg-gray-100` → `backgroundColor: 'background.secondary'`
+- `text-gray-600` / `text-gray-700` → `color="text.secondary"` or default Typography
+- `text-gray-900` → default Typography color or `color="text.primary"`
+- `border border-gray-200` → `border: 1, borderColor: 'divider'`
+- `bg-blue-50 text-blue-800` → `<Chip color="primary" />` or `<Alert severity="info" />`
+- `bg-green-50 text-green-800` → `<Chip color="success" />` or `backgroundColor: 'success.light'`
+- `bg-red-50 text-red-800` → `<Chip color="error" />` or `backgroundColor: 'error.light'`
+- `bg-orange-50 text-orange-800` → `<Chip color="warning" />` or `backgroundColor: 'warning.light'`
+- `bg-yellow-50 text-yellow-800` → `<Alert severity="warning" />`
+- `hover:bg-gray-50` → `'&:hover': { backgroundColor: 'action.hover' }`
+
+**Fully Migrated Pages (100% Dark Mode Compatible):**
+- ✅ `/organizations/[slug]/decisions/new` - Decision creation form
+- ✅ `/organizations/[slug]` - Organization dashboard and decision list
+- ✅ `/organizations/[slug]/decisions/[decisionId]/vote` - Voting interface (all decision types)
+- ✅ `/organizations/[slug]/decisions/[decisionId]/admin` - Decision administration
+- ✅ `/organizations/[slug]/decisions/[decisionId]/results` - Results display (all decision types)
+
+**Key Components Used:**
+- `Box` - Container with sx prop for theme-aware styling
+- `Typography` - Text with variants (h1-h6, body1-2, caption) and color prop
+- `Chip` - Badges with color variants (primary, success, error, warning, default)
+- `Alert` - Notifications with severity (info, success, error, warning)
+- `Button` - Actions with variants (contained, outlined, text) and color prop
+- `LinearProgress` - Progress bars with color variants
+- All use `sx` prop or `color` prop for theme integration
+
+**Responsive Design Improvements:**
+- Mobile breakpoint harmonized to 900px across all pages (sm: 640px → md: 900px)
+- Compact card design for decisions with optimized spacing
+- Sidebar adapts height dynamically to viewport
+- Filter system with responsive layout (stacked on mobile, inline on desktop)
+- Navigation buttons use flexWrap for mobile adaptation
 
 ### React Context Provider Architecture
 
