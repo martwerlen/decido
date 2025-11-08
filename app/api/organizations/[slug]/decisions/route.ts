@@ -109,7 +109,26 @@ export async function GET(
     // Récupérer les décisions avec pagination et filtres
     const decisions = await prisma.decision.findMany({
       where,
-      include: {
+      select: {
+        // Champs scalaires de Decision
+        id: true,
+        title: true,
+        description: true,
+        proposal: true,
+        initialProposal: true,
+        context: true,
+        decisionType: true,
+        status: true,
+        result: true,
+        votingMode: true,
+        publicSlug: true,
+        endDate: true,
+        startDate: true,
+        decidedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        creatorId: true,
+        // Relations
         creator: {
           select: {
             id: true,

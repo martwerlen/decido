@@ -30,8 +30,8 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
       });
 
       if (response.ok) {
-        // Rafraîchir la page pour mettre à jour la liste
-        router.refresh();
+        // Recharger la page complètement pour mettre à jour la liste
+        window.location.reload();
       } else {
         alert('Erreur lors de la suppression du brouillon');
         setIsDeleting(false);
