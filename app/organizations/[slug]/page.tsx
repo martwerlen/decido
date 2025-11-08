@@ -60,9 +60,25 @@ export default async function OrganizationDashboard({
   // Construire le filtre where (même logique que l'API)
   const where: any = {
     organizationId: organization.id,
-    status: { in: defaultStatusFilter },
     decisionType: { in: defaultTypeFilter },
   };
+
+  // Filtre par statut (les brouillons sont privés à l'utilisateur)
+  if (defaultStatusFilter.length === 1 && defaultStatusFilter[0] === 'DRAFT') {
+    where.status = 'DRAFT';
+    where.creatorId = session.user.id;
+  } else if (defaultStatusFilter.includes('DRAFT')) {
+    const otherStatuses = defaultStatusFilter.filter(s => s !== 'DRAFT');
+    if (!where.AND) where.AND = [];
+    where.AND.push({
+      OR: [
+        { status: 'DRAFT', creatorId: session.user.id },
+        { status: { in: otherStatuses } }
+      ],
+    });
+  } else {
+    where.status = { in: defaultStatusFilter };
+  }
 
   // Charger les 20 premières décisions avec filtres par défaut
   const initialDecisions = await prisma.decision.findMany({

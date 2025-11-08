@@ -56,9 +56,31 @@ export async function GET(
       organizationId: organization.id,
     };
 
-    // Filtre par statut
+    // Filtre par statut (les brouillons sont privés à l'utilisateur)
     if (statusFilter.length > 0) {
-      where.status = { in: statusFilter };
+      if (!where.AND) where.AND = [];
+
+      // Si on filtre uniquement par DRAFT
+      if (statusFilter.length === 1 && statusFilter[0] === 'DRAFT') {
+        where.AND.push({
+          status: 'DRAFT',
+          creatorId: session.user.id, // Seuls SES brouillons
+        });
+      } else if (statusFilter.includes('DRAFT')) {
+        // Si DRAFT est mélangé avec d'autres statuts
+        const otherStatuses = statusFilter.filter(s => s !== 'DRAFT');
+        where.AND.push({
+          OR: [
+            { status: 'DRAFT', creatorId: session.user.id }, // Ses brouillons
+            { status: { in: otherStatuses } } // Toutes les autres décisions
+          ],
+        });
+      } else {
+        // Pas de DRAFT dans le filtre
+        where.AND.push({
+          status: { in: statusFilter },
+        });
+      }
     }
 
     // Filtre par périmètre
