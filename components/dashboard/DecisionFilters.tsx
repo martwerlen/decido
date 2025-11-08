@@ -1,83 +1,180 @@
 'use client';
 
-import { useState } from 'react';
-import { Checkbox, FormControlLabel, FormGroup } from '@mui/material';
+import { useState, useEffect } from 'react';
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  OutlinedInput,
+  Checkbox,
+  ListItemText,
+  SelectChangeEvent,
+  Box,
+} from '@mui/material';
 
-interface DecisionFiltersProps {
-  onFilterChange: (filters: { showDrafts: boolean; showActive: boolean; showClosed: boolean }) => void;
+interface Team {
+  id: string;
+  name: string;
 }
 
-export default function DecisionFilters({ onFilterChange }: DecisionFiltersProps) {
-  const [showDrafts, setShowDrafts] = useState(false);
-  const [showActive, setShowActive] = useState(true); // Par défaut : En cours uniquement
-  const [showClosed, setShowClosed] = useState(false);
+export interface DecisionFiltersType {
+  statusFilter: string[]; // 'DRAFT', 'OPEN', 'CLOSED'
+  scopeFilter: string; // 'ALL', 'MY_TEAMS', 'ME', or team ID
+  typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'
+}
 
-  const handleChange = (filter: 'drafts' | 'active' | 'closed', checked: boolean) => {
-    const newFilters = {
-      showDrafts: filter === 'drafts' ? checked : showDrafts,
-      showActive: filter === 'active' ? checked : showActive,
-      showClosed: filter === 'closed' ? checked : showClosed,
-    };
+interface DecisionFiltersProps {
+  userTeams: Team[];
+  onFilterChange: (filters: DecisionFiltersType) => void;
+}
 
-    if (filter === 'drafts') setShowDrafts(checked);
-    if (filter === 'active') setShowActive(checked);
-    if (filter === 'closed') setShowClosed(checked);
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 
-    onFilterChange(newFilters);
+export default function DecisionFilters({ userTeams, onFilterChange }: DecisionFiltersProps) {
+  // Filtre 1: Statut (multi-sélection) - Par défaut: "En cours"
+  const [statusFilter, setStatusFilter] = useState<string[]>(['OPEN']);
+
+  // Filtre 2: Périmètre (sélection simple) - Par défaut: "Toute l'organisation"
+  const [scopeFilter, setScopeFilter] = useState<string>('ALL');
+
+  // Filtre 3: Type (multi-sélection) - Par défaut: tous cochés
+  const [typeFilter, setTypeFilter] = useState<string[]>([
+    'ADVICE_SOLICITATION',
+    'CONSENSUS',
+    'MAJORITY',
+    'NUANCED_VOTE',
+  ]);
+
+  // Appeler onFilterChange à chaque changement
+  useEffect(() => {
+    onFilterChange({ statusFilter, scopeFilter, typeFilter });
+  }, [statusFilter, scopeFilter, typeFilter, onFilterChange]);
+
+  const handleStatusChange = (event: SelectChangeEvent<typeof statusFilter>) => {
+    const value = event.target.value;
+    setStatusFilter(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const handleScopeChange = (event: SelectChangeEvent) => {
+    setScopeFilter(event.target.value);
+  };
+
+  const handleTypeChange = (event: SelectChangeEvent<typeof typeFilter>) => {
+    const value = event.target.value;
+    setTypeFilter(typeof value === 'string' ? value.split(',') : value);
   };
 
   return (
-    <div className="mb-6 p-4 bg-white border rounded-lg">
-      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+    <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+      <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
         Filtrer les décisions
       </h3>
-      <FormGroup row>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showDrafts}
-              onChange={(e) => handleChange('drafts', e.target.checked)}
-              sx={{
-                color: 'var(--color-primary)',
-                '&.Mui-checked': {
-                  color: 'var(--color-primary)',
-                },
-              }}
-            />
-          }
-          label="Brouillons"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showActive}
-              onChange={(e) => handleChange('active', e.target.checked)}
-              sx={{
-                color: 'var(--color-primary)',
-                '&.Mui-checked': {
-                  color: 'var(--color-primary)',
-                },
-              }}
-            />
-          }
-          label="En cours"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showClosed}
-              onChange={(e) => handleChange('closed', e.target.checked)}
-              sx={{
-                color: 'var(--color-primary)',
-                '&.Mui-checked': {
-                  color: 'var(--color-primary)',
-                },
-              }}
-            />
-          }
-          label="Terminées"
-        />
-      </FormGroup>
-    </div>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+        {/* Filtre 1: Statut */}
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
+          <InputLabel id="status-filter-label">Statut</InputLabel>
+          <Select
+            labelId="status-filter-label"
+            id="status-filter"
+            multiple
+            value={statusFilter}
+            onChange={handleStatusChange}
+            input={<OutlinedInput label="Statut" />}
+            renderValue={(selected) => {
+              const labels: Record<string, string> = {
+                DRAFT: 'Brouillon',
+                OPEN: 'En cours',
+                CLOSED: 'Terminé',
+              };
+              return selected.map((s) => labels[s]).join(', ');
+            }}
+            MenuProps={MenuProps}
+          >
+            <MenuItem value="DRAFT" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={statusFilter.indexOf('DRAFT') > -1} />
+              <ListItemText primary="Brouillon" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="OPEN" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={statusFilter.indexOf('OPEN') > -1} />
+              <ListItemText primary="En cours" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="CLOSED" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={statusFilter.indexOf('CLOSED') > -1} />
+              <ListItemText primary="Terminé" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Filtre 2: Périmètre */}
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
+          <InputLabel id="scope-filter-label">Périmètre</InputLabel>
+          <Select
+            labelId="scope-filter-label"
+            id="scope-filter"
+            value={scopeFilter}
+            onChange={handleScopeChange}
+            label="Périmètre"
+          >
+            <MenuItem value="ALL" sx={{ fontSize: '0.875rem' }}>Toute l'organisation</MenuItem>
+            {userTeams.map((team) => (
+              <MenuItem key={team.id} value={team.id} sx={{ fontSize: '0.875rem' }}>
+                {team.name}
+              </MenuItem>
+            ))}
+            <MenuItem value="ME" sx={{ fontSize: '0.875rem' }}>Moi</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Filtre 3: Type de décision */}
+        <FormControl sx={{ minWidth: { xs: '100%', md: 200 }, flex: { xs: '0 0 auto', md: '1 1 200px' } }} size="small">
+          <InputLabel id="type-filter-label">Type</InputLabel>
+          <Select
+            labelId="type-filter-label"
+            id="type-filter"
+            multiple
+            value={typeFilter}
+            onChange={handleTypeChange}
+            input={<OutlinedInput label="Type" />}
+            renderValue={(selected) => {
+              const labels: Record<string, string> = {
+                ADVICE_SOLICITATION: 'Sollicitation d\'avis',
+                CONSENSUS: 'Consensus',
+                MAJORITY: 'Majorité',
+                NUANCED_VOTE: 'Vote nuancé',
+              };
+              return selected.map((s) => labels[s]).join(', ');
+            }}
+            MenuProps={MenuProps}
+          >
+            <MenuItem value="ADVICE_SOLICITATION" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('ADVICE_SOLICITATION') > -1} />
+              <ListItemText primary="Sollicitation d'avis" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="CONSENSUS" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('CONSENSUS') > -1} />
+              <ListItemText primary="Consensus" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="MAJORITY" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('MAJORITY') > -1} />
+              <ListItemText primary="Majorité" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="NUANCED_VOTE" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('NUANCED_VOTE') > -1} />
+              <ListItemText primary="Vote nuancé" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+    </Box>
   );
 }

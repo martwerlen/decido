@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Box, Chip, Typography, Button, Alert } from '@mui/material';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 
 interface Participant {
@@ -200,46 +201,51 @@ export default function DecisionAdminClient({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{decision.title}</h1>
-        <p className="text-gray-600 mt-2">{decision.description}</p>
-        <div className="flex gap-2 mt-4">
-          <span className="bg-gray-100 px-3 py-1 rounded text-sm">
-            {DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
-          </span>
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
-            {DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
-          </span>
-        </div>
-      </div>
+      <Box sx={{ mb: 3 }}>
+        <h1 className="text-2xl font-bold">{decision.title}</h1>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{decision.description}</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Chip
+            label={DecisionStatusLabels[decision.status as keyof typeof DecisionStatusLabels]}
+            size="small"
+            variant="outlined"
+          />
+          <Chip
+            label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+        </Box>
+      </Box>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </div>
+        </Alert>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+        <Alert severity="success" sx={{ mb: 2 }}>
           {success}
-        </div>
+        </Alert>
       )}
 
       {/* Section Proposition amendée (CONSENSUS) */}
       {decision.decisionType === 'CONSENSUS' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Propositions</h2>
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <h2 className="text-base font-semibold mb-4">Propositions</h2>
 
-          <div className="mb-4">
-            <h3 className="font-medium mb-2">Proposition initiale</h3>
-            <div className="p-4 bg-gray-50 rounded border">
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>Proposition initiale</Typography>
+            <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
               {decision.initialProposal}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
           {(isOpen || decision.proposal) && (
             <div>
-              <h3 className="font-medium mb-2">Proposition amendée</h3>
+              <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>Proposition amendée</Typography>
               {isOpen ? (
                 <div className="space-y-3">
                   <textarea
@@ -249,38 +255,36 @@ export default function DecisionAdminClient({
                     className="w-full px-3 py-2 border rounded-lg"
                     placeholder="Vous pouvez amender la proposition pendant que le vote est ouvert..."
                   />
-                  <button
+                  <Button
                     onClick={handleUpdateProposal}
                     disabled={loading}
-                    className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                    variant="contained"
+                    color="primary"
                   >
                     Mettre à jour la proposition amendée
-                  </button>
+                  </Button>
                 </div>
               ) : decision.proposal ? (
-                <div className="p-4 bg-blue-50 rounded border border-blue-200">
+                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1, border: 1, borderColor: 'primary.main' }}>
                   {decision.proposal}
-                </div>
+                </Box>
               ) : (
-                <p className="text-sm text-gray-600">Aucune proposition amendée</p>
+                <Typography variant="body2" color="text.secondary">Aucune proposition amendée</Typography>
               )}
             </div>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Section Intention de décision (ADVICE_SOLICITATION) */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Intention de décision</h2>
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <h2 className="text-base font-semibold mb-4">Intention de décision</h2>
 
           {isOpen && opinionsReceived === 0 && (
-            <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+            <Alert severity="warning" sx={{ mb: 1.5 }}>
               ⚠️ Vous pouvez modifier votre intention uniquement tant qu'aucun avis n'a été donné.
-            </p>
+            </Alert>
           )}
 
           <div className="space-y-3">
@@ -289,35 +293,33 @@ export default function DecisionAdminClient({
               onChange={(e) => setAmendedProposal(e.target.value)}
               rows={6}
               disabled={opinionsReceived > 0}
-              className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border rounded-lg disabled:cursor-not-allowed"
               placeholder="Intention de décision..."
             />
 
             {isOpen && opinionsReceived === 0 && (
-              <button
+              <Button
                 onClick={handleUpdateProposal}
                 disabled={loading}
-                className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                style={{ backgroundColor: 'var(--color-primary)' }}
-                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                variant="contained"
+                color="primary"
               >
                 {loading ? 'Mise à jour...' : 'Mettre à jour l\'intention'}
-              </button>
+              </Button>
             )}
 
             {isOpen && opinionsReceived > 0 && (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-                ℹ️ Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre intention de décision.
-              </div>
+              <Alert severity="info" icon="ℹ️">
+                Des avis ont déjà été donnés. Vous ne pouvez plus modifier votre intention de décision.
+              </Alert>
             )}
           </div>
-        </div>
+        </Box>
       )}
 
       {/* Section Participants */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+        <h2 className="text-base font-semibold mb-4">
           {decision.decisionType === 'ADVICE_SOLICITATION'
             ? `Personnes sollicitées pour avis (${decision.participants.length})`
             : `Participants (${decision.participants.length})`}
@@ -326,42 +328,44 @@ export default function DecisionAdminClient({
         {decision.participants.length > 0 && (
           <div className="space-y-2">
             {decision.participants.map((participant) => (
-              <div key={participant.id} className="flex items-center justify-between p-3 border rounded">
+              <Box key={participant.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
                 <div className="flex-1">
                   {participant.user ? (
                     <div>
                       <span className="font-medium">{participant.user.name || 'Sans nom'}</span>
-                      <span className="text-sm text-gray-600 ml-2">({participant.user.email})</span>
+                      <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1, display: { xs: 'none', sm: 'inline' } }}>
+                        ({participant.user.email})
+                      </Typography>
                     </div>
                   ) : (
                     <div>
                       <span className="font-medium">{participant.externalName}</span>
-                      <span className="text-sm text-gray-600 ml-2">
+                      <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1, display: { xs: 'none', sm: 'inline' } }}>
                         ({participant.externalEmail}) - Externe
-                      </span>
+                      </Typography>
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
                   {participant.hasVoted ? (
-                    <span className="text-sm text-green-600">✓ A {decision.decisionType === 'ADVICE_SOLICITATION' ? 'donné son avis' : 'voté'}</span>
+                    <Typography variant="body2" color="success.main">✓ A {decision.decisionType === 'ADVICE_SOLICITATION' ? 'donné son avis' : 'voté'}</Typography>
                   ) : (
-                    <span className="text-sm text-gray-500">⏰ En attente</span>
+                    <Typography variant="body2" color="text.secondary">⏰ En attente</Typography>
                   )}
                 </div>
-              </div>
+              </Box>
             ))}
           </div>
         )}
-      </div>
+      </Box>
 
       {/* Section Conclusion/Décision finale */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && isOpen && opinionsReceived === decision.participants.length && decision.participants.length > 0 ? (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Décision finale</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <h2 className="text-base font-semibold mb-4">Décision finale</h2>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Tous les avis ont été reçus. Rédigez maintenant votre décision finale en tenant compte des avis sollicités.
-          </p>
+          </Typography>
           <div className="space-y-3">
             <textarea
               value={conclusion}
@@ -371,13 +375,13 @@ export default function DecisionAdminClient({
               placeholder="Rédigez votre décision finale ici..."
             />
           </div>
-        </div>
+        </Box>
       ) : decision.decisionType !== 'ADVICE_SOLICITATION' && isVotingFinished ? (
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Conclusion</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <h2 className="text-base font-semibold mb-4">Conclusion</h2>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
-          </p>
+          </Typography>
           <div className="space-y-3">
             <textarea
               value={conclusion}
@@ -386,86 +390,78 @@ export default function DecisionAdminClient({
               className="w-full px-3 py-2 border rounded-lg"
               placeholder="Entrez votre conclusion ici..."
             />
-            <button
+            <Button
               onClick={handleUpdateConclusion}
               disabled={loading}
-              className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+              variant="contained"
+              color="primary"
             >
               Enregistrer la conclusion
-            </button>
+            </Button>
           </div>
-        </div>
+        </Box>
       ) : null}
 
       {/* Actions */}
-      <div className="flex gap-4">
-        <button
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Button
           onClick={() => router.push(`/organizations/${slug}`)}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+          variant="outlined"
         >
           Retour
-        </button>
+        </Button>
 
         {isOpen && (
           <>
             {/* Bouton "Voir la décision en cours" / "Voir le vote" */}
-            <button
+            <Button
               onClick={() => router.push(`/organizations/${slug}/decisions/${decision.id}/vote`)}
-              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-              style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-                e.currentTarget.style.color = 'white';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--color-primary)';
-              }}
+              variant="outlined"
+              color="primary"
             >
               {decision.decisionType === 'CONSENSUS' || decision.decisionType === 'ADVICE_SOLICITATION'
                 ? 'Voir la décision en cours'
                 : 'Voir le vote'}
-            </button>
+            </Button>
 
             {/* Bouton "Retirer la décision" */}
-            <button
+            <Button
               onClick={handleWithdrawDecision}
               disabled={loading}
-              className="px-6 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="outlined"
+              color="error"
             >
               {loading ? 'Retrait...' : 'Retirer la décision'}
-            </button>
+            </Button>
 
             {/* Bouton "Valider la décision finale" (ADVICE_SOLICITATION uniquement) */}
             {decision.decisionType === 'ADVICE_SOLICITATION' && opinionsReceived === decision.participants.length && decision.participants.length > 0 && (
-              <button
+              <Button
                 onClick={handleValidateFinalDecision}
                 disabled={loading || !conclusion || conclusion.trim() === ''}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="contained"
+                color="success"
               >
                 {loading ? 'Validation...' : 'Valider la décision finale'}
-              </button>
+              </Button>
             )}
           </>
         )}
-      </div>
+      </Box>
 
       {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-          <h3 className="font-medium text-blue-900 mb-2">Statut de la sollicitation d'avis :</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <Typography variant="body2" fontWeight="medium" gutterBottom>Statut de la sollicitation d'avis :</Typography>
+          <ul className="text-sm space-y-1">
             <li>• {opinionsReceived} avis reçu{opinionsReceived > 1 ? 's' : ''} sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}</li>
             {opinionsReceived < decision.participants.length && (
               <li>• En attente de {decision.participants.length - opinionsReceived} avis supplémentaire{decision.participants.length - opinionsReceived > 1 ? 's' : ''}</li>
             )}
             {opinionsReceived === decision.participants.length && decision.participants.length > 0 && (
-              <li className="text-green-700">✓ Tous les avis ont été reçus ! Vous pouvez maintenant valider votre décision finale.</li>
+              <Typography component="li" color="success.main">✓ Tous les avis ont été reçus ! Vous pouvez maintenant valider votre décision finale.</Typography>
             )}
           </ul>
-        </div>
+        </Alert>
       )}
     </div>
   );

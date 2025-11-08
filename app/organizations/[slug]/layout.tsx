@@ -21,6 +21,7 @@ export default async function OrganizationLayout({
           flexGrow: 1,
           minHeight: "100vh",
           overflow: "auto",
+          pt: { xs: '56px', md: 0 }, // Padding for fixed AppBar on mobile
         }}
       >
         {children}

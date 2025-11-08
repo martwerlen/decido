@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Box, Chip, Button } from '@mui/material';
 import { DecisionTypeLabels } from '@/types/enums';
 
 interface DraftCardProps {
@@ -65,50 +66,67 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
   };
 
   return (
-    <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 hover:shadow-sm transition">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-medium text-gray-800">{draft.title || 'Brouillon sans titre'}</h3>
-            <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-medium">
-              Brouillon
-            </span>
-          </div>
+    <Box
+      sx={{
+        backgroundColor: 'background.paper',
+        border: 2,
+        borderStyle: 'dashed',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 1.5,
+        transition: 'box-shadow 0.2s',
+        '&:hover': {
+          boxShadow: 1,
+        },
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+            <h3 className="text-sm font-semibold truncate">{draft.title || 'Brouillon sans titre'}</h3>
+            <Chip label="Brouillon" size="small" sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }} />
+          </Box>
 
-          {draft.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{draft.description}</p>
-          )}
-
-          <div className="flex gap-3 text-xs text-gray-500">
-            <span className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-primary-lighter)', color: 'var(--color-primary-dark)' }}>
-              {DecisionTypeLabels[draft.decisionType as keyof typeof DecisionTypeLabels]}
-            </span>
-            <span className="px-2 py-1 rounded bg-gray-100">
-              {draft.votingMode === 'INVITED' ? 'Sur invitation' : 'Vote anonyme'}
-            </span>
-            <span className="text-gray-500">
+          <Box sx={{ display: 'flex', gap: 1, fontSize: '0.75rem', flexWrap: 'wrap', color: 'text.secondary' }}>
+            <Chip
+              label={DecisionTypeLabels[draft.decisionType as keyof typeof DecisionTypeLabels]}
+              size="small"
+              color="primary"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+            />
+            <Chip
+              label={draft.votingMode === 'INVITED' ? 'Sur invitation' : 'Vote anonyme'}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+            />
+            <span className="whitespace-nowrap">
               Modifié {getTimeAgo(draft.updatedAt)}
             </span>
-          </div>
+          </Box>
         </div>
 
-        <div className="flex gap-2 ml-4">
+        <div className="flex gap-2 flex-col sm:flex-row">
           <Link
             href={`/organizations/${orgSlug}/decisions/new?draft=${draft.id}`}
-            className="px-4 py-2 rounded-lg font-medium text-sm text-white"
+            className="px-3 py-1.5 rounded text-xs font-medium text-white whitespace-nowrap text-center"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
             Continuer
           </Link>
-          <button
+          <Button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-lg font-medium text-sm border border-red-500 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="outlined"
+            color="error"
+            size="small"
+            sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem' }}
           >
             {isDeleting ? 'Suppression...' : 'Supprimer'}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Box>
   );
 }

@@ -32,11 +32,26 @@ export default async function OrganizationDashboard({
         organizationId: organization.id,
       },
     },
+    include: {
+      teamMembers: {
+        include: {
+          team: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!membership) {
     redirect('/');
   }
+
+  // Extraire les équipes de l'utilisateur
+  const userTeams = membership.teamMembers.map((tm) => tm.team);
 
   // Récupérer les brouillons créés par l'utilisateur
   const draftDecisions = await prisma.decision.findMany({
@@ -49,6 +64,8 @@ export default async function OrganizationDashboard({
       id: true,
       title: true,
       description: true,
+      proposal: true,
+      initialProposal: true,
       decisionType: true,
       votingMode: true,
       createdAt: true,
@@ -75,6 +92,8 @@ export default async function OrganizationDashboard({
       id: true,
       title: true,
       description: true,
+      proposal: true,
+      initialProposal: true,
       decisionType: true,
       status: true,
       votingMode: true,
@@ -128,6 +147,8 @@ export default async function OrganizationDashboard({
       id: true,
       title: true,
       description: true,
+      proposal: true,
+      initialProposal: true,
       decisionType: true,
       status: true,
       votingMode: true,
@@ -173,6 +194,8 @@ export default async function OrganizationDashboard({
       id: true,
       title: true,
       description: true,
+      proposal: true,
+      initialProposal: true,
       decisionType: true,
       status: true,
       votingMode: true,
@@ -209,6 +232,8 @@ export default async function OrganizationDashboard({
     <DashboardContent
       slug={slug}
       organization={organization}
+      userTeams={userTeams}
+      userId={session.user.id}
       draftDecisions={draftDecisions}
       myActiveDecisions={myActiveDecisions}
       publicLinkDecisions={publicLinkDecisions}
