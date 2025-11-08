@@ -24,7 +24,7 @@ export default async function VotePage({
     redirect(`/organizations/${slug}/decisions`);
   }
 
-  // Récupérer la décision avec toutes les données nécessaires
+  // Récupérer la décision avec toutes les données nécessaires (optimisé)
   const decision = await prisma.decision.findFirst({
     where: {
       id: decisionId,
@@ -39,12 +39,21 @@ export default async function VotePage({
           image: true,
         },
       },
-      team: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       proposals: {
         orderBy: {
           order: 'asc',
         },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          order: true,
           _count: {
             select: {
               proposalVotes: true,
@@ -55,6 +64,12 @@ export default async function VotePage({
       nuancedProposals: {
         orderBy: {
           order: 'asc',
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          order: true,
         },
       },
       comments: {
@@ -69,6 +84,13 @@ export default async function VotePage({
               email: true,
             },
           },
+          externalParticipant: {
+            select: {
+              id: true,
+              externalName: true,
+              externalEmail: true,
+            },
+          },
           replies: {
             include: {
               user: {
@@ -76,6 +98,13 @@ export default async function VotePage({
                   id: true,
                   name: true,
                   email: true,
+                },
+              },
+              externalParticipant: {
+                select: {
+                  id: true,
+                  externalName: true,
+                  externalEmail: true,
                 },
               },
             },
@@ -89,7 +118,12 @@ export default async function VotePage({
         },
       },
       participants: {
-        include: {
+        select: {
+          id: true,
+          userId: true,
+          externalName: true,
+          externalEmail: true,
+          hasVoted: true,
           user: {
             select: {
               id: true,

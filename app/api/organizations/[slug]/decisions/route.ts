@@ -442,82 +442,80 @@ export async function POST(
     // Si launch=true et mode INVITED, créer les participants et envoyer les emails
     if (votingMode === 'INVITED' && launch) {
       const createdExternalParticipants: any[] = [];
+      const participantsToCreate: any[] = [];
 
-      // Ajouter des équipes entières
+      // Ajouter des équipes entières (optimisé avec une seule requête)
       if (teamIds && Array.isArray(teamIds) && teamIds.length > 0) {
-        for (const teamId of teamIds) {
-          // Vérifier que l'équipe appartient à l'organisation
-          const team = await prisma.team.findFirst({
-            where: {
-              id: teamId,
-              organizationId: organization.id,
-            },
-            include: {
-              members: {
-                include: {
-                  organizationMember: true,
-                },
+        // Récupérer toutes les équipes en une seule requête
+        const teams = await prisma.team.findMany({
+          where: {
+            id: { in: teamIds },
+            organizationId: organization.id,
+          },
+          include: {
+            members: {
+              include: {
+                organizationMember: true,
               },
             },
-          });
+          },
+        });
 
-          if (!team) continue;
-
-          // Ajouter tous les membres de l'équipe (sauf le créateur)
+        // Collecter tous les participants à créer
+        for (const team of teams) {
           for (const teamMember of team.members) {
-            // Ne pas ajouter le créateur de la décision comme participant (déjà ajouté)
+            // Ne pas ajouter le créateur de la décision comme participant
             if (teamMember.organizationMember.userId === decision.creatorId) {
               continue;
             }
 
-            try {
-              await prisma.decisionParticipant.create({
-                data: {
-                  decisionId: decision.id,
-                  userId: teamMember.organizationMember.userId,
-                  invitedVia: 'TEAM',
-                  teamId,
-                },
+            participantsToCreate.push({
+              decisionId: decision.id,
+              userId: teamMember.organizationMember.userId,
+              invitedVia: 'TEAM',
+              teamId: team.id,
+            });
+          }
+        }
+      }
+
+      // Ajouter des membres individuels (vérifier les memberships en une seule requête)
+      if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+        const validUserIds = userIds.filter(userId => userId !== decision.creatorId);
+
+        if (validUserIds.length > 0) {
+          // Vérifier tous les memberships en une seule requête
+          const memberships = await prisma.organizationMember.findMany({
+            where: {
+              userId: { in: validUserIds },
+              organizationId: organization.id,
+            },
+            select: {
+              userId: true,
+            },
+          });
+
+          const validUserIdsSet = new Set(memberships.map((m: { userId: string }) => m.userId));
+
+          // Collecter les participants à créer
+          for (const userId of validUserIds) {
+            if (validUserIdsSet.has(userId)) {
+              participantsToCreate.push({
+                decisionId: decision.id,
+                userId,
+                invitedVia: 'MANUAL',
               });
-            } catch (error) {
-              // Ignorer les doublons
-              console.error('Duplicate participant:', error);
             }
           }
         }
       }
 
-      // Ajouter des membres individuels
-      if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-        for (const userId of userIds) {
-          // Ne pas ajouter le créateur de la décision comme participant (déjà ajouté)
-          if (userId === decision.creatorId) {
-            continue;
-          }
-
-          // Vérifier que l'utilisateur est membre de l'organisation
-          const membership = await prisma.organizationMember.findFirst({
-            where: {
-              userId,
-              organizationId: organization.id,
-            },
-          });
-
-          if (!membership) continue;
-
-          try {
-            await prisma.decisionParticipant.create({
-              data: {
-                decisionId: decision.id,
-                userId,
-                invitedVia: 'MANUAL',
-              },
-            });
-          } catch (error) {
-            // Ignorer les doublons
-            console.error('Duplicate participant:', error);
-          }
-        }
+      // Créer tous les participants internes en une seule requête
+      if (participantsToCreate.length > 0) {
+        await prisma.decisionParticipant.createMany({
+          data: participantsToCreate,
+          skipDuplicates: true,
+        });
       }
 
       // Ajouter des participants externes
