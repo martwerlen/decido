@@ -104,12 +104,13 @@ export default function SharePageClient({
     console.log('🔵 Decision status:', decision.status);
     console.log('🔵 Closing state:', closing);
 
-    if (!confirm('Êtes-vous sûr de vouloir fermer cette décision ?')) {
-      console.log('🔵 Confirmation annulée par l\'utilisateur');
-      return;
-    }
+    // Confirmation désactivée temporairement pour test
+    // if (!confirm('Êtes-vous sûr de vouloir fermer cette décision ?')) {
+    //   console.log('🔵 Confirmation annulée par l\'utilisateur');
+    //   return;
+    // }
 
-    console.log('🔵 Confirmation OK, début de la fermeture...');
+    console.log('🔵 Début de la fermeture...');
     setClosing(true);
 
     try {
