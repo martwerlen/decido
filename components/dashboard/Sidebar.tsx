@@ -85,6 +85,7 @@ interface SidebarDecisions {
   ongoingTotal: number
   completed: CompletedDecision[]
   completedTotal: number
+  draftsCount: number
 }
 
 interface Organization {
@@ -155,6 +156,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     ongoingTotal: 0,
     completed: [],
     completedTotal: 0,
+    draftsCount: 0,
   })
   const [decisionsLoading, setDecisionsLoading] = useState(false)
   const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null)
@@ -854,6 +856,32 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
             {/* Container pour les décisions */}
             <Box ref={decisionsContainerRef} sx={{ flexGrow: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              {/* Section Brouillons (affichée uniquement si l'utilisateur a des brouillons) */}
+              {decisions.draftsCount > 0 && (
+                <Box sx={{ p: 2, pb: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      "&:hover": { color: "primary.main" }
+                    }}
+                    onClick={() => router.push(`/organizations/${organization}?status=DRAFT`)}
+                  >
+                    <span>Brouillons</span>
+                    <IconButton size="small" sx={{ p: 0 }}>
+                      <MoreHoriz fontSize="small" />
+                    </IconButton>
+                  </Typography>
+                </Box>
+              )}
+
+              {decisions.draftsCount > 0 && <Divider />}
+
               {/* Décisions en cours */}
               <Box sx={{ p: 2, pb: 1 }}>
                 <Typography
@@ -867,7 +895,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                     cursor: "pointer",
                     "&:hover": { color: "primary.main" }
                   }}
-                  onClick={() => router.push(`/organizations/${organization}`)}
+                  onClick={() => router.push(`/organizations/${organization}?status=OPEN`)}
                 >
                   <span>En cours</span>
                   {decisions.ongoingTotal > maxDecisions.ongoing && (
@@ -939,7 +967,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                     cursor: "pointer",
                     "&:hover": { color: "primary.main" }
                   }}
-                  onClick={() => router.push(`/organizations/${organization}`)}
+                  onClick={() => router.push(`/organizations/${organization}?status=CLOSED`)}
                 >
                   <span>Terminées</span>
                   {decisions.completedTotal > maxDecisions.completed && (
