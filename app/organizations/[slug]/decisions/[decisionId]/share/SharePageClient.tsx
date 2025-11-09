@@ -30,10 +30,12 @@ export default function SharePageClient({
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [closing, setClosing] = useState(false);
 
-  // Log de débogage au chargement
-  console.log('📋 SharePageClient chargé');
-  console.log('📋 Decision:', { id: decision.id, status: decision.status, title: decision.title });
-  console.log('📋 Bouton fermé désactivé?', closing || decision.status === 'CLOSED');
+  // Log de débogage au montage du composant
+  useEffect(() => {
+    console.log('📋 SharePageClient chargé');
+    console.log('📋 Decision:', { id: decision.id, status: decision.status, title: decision.title });
+    console.log('📋 Bouton fermé désactivé?', closing || decision.status === 'CLOSED');
+  }, []);
 
   // Construire l'URL publique
   const baseUrl = typeof window !== 'undefined'
