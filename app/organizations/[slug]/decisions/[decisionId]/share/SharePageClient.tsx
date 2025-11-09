@@ -93,11 +93,8 @@ export default function SharePageClient({
 
   // Fermer la décision
   const closeDecision = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir fermer cette décision ?')) {
-      return;
-    }
-
     setClosing(true);
+
     try {
       const response = await fetch(
         `/api/organizations/${organizationSlug}/decisions/${decision.id}/close`,

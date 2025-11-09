@@ -58,6 +58,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
+
+        // Au premier login, récupérer la dernière organisation visitée
+        const userWithMembership = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: {
+            memberships: {
+              include: {
+                organization: {
+                  select: {
+                    slug: true,
+                  },
+                },
+              },
+              orderBy: {
+                joinedAt: 'desc',
+              },
+              take: 1,
+            },
+          },
+        })
+
+        if (userWithMembership?.memberships[0]?.organization) {
+          token.lastOrganizationSlug = userWithMembership.memberships[0].organization.slug
+        }
       }
 
       // Si la session est mise à jour (ex: changement d'organisation)
