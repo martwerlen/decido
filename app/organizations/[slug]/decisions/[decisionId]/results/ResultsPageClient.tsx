@@ -171,6 +171,36 @@ export default function ResultsPageClient({
 
       {/* Résultats vote à la majorité */}
       {decision.decisionType === 'MAJORITY' && (() => {
+        // Si la décision est retirée, afficher uniquement le statut
+        if (decision.result === 'WITHDRAWN') {
+          return (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h5" fontWeight="semibold">Statut</Typography>
+                <Chip
+                  label="Proposition retirée"
+                  color="error"
+                  sx={{ px: 2, py: 1, fontWeight: 'medium' }}
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {decision.decidedAt && (
+                  <>
+                    Décision finalisée le{' '}
+                    {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </>
+                )}
+              </Typography>
+            </Box>
+          );
+        }
+
         // Déterminer les gagnants et les ex-aequo
         const winners = proposalResults.filter(r => r.isWinner);
         const maxVotes = Math.max(...proposalResults.map(r => r.voteCount));
@@ -183,7 +213,11 @@ export default function ResultsPageClient({
 
             <Box sx={{ mb: 3 }}>
               <Typography color="text.secondary">
-                {totalVotes} vote{totalVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
+                {votingMode === 'PUBLIC_LINK' ? (
+                  <>{totalVotes} vote{totalVotes > 1 ? 's' : ''}</>
+                ) : (
+                  <>{totalVotes} vote{totalVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}</>
+                )}
               </Typography>
             </Box>
 
@@ -319,20 +353,60 @@ export default function ResultsPageClient({
       })()}
 
       {/* Résultats vote nuancé  */}
-      {decision.decisionType === 'NUANCED_VOTE' && (
-        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
-          <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultats du vote nuancé</Typography>
+      {decision.decisionType === 'NUANCED_VOTE' && (() => {
+        // Si la décision est retirée, afficher uniquement le statut
+        if (decision.result === 'WITHDRAWN') {
+          return (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h5" fontWeight="semibold">Statut</Typography>
+                <Chip
+                  label="Proposition retirée"
+                  color="error"
+                  sx={{ px: 2, py: 1, fontWeight: 'medium' }}
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {decision.decidedAt && (
+                  <>
+                    Décision finalisée le{' '}
+                    {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </>
+                )}
+              </Typography>
+            </Box>
+          );
+        }
 
-          <Box sx={{ mb: 3 }}>
-            <Typography color="text.secondary">
-              {decision.participants.filter(p => p.hasVoted).length} vote{decision.participants.filter(p => p.hasVoted).length > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
-              {decision.nuancedWinnerCount && decision.nuancedWinnerCount > 1 &&
-                ` • ${decision.nuancedWinnerCount} propositions gagnantes`}
-            </Typography>
-          </Box>
+        // Calculer le nombre de votes pour PUBLIC_LINK
+        const votedCount = votingMode === 'PUBLIC_LINK'
+          ? nuancedResults.length > 0 ? Object.values(nuancedResults[0].mentionProfile).reduce((sum, count) => sum + count, 0) : 0
+          : decision.participants.filter(p => p.hasVoted).length;
+
+        return (
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultats du vote nuancé</Typography>
+
+            <Box sx={{ mb: 3 }}>
+              <Typography color="text.secondary">
+                {votingMode === 'PUBLIC_LINK' ? (
+                  <>{votedCount} vote{votedCount > 1 ? 's' : ''}</>
+                ) : (
+                  <>{votedCount} vote{votedCount > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}</>
+                )}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Échelle : {NuancedScaleLabels[decision.nuancedScale as keyof typeof NuancedScaleLabels]}
+                {decision.nuancedWinnerCount && decision.nuancedWinnerCount > 1 &&
+                  ` • ${decision.nuancedWinnerCount} propositions gagnantes`}
+              </Typography>
+            </Box>
 
           {/* Propositions gagnantes */}
           {decision.nuancedWinnerCount && nuancedResults.length > 0 && (
@@ -618,13 +692,14 @@ export default function ResultsPageClient({
             })}
           </Box>
 
-          {decision.status === 'OPEN' && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
-            </Alert>
-          )}
-        </Box>
-      )}
+            {decision.status === 'OPEN' && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Le vote est toujours en cours. Ces résultats peuvent encore évoluer.
+              </Alert>
+            )}
+          </Box>
+        );
+      })()}
 
       {/* Résultats consensus */}
       {decision.decisionType === 'CONSENSUS' && (
@@ -681,52 +756,83 @@ export default function ResultsPageClient({
           )}
 
           {/* Résultat du vote */}
-          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
-            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultat du vote</Typography>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-              <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'success.light', border: 1, borderColor: 'success.main' }}>
-                <Typography variant="h3" fontWeight="bold" color="success.dark">{agreeCount}</Typography>
-                <Typography variant="body2" color="success.dark">D'accord</Typography>
+          {decision.result === 'WITHDRAWN' ? (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h5" fontWeight="semibold">Statut</Typography>
+                <Chip
+                  label="Proposition retirée"
+                  color="error"
+                  sx={{ px: 2, py: 1, fontWeight: 'medium' }}
+                />
               </Box>
-              <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
-                <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
-                <Typography variant="body2" color="error.dark">Pas d'accord</Typography>
-              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {decision.decidedAt && (
+                  <>
+                    Décision finalisée le{' '}
+                    {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </>
+                )}
+              </Typography>
             </Box>
+          ) : (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Résultat du vote</Typography>
 
-            <Box sx={{ textAlign: 'center' }}>
-              {consensusReached ? (
-                <Box sx={{ backgroundColor: 'success.light', border: 1, borderColor: 'success.main', borderRadius: 2, p: 2 }}>
-                  <Typography variant="body1" fontWeight="semibold" color="success.dark" sx={{ mb: 0.5 }}>
-                    ✓ Consensus atteint
-                  </Typography>
-                  <Typography variant="body2" color="success.dark">
-                    Tous les participants sont d'accord avec la proposition
-                  </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+                <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'success.light', border: 1, borderColor: 'success.main' }}>
+                  <Typography variant="h3" fontWeight="bold" color="success.dark">{agreeCount}</Typography>
+                  <Typography variant="body2" color="success.dark">D'accord</Typography>
                 </Box>
-              ) : (
-                <Box sx={{ backgroundColor: 'warning.light', border: 1, borderColor: 'warning.main', borderRadius: 2, p: 2 }}>
-                  <Typography variant="body1" fontWeight="semibold" color="warning.dark" sx={{ mb: 0.5 }}>
-                    Consensus non atteint
-                  </Typography>
-                  <Typography variant="body2" color="warning.dark">
-                    {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d'accord
-                  </Typography>
+                <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
+                  <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
+                  <Typography variant="body2" color="error.dark">Pas d'accord</Typography>
                 </Box>
+              </Box>
+
+              <Box sx={{ textAlign: 'center' }}>
+                {consensusReached ? (
+                  <Box sx={{ backgroundColor: 'success.light', border: 1, borderColor: 'success.main', borderRadius: 2, p: 2 }}>
+                    <Typography variant="body1" fontWeight="semibold" color="success.dark" sx={{ mb: 0.5 }}>
+                      ✓ Consensus atteint
+                    </Typography>
+                    <Typography variant="body2" color="success.dark">
+                      Tous les participants sont d'accord avec la proposition
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ backgroundColor: 'warning.light', border: 1, borderColor: 'warning.main', borderRadius: 2, p: 2 }}>
+                    <Typography variant="body1" fontWeight="semibold" color="warning.dark" sx={{ mb: 0.5 }}>
+                      Consensus non atteint
+                    </Typography>
+                    <Typography variant="body2" color="warning.dark">
+                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d'accord
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                {votingMode === 'PUBLIC_LINK' ? (
+                  <>{totalConsensusVotes} vote{totalConsensusVotes > 1 ? 's' : ''}</>
+                ) : (
+                  <>{totalConsensusVotes} vote{totalConsensusVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}</>
+                )}
+              </Typography>
+
+              {decision.status === 'OPEN' && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
+                </Alert>
               )}
             </Box>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-              {totalConsensusVotes} vote{totalConsensusVotes > 1 ? 's' : ''} sur {decision.participants.length} participant{decision.participants.length > 1 ? 's' : ''}
-            </Typography>
-
-            {decision.status === 'OPEN' && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
-              </Alert>
-            )}
-          </Box>
+          )}
         </>
       )}
 
