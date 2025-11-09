@@ -30,13 +30,6 @@ export default function SharePageClient({
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [closing, setClosing] = useState(false);
 
-  // Log de débogage au montage du composant
-  useEffect(() => {
-    console.log('📋 SharePageClient chargé');
-    console.log('📋 Decision:', { id: decision.id, status: decision.status, title: decision.title });
-    console.log('📋 Bouton fermé désactivé?', closing || decision.status === 'CLOSED');
-  }, []);
-
   // Construire l'URL publique
   const baseUrl = typeof window !== 'undefined'
     ? window.location.origin
@@ -100,44 +93,27 @@ export default function SharePageClient({
 
   // Fermer la décision
   const closeDecision = async () => {
-    console.log('🔵 closeDecision appelée !');
-    console.log('🔵 Decision status:', decision.status);
-    console.log('🔵 Closing state:', closing);
-
-    // Confirmation désactivée temporairement pour test
-    // if (!confirm('Êtes-vous sûr de vouloir fermer cette décision ?')) {
-    //   console.log('🔵 Confirmation annulée par l\'utilisateur');
-    //   return;
-    // }
-
-    console.log('🔵 Début de la fermeture...');
     setClosing(true);
 
     try {
-      const url = `/api/organizations/${organizationSlug}/decisions/${decision.id}/close`;
-      console.log('🔵 URL appelée:', url);
-
-      const response = await fetch(url, {
-        method: 'PATCH',
-      });
-
-      console.log('🔵 Response status:', response.status);
-      console.log('🔵 Response OK:', response.ok);
+      const response = await fetch(
+        `/api/organizations/${organizationSlug}/decisions/${decision.id}/close`,
+        {
+          method: 'PATCH',
+        }
+      );
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Succès:', data);
         // Actualiser la sidebar pour refléter la fermeture de la décision
         refreshSidebar();
         router.push(`/organizations/${organizationSlug}/decisions/${decision.id}/results`);
       } else {
         const data = await response.json();
-        console.error('❌ Erreur API:', data);
         alert(data.error || 'Erreur lors de la fermeture');
         setClosing(false);
       }
     } catch (error) {
-      console.error('❌ Exception:', error);
+      console.error('Error closing decision:', error);
       alert('Erreur lors de la fermeture');
       setClosing(false);
     }
