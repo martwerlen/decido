@@ -38,7 +38,7 @@ export async function GET(
       return Response.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // 1. Décisions en cours (OPEN)
+    // 1. Décisions en cours (OPEN) - Limiter à 5 plus récentes
     const ongoingWhere = {
       organizationId: organization.id,
       status: 'OPEN',
@@ -65,12 +65,13 @@ export async function GET(
         orderBy: {
           createdAt: 'desc',
         },
+        take: 5, // Limiter à 5 décisions
       }),
       prisma.decision.count({ where: ongoingWhere }),
     ]);
 
     // Enrichir avec les infos de participation
-    const enrichedOngoing = ongoingDecisions.map((decision) => ({
+    const enrichedOngoing = ongoingDecisions.map((decision: typeof ongoingDecisions[number]) => ({
       id: decision.id,
       title: decision.title,
       status: decision.status,
@@ -80,7 +81,7 @@ export async function GET(
       hasVoted: decision.participants.length > 0 ? decision.participants[0].hasVoted : false,
     }));
 
-    // 2. Décisions terminées (CLOSED, IMPLEMENTED, ARCHIVED, WITHDRAWN)
+    // 2. Décisions terminées (CLOSED, IMPLEMENTED, ARCHIVED, WITHDRAWN) - Limiter à 5 plus récentes
     const completedWhere = {
       organizationId: organization.id,
       status: {
@@ -102,12 +103,13 @@ export async function GET(
         orderBy: {
           createdAt: 'desc',
         },
+        take: 5, // Limiter à 5 décisions
       }),
       prisma.decision.count({ where: completedWhere }),
     ]);
 
     // Enrichir les décisions terminées avec isCreator
-    const enrichedCompleted = completedDecisions.map((decision) => ({
+    const enrichedCompleted = completedDecisions.map((decision: typeof completedDecisions[number]) => ({
       id: decision.id,
       title: decision.title,
       status: decision.status,
@@ -116,11 +118,21 @@ export async function GET(
       isCreator: decision.creatorId === session.user.id,
     }));
 
+    // 3. Compter les brouillons de l'utilisateur
+    const draftsCount = await prisma.decision.count({
+      where: {
+        organizationId: organization.id,
+        status: 'DRAFT',
+        creatorId: session.user.id,
+      },
+    });
+
     return Response.json({
       ongoing: enrichedOngoing,
       ongoingTotal,
       completed: enrichedCompleted,
       completedTotal,
+      draftsCount, // Ajouter le nombre de brouillons
     });
   } catch (error) {
     console.error('Error fetching sidebar decisions:', error);

@@ -36,6 +36,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
           },
           success: {
             main: isDarkMode ? "#5da370" : "#4a7c59",
+            light: isDarkMode ? "#72b585" : "#d4f0dd", // Vert très clair pour le mode clair
           },
           background: {
             default: isDarkMode ? "#1a2520" : "#ffffff",

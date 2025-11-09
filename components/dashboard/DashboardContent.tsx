@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { TextField, Button, Box, Chip, Typography } from '@mui/material';
 import { Add, Search, QrCode2 } from '@mui/icons-material';
 import DecisionFilters, { DecisionFiltersType } from './DecisionFilters';
@@ -33,9 +33,20 @@ export default function DashboardContent({
   totalCount,
 }: DashboardContentProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Initialiser les filtres en fonction des query params de l'URL
+  const getInitialStatusFilter = () => {
+    const statusParam = searchParams.get('status');
+    if (statusParam === 'DRAFT') return ['DRAFT'];
+    if (statusParam === 'CLOSED') return ['CLOSED'];
+    if (statusParam === 'OPEN') return ['OPEN'];
+    return ['OPEN']; // Par défaut : En cours uniquement
+  };
+
   const [filters, setFilters] = useState<DecisionFiltersType>({
-    statusFilter: ['OPEN'], // Par défaut : En cours uniquement
+    statusFilter: getInitialStatusFilter(),
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
     typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
@@ -110,6 +121,22 @@ export default function DashboardContent({
     reloadDecisions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchQuery]);
+
+  // Synchroniser les filtres avec les query params de l'URL
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      let newStatusFilter: string[] = [];
+      if (statusParam === 'DRAFT') newStatusFilter = ['DRAFT'];
+      else if (statusParam === 'CLOSED') newStatusFilter = ['CLOSED'];
+      else if (statusParam === 'OPEN') newStatusFilter = ['OPEN'];
+
+      // Mettre à jour les filtres seulement si différents
+      if (JSON.stringify(newStatusFilter) !== JSON.stringify(filters.statusFilter)) {
+        setFilters(prev => ({ ...prev, statusFilter: newStatusFilter }));
+      }
+    }
+  }, [searchParams, filters.statusFilter]);
 
   // Fonction pour charger plus de décisions
   const loadMore = async () => {

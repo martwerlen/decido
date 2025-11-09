@@ -351,6 +351,7 @@ export default function NewDecisionPage({
           const data = await response.json();
           setDraftId(data.decision.id);
           setLastSavedAt(new Date());
+          refreshSidebar(); // Rafraîchir la sidebar pour afficher la section "Brouillons"
         } else {
           const data = await response.json();
           setError(data.error || 'Erreur lors de la sauvegarde');
@@ -367,6 +368,7 @@ export default function NewDecisionPage({
 
         if (response.ok) {
           setLastSavedAt(new Date());
+          refreshSidebar(); // Rafraîchir la sidebar pour mettre à jour le compteur de brouillons
         } else {
           const data = await response.json();
           setError(data.error || 'Erreur lors de la sauvegarde');
