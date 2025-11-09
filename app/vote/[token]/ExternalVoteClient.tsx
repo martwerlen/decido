@@ -28,10 +28,30 @@ interface Decision {
   context?: string;
   decisionType: string;
   initialProposal?: string;
+  proposal?: string;
   amendedProposal?: string;
   endDate: string;
   proposals?: Proposal[];
   comments?: Comment[];
+}
+
+interface OpinionResponse {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string | null;
+  externalParticipantId: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  externalParticipant: {
+    id: string;
+    externalName: string | null;
+    externalEmail: string | null;
+  } | null;
 }
 
 interface Proposal {
@@ -79,10 +99,13 @@ export default function ExternalVoteClient({ token }: { token: string }) {
   const [existingVote, setExistingVote] = useState<ExistingVote | null>(null);
   const [existingProposalVote, setExistingProposalVote] = useState<ExistingProposalVote | null>(null);
   const [existingComments, setExistingComments] = useState<Comment[]>([]);
+  const [existingOpinion, setExistingOpinion] = useState<OpinionResponse | null>(null);
+  const [allOpinions, setAllOpinions] = useState<OpinionResponse[]>([]);
 
   const [selectedProposal, setSelectedProposal] = useState<string>('');
   const [voteValue, setVoteValue] = useState<string>('');
   const [comment, setComment] = useState<string>('');
+  const [opinionContent, setOpinionContent] = useState<string>('');
 
   const [submitting, setSubmitting] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -116,6 +139,8 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         setExistingVote(data.existingVote);
         setExistingProposalVote(data.existingProposalVote);
         setExistingComments(data.existingComments || []);
+        setExistingOpinion(data.existingOpinion || null);
+        setAllOpinions(data.allOpinions || []);
 
         // Pré-remplir le vote existant
         if (data.existingVote) {
@@ -123,6 +148,9 @@ export default function ExternalVoteClient({ token }: { token: string }) {
         }
         if (data.existingProposalVote) {
           setSelectedProposal(data.existingProposalVote.proposal.id);
+        }
+        if (data.existingOpinion) {
+          setOpinionContent(data.existingOpinion.content);
         }
 
         setLoading(false);
@@ -170,6 +198,40 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     } catch (err) {
       setError('Erreur lors de l\'envoi du commentaire');
       setSubmittingComment(false);
+    }
+  };
+
+  // Soumettre un avis (ADVICE_SOLICITATION)
+  const handleSubmitOpinion = async () => {
+    if (!decision || !opinionContent.trim()) {
+      setError('L\'avis ne peut pas être vide');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/vote/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opinion: opinionContent.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de l\'enregistrement de l\'avis');
+        setSubmitting(false);
+        return;
+      }
+
+      const data = await response.json();
+      setSubmissionMessage(data.message || 'Votre avis a été enregistré');
+      setSubmitted(true);
+      setSubmitting(false);
+    } catch (err) {
+      setError('Erreur lors de l\'enregistrement de l\'avis');
+      setSubmitting(false);
     }
   };
 
@@ -319,6 +381,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
       SUPERMAJORITY: 'Super-majorité',
       WEIGHTED_VOTE: 'Vote pondéré',
       ADVISORY: 'Vote consultatif',
+      ADVICE_SOLICITATION: 'Sollicitation d\'avis',
     };
     return labels[type] || type;
   };
@@ -358,10 +421,12 @@ export default function ExternalVoteClient({ token }: { token: string }) {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
               <Chip label={getDecisionTypeLabel(decision.decisionType)} color="primary" />
-              <Chip
-                label={`Date limite: ${new Date(decision.endDate).toLocaleDateString('fr-FR')}`}
-                variant="outlined"
-              />
+              {decision.decisionType !== 'ADVICE_SOLICITATION' && (
+                <Chip
+                  label={`Date limite: ${new Date(decision.endDate).toLocaleDateString('fr-FR')}`}
+                  variant="outlined"
+                />
+              )}
             </Box>
             <Typography variant="h4" gutterBottom>
               {decision.title}
@@ -539,6 +604,128 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                 </CardContent>
               </Card>
             )}
+          </>
+        ) : decision.decisionType === 'ADVICE_SOLICITATION' ? (
+          /* Sollicitation d'avis */
+          <>
+            {/* Proposition de décision */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Proposition de décision
+                </Typography>
+                <Paper elevation={0} sx={{ bgcolor: 'background.paper', p: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                    {decision.proposal || decision.initialProposal}
+                  </Typography>
+                </Paper>
+              </CardContent>
+            </Card>
+
+            {/* Avis déjà donnés */}
+            {allOpinions.length > 0 && (
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Avis reçus ({allOpinions.length})
+                  </Typography>
+                  <div className="space-y-4">
+                    {allOpinions.map((opinion) => {
+                      const authorName = opinion.user?.name || opinion.externalParticipant?.externalName || 'Anonyme';
+                      const isCurrentParticipant = opinion.externalParticipantId === participant?.id;
+
+                      return (
+                        <Paper key={opinion.id} elevation={0} sx={{
+                          p: 2,
+                          border: '1px solid',
+                          borderColor: isCurrentParticipant ? 'primary.main' : 'divider',
+                          borderLeft: 4,
+                          mb: 2,
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography variant="body2" fontWeight="medium">{authorName}</Typography>
+                            {isCurrentParticipant && (
+                              <Chip label="Votre avis" size="small" color="primary" />
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(opinion.createdAt).toLocaleString('fr-FR')}
+                              {new Date(opinion.updatedAt) > new Date(opinion.createdAt) && ' (modifié)'}
+                            </Typography>
+                          </Box>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {opinion.content}
+                          </Typography>
+                        </Paper>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Commentaires */}
+            {decision.comments && decision.comments.length > 0 && (
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Commentaires
+                  </Typography>
+                  {decision.comments.map((comment) => (
+                    <Box key={comment.id} sx={{ mb: 2 }}>
+                      <Paper elevation={0} sx={{ bgcolor: 'background.paper', p: 2, border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>
+                          {comment.content}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {getCommentAuthorName(comment)} • {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Formulaire d'avis */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {existingOpinion ? 'Modifier votre avis' : 'Donner votre avis'}
+                </Typography>
+
+                {existingOpinion && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Vous avez déjà donné votre avis. Vous pouvez le modifier ci-dessous.
+                  </Alert>
+                )}
+
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                <TextField
+                  multiline
+                  rows={6}
+                  fullWidth
+                  value={opinionContent}
+                  onChange={(e) => setOpinionContent(e.target.value)}
+                  placeholder="Partagez votre avis sur cette proposition de décision..."
+                  sx={{ mb: 2 }}
+                />
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={handleSubmitOpinion}
+                  disabled={submitting || !opinionContent.trim()}
+                >
+                  {submitting ? <CircularProgress size={24} /> : existingOpinion ? 'Mettre à jour mon avis' : 'Enregistrer mon avis'}
+                </Button>
+              </CardContent>
+            </Card>
           </>
         ) : (
           /* Formulaire de vote pour MAJORITY et autres types */

@@ -887,9 +887,6 @@ export default function VotePageClient({
               <h2 className="text-xl font-semibold mb-4">
                 {hasVoted ? 'Modifier votre avis' : 'Donner votre avis'}
               </h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Avis de {decision.creator.name || 'créateur'} : Votre expertise et votre point de vue sont précieux pour cette décision.
-              </p>
               <div className="space-y-3">
                 <textarea
                   value={opinionContent}
