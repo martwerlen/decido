@@ -72,7 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 },
               },
               orderBy: {
-                createdAt: 'desc',
+                joinedAt: 'desc',
               },
               take: 1,
             },
