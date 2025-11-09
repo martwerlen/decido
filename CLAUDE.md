@@ -620,6 +620,13 @@ The anonymous voting system allows organizations to create public decision votes
    - Anonymous votes are counted alongside authenticated votes
    - Results visible to creator at any time
    - Public can view results if decision is closed (depending on settings)
+   - **Display behavior for PUBLIC_LINK mode**:
+     - Vote count shows only "X votes" (without participant count, as there are no DecisionParticipant records)
+     - Applied to all decision types: CONSENSUS, MAJORITY, NUANCED_VOTE
+   - **Display behavior for WITHDRAWN decisions**:
+     - For CONSENSUS, MAJORITY, and NUANCED_VOTE types: Shows only status card with "Proposition retirée" chip and finalization date
+     - No winner or vote results are displayed for withdrawn decisions
+     - Consistent with ADVICE_SOLICITATION withdrawn display pattern
 
 **Database schema:**
 - `Decision.publicSlug`: Human-readable slug for URL (unique per organization)
