@@ -454,8 +454,16 @@ export default function NewDecisionPage({
 
   // Calculer le nombre total de participants sélectionnés
   const getTotalParticipants = (): { internal: number; external: number; total: number } => {
-    const internalCount = getEffectiveSelectedUsers().length;
+    let internalCount = getEffectiveSelectedUsers().length;
     const externalCount = externalParticipants.length;
+
+    // Pour ADVICE_SOLICITATION, exclure le créateur du compteur
+    if (formData.decisionType === 'ADVICE_SOLICITATION' && session?.user?.id) {
+      const effectiveUsers = getEffectiveSelectedUsers();
+      if (effectiveUsers.includes(session.user.id)) {
+        internalCount -= 1;
+      }
+    }
 
     return {
       internal: internalCount,
