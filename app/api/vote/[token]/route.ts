@@ -83,6 +83,8 @@ export async function GET(
     let existingVote = null;
     let existingProposalVote = null;
     let existingComments = [];
+    let existingOpinion = null;
+    let allOpinions = [];
 
     if (participant.decision.decisionType === 'MAJORITY') {
       existingProposalVote = await prisma.proposalVote.findFirst({
@@ -92,6 +94,40 @@ export async function GET(
         },
         include: {
           proposal: true,
+        },
+      });
+    } else if (participant.decision.decisionType === 'ADVICE_SOLICITATION') {
+      // Pour ADVICE_SOLICITATION, récupérer l'avis du participant externe
+      existingOpinion = await prisma.opinionResponse.findFirst({
+        where: {
+          externalParticipantId: participant.id,
+          decisionId: participant.decision.id,
+        },
+      });
+
+      // Récupérer tous les avis existants
+      allOpinions = await prisma.opinionResponse.findMany({
+        where: {
+          decisionId: participant.decision.id,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          externalParticipant: {
+            select: {
+              id: true,
+              externalName: true,
+              externalEmail: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
         },
       });
     } else {
@@ -125,6 +161,8 @@ export async function GET(
       existingVote,
       existingProposalVote,
       existingComments,
+      existingOpinion,
+      allOpinions,
     });
   } catch (error) {
     console.error('Error fetching decision for external vote:', error);
@@ -172,7 +210,76 @@ export async function POST(
     const { decisionType } = participant.decision;
 
     // Traiter selon le type de décision
-    if (decisionType === 'MAJORITY') {
+    if (decisionType === 'ADVICE_SOLICITATION') {
+      // Sollicitation d'avis : créer ou mettre à jour l'avis du participant externe
+      const { opinion } = body;
+
+      if (!opinion || !opinion.trim()) {
+        return Response.json(
+          { error: 'L\'avis ne peut pas être vide' },
+          { status: 400 }
+        );
+      }
+
+      // Vérifier si l'avis existe déjà
+      const existingOpinion = await prisma.opinionResponse.findFirst({
+        where: {
+          externalParticipantId: participant.id,
+          decisionId: participant.decision.id,
+        },
+      });
+
+      let savedOpinion;
+      let isUpdate = false;
+
+      if (existingOpinion) {
+        // Mettre à jour l'avis existant
+        savedOpinion = await prisma.opinionResponse.update({
+          where: { id: existingOpinion.id },
+          data: { content: opinion.trim() },
+          include: {
+            externalParticipant: {
+              select: {
+                id: true,
+                externalName: true,
+                externalEmail: true,
+              },
+            },
+          },
+        });
+        isUpdate = true;
+      } else {
+        // Créer un nouvel avis
+        savedOpinion = await prisma.opinionResponse.create({
+          data: {
+            content: opinion.trim(),
+            decisionId: participant.decision.id,
+            externalParticipantId: participant.id,
+          },
+          include: {
+            externalParticipant: {
+              select: {
+                id: true,
+                externalName: true,
+                externalEmail: true,
+              },
+            },
+          },
+        });
+
+        // Marquer le participant comme ayant voté (ici, "voté" signifie "donné un avis")
+        await prisma.decisionParticipant.update({
+          where: { id: participant.id },
+          data: { hasVoted: true },
+        });
+      }
+
+      return Response.json({
+        opinion: savedOpinion,
+        isUpdate,
+        message: isUpdate ? 'Votre avis a été mis à jour' : 'Votre avis a été enregistré',
+      });
+    } else if (decisionType === 'MAJORITY') {
       // Vote pour une proposition
       const { proposalId } = body;
 

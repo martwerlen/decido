@@ -51,14 +51,6 @@ interface Member {
   };
 }
 
-interface NonUserMember {
-  id: string;
-  firstName: string;
-  lastName: string;
-  position?: string;
-  createdAt: string;
-}
-
 interface Invitation {
   id: string;
   email: string;
@@ -75,7 +67,6 @@ interface Invitation {
 
 interface MembersData {
   members: Member[];
-  nonUserMembers: NonUserMember[];
   pendingInvitations: Invitation[];
 }
 
@@ -119,7 +110,7 @@ export default function OrganizationMembersPage() {
   // État pour la confirmation de suppression
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<{
-    type: 'member' | 'nonUserMember' | 'invitation';
+    type: 'member' | 'invitation';
     id: string;
     name: string;
   } | null>(null);
@@ -253,7 +244,7 @@ export default function OrganizationMembersPage() {
   };
 
   const handleDeleteClick = (
-    type: 'member' | 'nonUserMember' | 'invitation',
+    type: 'member' | 'invitation',
     id: string,
     name: string
   ) => {
@@ -272,8 +263,6 @@ export default function OrganizationMembersPage() {
       let url = '';
       if (deletingItem.type === 'member') {
         url = `/api/organizations/${organizationSlug}/members?memberId=${deletingItem.id}`;
-      } else if (deletingItem.type === 'nonUserMember') {
-        url = `/api/organizations/${organizationSlug}/members?nonUserMemberId=${deletingItem.id}`;
       } else if (deletingItem.type === 'invitation') {
         url = `/api/organizations/${organizationSlug}/invitations?invitationId=${deletingItem.id}`;
       }
@@ -398,61 +387,6 @@ export default function OrganizationMembersPage() {
                 <TableRow>
                   <TableCell colSpan={5} align="center">
                     Aucun membre avec compte
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      {/* Membres sans compte utilisateur */}
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon /> Membres sans compte ({data?.nonUserMembers.length || 0})
-        </Typography>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Prénom</TableCell>
-                <TableCell>Nom</TableCell>
-                <TableCell>Fonction</TableCell>
-                <TableCell>Ajouté le</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.nonUserMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.firstName}</TableCell>
-                  <TableCell>{member.lastName}</TableCell>
-                  <TableCell>{member.position || '-'}</TableCell>
-                  <TableCell>
-                    {new Date(member.createdAt).toLocaleDateString('fr-FR')}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() =>
-                        handleDeleteClick(
-                          'nonUserMember',
-                          member.id,
-                          `${member.firstName} ${member.lastName}`
-                        )
-                      }
-                    >
-                      Supprimer
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!data?.nonUserMembers || data.nonUserMembers.length === 0) && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Aucun membre sans compte
                   </TableCell>
                 </TableRow>
               )}
@@ -640,12 +574,13 @@ export default function OrganizationMembersPage() {
 
           <TextField
             fullWidth
-            label="Email (optionnel)"
+            label="Email"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
             margin="normal"
-            helperText="Si fourni, la personne recevra une invitation par email"
+            helperText="La personne recevra une invitation par email"
           />
 
           {/* Sélection des équipes */}
@@ -688,34 +623,30 @@ export default function OrganizationMembersPage() {
             </Select>
           </FormControl>
 
-          {formData.email && (
-            <>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Rôle</InputLabel>
-                <Select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  label="Rôle"
-                >
-                  <MenuItem value="MEMBER">Membre</MenuItem>
-                  <MenuItem value="ADMIN">Administrateur</MenuItem>
-                  <MenuItem value="OWNER">Propriétaire</MenuItem>
-                </Select>
-              </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Rôle</InputLabel>
+            <Select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              label="Rôle"
+            >
+              <MenuItem value="MEMBER">Membre</MenuItem>
+              <MenuItem value="ADMIN">Administrateur</MenuItem>
+              <MenuItem value="OWNER">Propriétaire</MenuItem>
+            </Select>
+          </FormControl>
 
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.sendInvitation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sendInvitation: e.target.checked })
-                    }
-                  />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.sendInvitation}
+                onChange={(e) =>
+                  setFormData({ ...formData, sendInvitation: e.target.checked })
                 }
-                label="Envoyer une invitation par email"
               />
-            </>
-          )}
+            }
+            label="Envoyer une invitation par email"
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)} disabled={formLoading}>
@@ -725,7 +656,7 @@ export default function OrganizationMembersPage() {
             onClick={handleAddMember}
             variant="contained"
             color="primary"
-            disabled={formLoading || !formData.firstName || !formData.lastName}
+            disabled={formLoading || !formData.firstName || !formData.lastName || !formData.email}
           >
             {formLoading ? 'Ajout...' : 'Ajouter'}
           </Button>
