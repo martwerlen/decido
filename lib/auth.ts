@@ -63,7 +63,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const userWithMembership = await prisma.user.findUnique({
           where: { id: user.id },
           include: {
-            organizationMembers: {
+            memberships: {
               include: {
                 organization: {
                   select: {
@@ -79,8 +79,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         })
 
-        if (userWithMembership?.organizationMembers[0]?.organization) {
-          token.lastOrganizationSlug = userWithMembership.organizationMembers[0].organization.slug
+        if (userWithMembership?.memberships[0]?.organization) {
+          token.lastOrganizationSlug = userWithMembership.memberships[0].organization.slug
         }
       }
 
