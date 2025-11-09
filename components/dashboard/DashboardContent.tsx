@@ -122,6 +122,22 @@ export default function DashboardContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchQuery]);
 
+  // Synchroniser les filtres avec les query params de l'URL
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      let newStatusFilter: string[] = [];
+      if (statusParam === 'DRAFT') newStatusFilter = ['DRAFT'];
+      else if (statusParam === 'CLOSED') newStatusFilter = ['CLOSED'];
+      else if (statusParam === 'OPEN') newStatusFilter = ['OPEN'];
+
+      // Mettre à jour les filtres seulement si différents
+      if (JSON.stringify(newStatusFilter) !== JSON.stringify(filters.statusFilter)) {
+        setFilters(prev => ({ ...prev, statusFilter: newStatusFilter }));
+      }
+    }
+  }, [searchParams, filters.statusFilter]);
+
   // Fonction pour charger plus de décisions
   const loadMore = async () => {
     setIsLoadingMore(true);
