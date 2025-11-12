@@ -16,12 +16,14 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 
-type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'NUANCED_VOTE' | 'ADVICE_SOLICITATION';
+type DecisionType = 'MAJORITY' | 'CONSENSUS' | 'CONSENT' | 'NUANCED_VOTE' | 'ADVICE_SOLICITATION';
 type NuancedScale = '3_LEVELS' | '5_LEVELS' | '7_LEVELS';
+type ConsentStepMode = 'MERGED' | 'DISTINCT';
 
 // Descriptions courtes pour les tooltips
 const DecisionTypeTooltips: Record<DecisionType, string> = {
   CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
+  CONSENT: "Faites évoluer la proposition grâce au retour du groupe et allez de l'avant tant que personne n'a d'objection majeure",
   MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
   NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l'emporte",
   ADVICE_SOLICITATION: "Solliciter l'avis de personnes compétentes avant de décider en autonomie",
@@ -87,6 +89,8 @@ export default function NewDecisionPage({
     // Pour le vote nuancé
     nuancedScale: '5_LEVELS' as NuancedScale,
     nuancedWinnerCount: 1,
+    // Pour le consentement
+    consentStepMode: 'DISTINCT' as ConsentStepMode,
   });
 
   const [nuancedProposals, setNuancedProposals] = useState<NuancedProposal[]>([
@@ -524,15 +528,25 @@ export default function NewDecisionPage({
       }
 
       // Vérifier que endDate est au moins 24h dans le futur (sauf ADVICE_SOLICITATION)
+      // Pour CONSENT, la durée minimale est de 7 jours
       if (formData.decisionType !== 'ADVICE_SOLICITATION' && formData.endDate) {
         const endDate = new Date(formData.endDate);
         const minDate = new Date();
-        minDate.setHours(minDate.getHours() + 24);
 
-        if (endDate < minDate) {
-          setError('La date de fin doit être au moins 24h dans le futur');
-          setLoading(false);
-          return;
+        if (formData.decisionType === 'CONSENT') {
+          minDate.setDate(minDate.getDate() + 7);
+          if (endDate < minDate) {
+            setError('La durée minimale d\'une décision par consentement est de 7 jours');
+            setLoading(false);
+            return;
+          }
+        } else {
+          minDate.setHours(minDate.getHours() + 24);
+          if (endDate < minDate) {
+            setError('La date de fin doit être au moins 24h dans le futur');
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -678,9 +692,13 @@ export default function NewDecisionPage({
     setMajorityProposals(updated);
   };
 
-  // Calcul de la date minimale (24h dans le futur)
+  // Calcul de la date minimale (24h dans le futur, 7 jours pour CONSENT)
   const minDate = new Date();
-  minDate.setHours(minDate.getHours() + 24);
+  if (formData.decisionType === 'CONSENT') {
+    minDate.setDate(minDate.getDate() + 7);
+  } else {
+    minDate.setHours(minDate.getHours() + 24);
+  }
   const minDateString = minDate.toISOString().slice(0, 16);
 
   // Afficher un spinner pendant le chargement du brouillon ou des données
@@ -736,8 +754,8 @@ export default function NewDecisionPage({
           />
         </div>
 
-        {/* Mode de vote - masqué pour ADVICE_SOLICITATION */}
-        {formData.decisionType !== 'ADVICE_SOLICITATION' && (
+        {/* Mode de vote - masqué pour ADVICE_SOLICITATION et CONSENT */}
+        {formData.decisionType !== 'ADVICE_SOLICITATION' && formData.decisionType !== 'CONSENT' && (
           <div className="border-t pt-6">
             <label className="block font-medium mb-3">
               Mode de participation *
@@ -915,6 +933,39 @@ export default function NewDecisionPage({
               </Box>
             </Tooltip>
 
+            {/* Masquer CONSENT si PUBLIC_LINK est sélectionné */}
+            {formData.votingMode !== 'PUBLIC_LINK' && (
+              <Tooltip
+                title={DecisionTypeTooltips.CONSENT}
+                arrow
+                placement="right"
+              >
+                <Box
+                  component="label"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    p: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'action.hover' }
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="decisionType"
+                    value="CONSENT"
+                    checked={formData.decisionType === 'CONSENT'}
+                    onChange={(e) => setFormData({ ...formData, decisionType: 'CONSENT', votingMode: 'INVITED' })}
+                    className="mt-1 mr-3"
+                  />
+                  <div className="font-medium">{DecisionTypeLabels.CONSENT}</div>
+                </Box>
+              </Tooltip>
+            )}
+
             <Tooltip
               title={DecisionTypeTooltips.NUANCED_VOTE}
               arrow
@@ -1059,6 +1110,99 @@ export default function NewDecisionPage({
           </div>
         )}
 
+        {/* Configuration pour le consentement */}
+        {formData.decisionType === 'CONSENT' && (
+          <div className="space-y-6 border-t pt-6">
+            <h3 className="text-lg font-semibold">Configuration de la décision par consentement</h3>
+
+            {/* Proposition initiale */}
+            <div>
+              <label htmlFor="initialProposal" className="block font-medium mb-2">
+                Proposition initiale *
+              </label>
+              <textarea
+                id="initialProposal"
+                required
+                rows={4}
+                value={formData.initialProposal}
+                onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Décrivez votre proposition initiale..."
+              />
+            </div>
+
+            {/* Choix du mode d'étapes */}
+            <div>
+              <label className="block font-medium mb-2">
+                Déroulement des étapes *
+              </label>
+              <div className="space-y-3">
+                <Box
+                  component="label"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    p: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'action.hover' }
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="consentStepMode"
+                    value="DISTINCT"
+                    checked={formData.consentStepMode === 'DISTINCT'}
+                    onChange={(e) => setFormData({ ...formData, consentStepMode: 'DISTINCT' })}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <div className="font-medium">Clarifications et avis distincts (recommandé)</div>
+                    <Typography variant="body2" color="text.secondary">
+                      Les questions de clarification et les avis sont traités séparément pour plus de structure
+                    </Typography>
+                  </div>
+                </Box>
+
+                <Box
+                  component="label"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    p: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'action.hover' }
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="consentStepMode"
+                    value="MERGED"
+                    checked={formData.consentStepMode === 'MERGED'}
+                    onChange={(e) => setFormData({ ...formData, consentStepMode: 'MERGED' })}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <div className="font-medium">Clarifications et avis mélangés</div>
+                    <Typography variant="body2" color="text.secondary">
+                      Les questions de clarification et les avis peuvent être donnés en même temps
+                    </Typography>
+                  </div>
+                </Box>
+              </div>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                ℹ️ La décision se découpe en 4 étapes : 1/3 du temps pour les questions de clarification, 1/3 du temps pour les avis, 1/3 du temps pour l'évolution de la proposition et la possibilité d'émettre une objection
+              </Typography>
+            </div>
+          </div>
+        )}
+
         {/* Proposition de décision (uniquement pour ADVICE_SOLICITATION) */}
         {formData.decisionType === 'ADVICE_SOLICITATION' && (
           <div>
@@ -1195,7 +1339,9 @@ export default function NewDecisionPage({
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Doit être au moins 24h dans le futur
+              {formData.decisionType === 'CONSENT'
+                ? 'Durée minimale : 7 jours'
+                : 'Doit être au moins 24h dans le futur'}
             </Typography>
           </div>
         )}

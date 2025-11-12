@@ -52,7 +52,7 @@ export const DECISION_TYPES: DecisionType[] = [
 
 export const DecisionTypeLabels: Record<DecisionType, string> = {
   CONSENSUS: 'Consensus',
-  CONSENT: 'Consentement (pas d\'objection)',
+  CONSENT: 'Décision par consentement',
   MAJORITY: 'Majorité simple',
   SUPERMAJORITY: 'Super-majorité (2/3)',
   WEIGHTED_VOTE: 'Vote nuancé',
@@ -63,7 +63,7 @@ export const DecisionTypeLabels: Record<DecisionType, string> = {
 
 export const DecisionTypeDescriptions: Record<DecisionType, string> = {
   CONSENSUS: 'Tous les membres doivent être en accord',
-  CONSENT: 'Aucun membre ne s\'oppose fortement',
+  CONSENT: 'Faites évoluer la proposition grâce au retour du groupe et allez de l\'avant tant que personne n\'a d\'objection majeure',
   MAJORITY: 'Plus de la moitié des votes sont favorables',
   SUPERMAJORITY: 'Au moins 2/3 des votes sont favorables',
   WEIGHTED_VOTE: 'Vote avec échelle de préférence (-3 à +3)',
@@ -477,4 +477,76 @@ export function getMentionColor(scale: NuancedScale, mention: string): string {
 export function getMentionRank(scale: NuancedScale, mention: string): number {
   const mentions = getMentionsForScale(scale);
   return mentions.indexOf(mention);
+}
+
+// ============================================
+// DÉCISION PAR CONSENTEMENT
+// ============================================
+
+// Mode de déroulement des étapes
+export type ConsentStepMode = 'MERGED' | 'DISTINCT';
+
+export const CONSENT_STEP_MODES: ConsentStepMode[] = ['MERGED', 'DISTINCT'];
+
+export const ConsentStepModeLabels: Record<ConsentStepMode, string> = {
+  MERGED: 'Clarifications et avis mélangés',
+  DISTINCT: 'Clarifications et avis distincts',
+};
+
+// Stades de la décision par consentement
+export type ConsentStage =
+  | 'CLARIFICATIONS'
+  | 'AVIS'
+  | 'CLARIFAVIS'
+  | 'AMENDEMENTS'
+  | 'OBJECTIONS'
+  | 'TERMINEE';
+
+export const CONSENT_STAGES: ConsentStage[] = [
+  'CLARIFICATIONS',
+  'AVIS',
+  'CLARIFAVIS',
+  'AMENDEMENTS',
+  'OBJECTIONS',
+  'TERMINEE',
+];
+
+export const ConsentStageLabels: Record<ConsentStage, string> = {
+  CLARIFICATIONS: 'Questions de clarification',
+  AVIS: 'Avis',
+  CLARIFAVIS: 'Questions de clarification et avis',
+  AMENDEMENTS: 'Amendements',
+  OBJECTIONS: 'Objections',
+  TERMINEE: 'Terminée',
+};
+
+// Statuts d'objection
+export type ConsentObjectionStatus =
+  | 'NO_OBJECTION'
+  | 'OBJECTION'
+  | 'NO_POSITION';
+
+export const CONSENT_OBJECTION_STATUSES: ConsentObjectionStatus[] = [
+  'NO_OBJECTION',
+  'OBJECTION',
+  'NO_POSITION',
+];
+
+export const ConsentObjectionStatusLabels: Record<ConsentObjectionStatus, string> = {
+  NO_OBJECTION: 'Pas d\'objection',
+  OBJECTION: 'Objection',
+  NO_POSITION: 'Ne se prononce pas',
+};
+
+// Helpers de validation
+export function isValidConsentStepMode(mode: string): mode is ConsentStepMode {
+  return CONSENT_STEP_MODES.includes(mode as ConsentStepMode);
+}
+
+export function isValidConsentStage(stage: string): stage is ConsentStage {
+  return CONSENT_STAGES.includes(stage as ConsentStage);
+}
+
+export function isValidConsentObjectionStatus(status: string): status is ConsentObjectionStatus {
+  return CONSENT_OBJECTION_STATUSES.includes(status as ConsentObjectionStatus);
 }
