@@ -21,7 +21,7 @@ interface Team {
 export interface DecisionFiltersType {
   statusFilter: string[]; // 'DRAFT', 'OPEN', 'CLOSED'
   scopeFilter: string; // 'ALL', 'MY_TEAMS', 'ME', or team ID
-  typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'
+  typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'CONSENT', 'MAJORITY', 'NUANCED_VOTE'
 }
 
 interface DecisionFiltersProps {
@@ -51,6 +51,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
   const [typeFilter, setTypeFilter] = useState<string[]>([
     'ADVICE_SOLICITATION',
     'CONSENSUS',
+    'CONSENT',
     'MAJORITY',
     'NUANCED_VOTE',
   ]);
@@ -149,6 +150,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
               const labels: Record<string, string> = {
                 ADVICE_SOLICITATION: 'Sollicitation d\'avis',
                 CONSENSUS: 'Consensus',
+                CONSENT: 'Consentement',
                 MAJORITY: 'Majorité',
                 NUANCED_VOTE: 'Vote nuancé',
               };
@@ -163,6 +165,10 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
             <MenuItem value="CONSENSUS" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('CONSENSUS') > -1} />
               <ListItemText primary="Consensus" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="CONSENT" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('CONSENT') > -1} />
+              <ListItemText primary="Consentement" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
             <MenuItem value="MAJORITY" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('MAJORITY') > -1} />

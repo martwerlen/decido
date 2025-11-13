@@ -48,7 +48,7 @@ export default function DashboardContent({
   const [filters, setFilters] = useState<DecisionFiltersType>({
     statusFilter: getInitialStatusFilter(),
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
-    typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
+    typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'CONSENT', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
   const [decisions, setDecisions] = useState(initialDecisions);
   const [total, setTotal] = useState(totalCount);
