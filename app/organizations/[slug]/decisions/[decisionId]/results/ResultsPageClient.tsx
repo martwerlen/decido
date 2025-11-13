@@ -94,6 +94,8 @@ interface Props {
   disagreeCount: number;
   consensusReached: boolean;
   opinionResponses: OpinionResponse[];
+  clarificationQuestions?: any[];
+  consentObjections?: any[];
   slug: string;
   isCreator: boolean;
   votingMode: string;
@@ -107,6 +109,8 @@ export default function ResultsPageClient({
   disagreeCount,
   consensusReached,
   opinionResponses,
+  clarificationQuestions = [],
+  consentObjections = [],
   slug,
   isCreator,
   votingMode,
@@ -967,6 +971,189 @@ export default function ResultsPageClient({
                 </Typography>
               </Box>
             )}
+        </>
+      )}
+
+      {/* Décision par consentement */}
+      {decision.decisionType === 'CONSENT' && (
+        <>
+          {/* Statut et résultat */}
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h5" fontWeight="semibold">Résultat</Typography>
+              {decision.result && (
+                <Chip
+                  label={
+                    decision.result === 'APPROVED' ? '✅ Approuvée (pas d\'objections)' :
+                    decision.result === 'BLOCKED' ? '🚫 Bloquée (objections présentes)' :
+                    decision.result === 'WITHDRAWN' ? '⚪ Retirée' :
+                    DecisionResultLabels[decision.result as keyof typeof DecisionResultLabels]
+                  }
+                  color={
+                    decision.result === 'APPROVED' ? 'success' :
+                    decision.result === 'BLOCKED' ? 'error' :
+                    'default'
+                  }
+                  sx={{ px: 2, py: 1, fontWeight: 'medium' }}
+                />
+              )}
+            </Box>
+
+            {/* Statistiques */}
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Chip
+                label={`${consentObjections.filter(o => o.status === 'NO_OBJECTION').length} consentements`}
+                color="success"
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                label={`${consentObjections.filter(o => o.status === 'OBJECTION' && !o.withdrawnAt).length} objections`}
+                color="error"
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                label={`${consentObjections.filter(o => o.status === 'NO_POSITION').length} sans position`}
+                color="default"
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                label={`${clarificationQuestions.length} questions`}
+                color="info"
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+
+            {decision.decidedAt && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Décision finalisée le{' '}
+                {new Date(decision.decidedAt).toLocaleDateString('fr-FR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Propositions */}
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>Proposition</Typography>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                {decision.proposal && decision.initialProposal !== decision.proposal ? 'Proposition initiale' : 'Proposition'}
+              </Typography>
+              <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider', whiteSpace: 'pre-wrap' }}>
+                {decision.initialProposal}
+              </Box>
+            </Box>
+
+            {decision.proposal && decision.initialProposal !== decision.proposal && (
+              <Box>
+                <Typography variant="body2" fontWeight="medium" color="primary" sx={{ mb: 1 }}>
+                  Proposition amendée
+                </Typography>
+                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1, border: 1, borderColor: 'primary.main', whiteSpace: 'pre-wrap' }}>
+                  {decision.proposal}
+                </Box>
+              </Box>
+            )}
+          </Box>
+
+          {/* Questions de clarification */}
+          {clarificationQuestions.length > 0 && (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>
+                Questions de clarification ({clarificationQuestions.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {clarificationQuestions.map((q: any) => (
+                  <Box key={q.id} sx={{ borderLeft: 4, borderColor: 'info.main', pl: 2 }}>
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Question de {q.questioner?.name || q.externalQuestioner?.externalName || 'Anonyme'}
+                      </Typography>
+                      <Typography fontWeight="medium">{q.questionText}</Typography>
+                    </Box>
+
+                    {q.answerText && (
+                      <Box sx={{ pl: 2, borderLeft: 2, borderColor: 'success.main', mt: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          Réponse du créateur
+                        </Typography>
+                        <Typography>{q.answerText}</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Objections */}
+          {consentObjections.length > 0 && (
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" sx={{ mb: 2 }}>
+                Positions des participants ({consentObjections.length}/{decision.participants.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {consentObjections.map((obj: any) => (
+                  <Box
+                    key={obj.id}
+                    sx={{
+                      p: 2,
+                      backgroundColor: 'background.secondary',
+                      borderRadius: 1,
+                      border: 1,
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: obj.objectionText ? 1 : 0 }}>
+                      <Typography fontWeight="medium">
+                        {obj.user?.name || obj.externalParticipant?.externalName || 'Anonyme'}
+                      </Typography>
+                      <Chip
+                        label={
+                          obj.status === 'NO_OBJECTION' ? '✅ Pas d\'objection' :
+                          obj.status === 'OBJECTION' ? '🚫 Objection' :
+                          '⚪ Sans position'
+                        }
+                        color={
+                          obj.status === 'NO_OBJECTION' ? 'success' :
+                          obj.status === 'OBJECTION' ? 'error' :
+                          'default'
+                        }
+                        size="small"
+                      />
+                    </Box>
+                    {obj.objectionText && (
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                        {obj.objectionText}
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Conclusion pour CONSENT */}
+          {decision.conclusion && (
+            <Box sx={{ backgroundColor: 'primary.light', border: 1, borderColor: 'primary.main', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h5" fontWeight="semibold" color="primary.dark" sx={{ mb: 2 }}>
+                Conclusion
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                {decision.conclusion}
+              </Typography>
+            </Box>
+          )}
         </>
       )}
 
