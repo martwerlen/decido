@@ -32,6 +32,10 @@ interface Decision {
   result: string | null;
   decidedAt: Date | null;
   endDate: Date | null;
+  startDate?: Date | null;
+  consentStepMode?: string | null;
+  consentCurrentStage?: string | null;
+  consentAmendmentAction?: string | null;
   participants: Participant[];
 }
 
@@ -39,12 +43,16 @@ interface Props {
   decision: Decision;
   slug: string;
   userId: string;
+  clarificationQuestions?: any[] | null;
+  consentObjections?: any[] | null;
 }
 
 export default function DecisionAdminClient({
   decision: initialDecision,
   slug,
   userId,
+  clarificationQuestions,
+  consentObjections,
 }: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState(initialDecision);
@@ -319,13 +327,130 @@ export default function DecisionAdminClient({
         </Box>
       )}
 
+      {/* Section Décision par consentement (CONSENT) */}
+      {decision.decisionType === 'CONSENT' && (
+        <>
+          {/* Stade actuel */}
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <h2 className="text-base font-semibold mb-4">État de la décision</h2>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+              <Chip
+                label={`Stade: ${decision.consentCurrentStage || 'N/A'}`}
+                color="primary"
+                size="small"
+              />
+              <Chip
+                label={`Mode: ${decision.consentStepMode === 'MERGED' ? 'Clarifavis' : 'Distinct'}`}
+                color="info"
+                size="small"
+              />
+              {decision.consentAmendmentAction && (
+                <Chip
+                  label={`Action: ${
+                    decision.consentAmendmentAction === 'AMENDED' ? 'Amendée' :
+                    decision.consentAmendmentAction === 'KEPT' ? 'Conservée' :
+                    'Retirée'
+                  }`}
+                  color={decision.consentAmendmentAction === 'WITHDRAWN' ? 'error' : 'success'}
+                  size="small"
+                />
+              )}
+            </Box>
+
+            {decision.consentCurrentStage === 'AMENDEMENTS' && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                ⚠️ Vous devez amender, garder ou retirer la proposition depuis la page de vote.
+              </Alert>
+            )}
+
+            <Button
+              variant="outlined"
+              onClick={() => router.push(`/organizations/${slug}/decisions/${decision.id}/vote`)}
+            >
+              Voir la décision en cours
+            </Button>
+          </Box>
+
+          {/* Tableau de participation */}
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <h2 className="text-base font-semibold mb-4">
+              Activité des participants ({decision.participants.length})
+            </h2>
+
+            <Box sx={{ overflowX: 'auto' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Participant</th>
+                    <th className="text-center p-2">Questions posées</th>
+                    <th className="text-center p-2">Position (Objection)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {decision.participants.map((participant) => {
+                    const participantName = participant.user?.name || participant.externalName || 'Anonyme';
+                    const participantId = participant.userId;
+
+                    // Compter les questions posées
+                    const questionsCount = clarificationQuestions?.filter(
+                      q => q.questionerId === participantId
+                    ).length || 0;
+
+                    // Récupérer l'objection
+                    const objection = consentObjections?.find(
+                      obj => obj.userId === participantId
+                    );
+
+                    return (
+                      <tr key={participant.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2">{participantName}</td>
+                        <td className="text-center p-2">
+                          {questionsCount > 0 ? (
+                            <Chip label={questionsCount} size="small" color="info" />
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="text-center p-2">
+                          {objection ? (
+                            <Chip
+                              label={
+                                objection.status === 'NO_OBJECTION' ? '✅ Pas d\'objection' :
+                                objection.status === 'OBJECTION' ? '🚫 Objection' :
+                                '⚪ Sans position'
+                              }
+                              size="small"
+                              color={
+                                objection.status === 'NO_OBJECTION' ? 'success' :
+                                objection.status === 'OBJECTION' ? 'error' :
+                                'default'
+                              }
+                            />
+                          ) : decision.consentCurrentStage === 'OBJECTIONS' ? (
+                            <span className="text-gray-400">En attente</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Box>
+          </Box>
+        </>
+      )}
+
       {/* Section Participants */}
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
-        <h2 className="text-base font-semibold mb-4">
-          {decision.decisionType === 'ADVICE_SOLICITATION'
-            ? `Personnes sollicitées pour avis (${decision.participants.length})`
-            : `Participants (${decision.participants.length})`}
-        </h2>
+      {decision.decisionType !== 'CONSENT' && (
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+          <h2 className="text-base font-semibold mb-4">
+            {decision.decisionType === 'ADVICE_SOLICITATION'
+              ? `Personnes sollicitées pour avis (${decision.participants.length})`
+              : `Participants (${decision.participants.length})`}
+          </h2>
 
         {decision.participants.length > 0 && (
           <div className="space-y-2">
@@ -360,6 +485,7 @@ export default function DecisionAdminClient({
           </div>
         )}
       </Box>
+      )}
 
       {/* Section Conclusion/Décision finale */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && isOpen && opinionsReceived === decision.participants.length && decision.participants.length > 0 ? (

@@ -91,11 +91,53 @@ export default async function DecisionAdminPage({
     redirect(`/organizations/${slug}/decisions/${decisionId}/share`);
   }
 
+  // Pour les décisions CONSENT, récupérer les questions et objections
+  let clarificationQuestions = null;
+  let consentObjections = null;
+
+  if (decision.decisionType === 'CONSENT') {
+    clarificationQuestions = await prisma.clarificationQuestion.findMany({
+      where: { decisionId },
+      include: {
+        questioner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        answerer: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    consentObjections = await prisma.consentObjection.findMany({
+      where: { decisionId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   return (
     <DecisionAdminClient
       decision={decision}
       slug={slug}
       userId={session.user.id}
+      clarificationQuestions={clarificationQuestions}
+      consentObjections={consentObjections}
     />
   );
 }
