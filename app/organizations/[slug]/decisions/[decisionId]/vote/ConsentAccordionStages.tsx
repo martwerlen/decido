@@ -608,13 +608,13 @@ export default function ConsentAccordionStages({
           )}
           {status4 === 'ACTIF' && (
             <Box>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Donnez votre position sur la proposition
-              </Alert>
-
               {/* Formulaire objection */}
               {isParticipant && !userObjection && (
                 <Box>
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    Donnez votre position sur la proposition
+                  </Alert>
+
                   <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
                     Votre position
                   </Typography>
@@ -667,6 +667,12 @@ export default function ConsentAccordionStages({
               {userObjection && (
                 <Alert severity="success" sx={{ mb: 3 }}>
                   Vous avez enregistré votre position : {userObjection.status}
+                </Alert>
+              )}
+
+              {!isParticipant && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  Vous n'êtes pas participant à cette décision. Vous pouvez consulter les positions des participants ci-dessous.
                 </Alert>
               )}
 
