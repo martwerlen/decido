@@ -53,6 +53,18 @@ interface ConsentObjection {
   createdAt: Date;
 }
 
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+}
+
 interface Props {
   currentStage: ConsentStage;
   stepMode: ConsentStepMode;
@@ -96,6 +108,19 @@ interface Props {
   onKeepProposal: () => void;
   onWithdrawProposal: () => void;
 
+  // Comments
+  comments: Comment[];
+  newComment: string;
+  setNewComment: (value: string) => void;
+  editingCommentId: string | null;
+  setEditingCommentId: (value: string | null) => void;
+  editingCommentContent: string;
+  setEditingCommentContent: (value: string) => void;
+  onAddComment: () => void;
+  onUpdateComment: (commentId: string) => void;
+  userId: string;
+  slug: string;
+
   loading: boolean;
 }
 
@@ -133,6 +158,17 @@ export default function ConsentAccordionStages({
   onAmendProposal,
   onKeepProposal,
   onWithdrawProposal,
+  comments,
+  newComment,
+  setNewComment,
+  editingCommentId,
+  setEditingCommentId,
+  editingCommentContent,
+  setEditingCommentContent,
+  onAddComment,
+  onUpdateComment,
+  userId,
+  slug,
   loading,
 }: Props) {
   // État d'ouverture des accordéons
@@ -483,7 +519,12 @@ export default function ConsentAccordionStages({
           </Box>
         </AccordionSummary>
         <AccordionDetails>
-          {status3 === 'FUTUR' && date3 && (
+          {status3 === 'FUTUR' && timings?.amendements && (
+            <Alert severity="info">
+              Cette étape ouvrira le {new Date(timings.amendements.startDate).toLocaleDateString('fr-FR')} à {new Date(timings.amendements.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </Alert>
+          )}
+          {status3 === 'ACTIF' && !isCreator && date3 && (
             <Alert severity="warning">
               Jusqu'au {new Date(date3).toLocaleDateString('fr-FR')} à {new Date(date3).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, le proposeur peut conserver sa proposition telle quelle, la faire évoluer ou la retirer. Vous pourrez contribuer après cette étape.
             </Alert>
@@ -536,11 +577,6 @@ export default function ConsentAccordionStages({
                 </Box>
               </Box>
             </Box>
-          )}
-          {status3 === 'ACTIF' && !isCreator && (
-            <Alert severity="info">
-              Le créateur de la décision est en train de décider s'il conserve, amende ou retire sa proposition.
-            </Alert>
           )}
         </AccordionDetails>
       </Accordion>
@@ -660,6 +696,113 @@ export default function ConsentAccordionStages({
                   ))}
                 </Box>
               )}
+
+              {/* C. Discussion (Commentaires) */}
+              <Box sx={{ mt: 4 }}>
+                <Divider sx={{ mb: 3 }} />
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  C. Discussion
+                </Typography>
+
+                {/* Liste des commentaires */}
+                {comments.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 3 }}>
+                    Aucun commentaire pour le moment
+                  </Typography>
+                ) : (
+                  <Box sx={{ mb: 3 }}>
+                    {comments.map((comment) => (
+                      <Box key={comment.id} sx={{ mb: 3, pb: 3, borderLeft: 4, borderColor: 'divider', pl: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {comment.user?.name || 'Anonyme'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(comment.createdAt).toLocaleString('fr-FR')}
+                                {new Date(comment.updatedAt).getTime() > new Date(comment.createdAt).getTime() && ' (modifié)'}
+                              </Typography>
+                            </Box>
+
+                            {editingCommentId === comment.id ? (
+                              <Box>
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={3}
+                                  value={editingCommentContent}
+                                  onChange={(e) => setEditingCommentContent(e.target.value)}
+                                  sx={{ mb: 2 }}
+                                />
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={() => onUpdateComment(comment.id)}
+                                    disabled={loading}
+                                  >
+                                    Enregistrer
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => {
+                                      setEditingCommentId(null);
+                                      setEditingCommentContent('');
+                                    }}
+                                  >
+                                    Annuler
+                                  </Button>
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                {comment.content}
+                              </Typography>
+                            )}
+                          </Box>
+
+                          {comment.user?.id === userId && decisionStatus === 'OPEN' && !editingCommentId && (
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditingCommentContent(comment.content);
+                              }}
+                              sx={{ ml: 2 }}
+                            >
+                              Modifier
+                            </Button>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Formulaire pour ajouter un commentaire */}
+                {decisionStatus === 'OPEN' && (
+                  <Box>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Ajoutez votre commentaire..."
+                      sx={{ mb: 2 }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={onAddComment}
+                      disabled={loading || !newComment.trim()}
+                    >
+                      {loading ? 'Envoi...' : 'Ajouter un commentaire'}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
             </Box>
           )}
         </AccordionDetails>

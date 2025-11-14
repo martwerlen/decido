@@ -15,9 +15,6 @@ import {
   FormLabel,
   Radio,
   LinearProgress,
-  Stepper,
-  Step,
-  StepLabel,
   Card,
   CardContent,
   Divider,
@@ -122,6 +119,11 @@ export default function ConsentVoteClient({
   // Amendements (créateur seulement)
   const [amendedProposal, setAmendedProposal] = useState(decision.proposal || decision.initialProposal || '');
 
+  // Commentaires (thread de discussion pour étape objections)
+  const [newComment, setNewComment] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+
   // Calculer le stade actuel et les timings
   const currentStage = decision.consentCurrentStage as ConsentStage || 'CLARIFICATIONS';
   const stepMode = decision.consentStepMode as ConsentStepMode || 'DISTINCT';
@@ -159,20 +161,6 @@ export default function ConsentVoteClient({
       fetchOpinions();
     }
   }, [slug, decision.id, userId, currentStage]);
-
-  // Déterminer les étapes pour le stepper
-  const steps = stepMode === 'MERGED'
-    ? ['Clarifications & Avis', 'Amendements', 'Objections', 'Conclusion']
-    : ['Clarifications', 'Avis', 'Amendements', 'Objections', 'Conclusion'];
-
-  const getActiveStep = () => {
-    if (currentStage === 'TERMINEE') return steps.length;
-    if (currentStage === 'OBJECTIONS') return steps.length - 2;
-    if (currentStage === 'AMENDEMENTS') return stepMode === 'MERGED' ? 1 : 2;
-    if (currentStage === 'AVIS') return 1;
-    if (currentStage === 'CLARIFAVIS') return 0;
-    return 0; // CLARIFICATIONS
-  };
 
   // Fonction pour soumettre une question
   const handleSubmitQuestion = async () => {
@@ -436,6 +424,83 @@ export default function ConsentVoteClient({
     }
   };
 
+  // Fonction pour ajouter un commentaire
+  const handleAddComment = async () => {
+    if (!newComment.trim()) {
+      setError('Le commentaire ne peut pas être vide');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/comments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: newComment }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      setNewComment('');
+      setSuccess('Commentaire ajouté !');
+      setTimeout(() => {
+        router.refresh();
+        setSuccess('');
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction pour modifier un commentaire
+  const handleUpdateComment = async (commentId: string) => {
+    if (!editingCommentContent.trim()) {
+      setError('Le commentaire ne peut pas être vide');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/comments/${commentId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: editingCommentContent }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+      setSuccess('Commentaire modifié !');
+      setTimeout(() => {
+        router.refresh();
+        setSuccess('');
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', backgroundColor: 'background.default' }}>
       {/* History Panel */}
@@ -478,19 +543,6 @@ export default function ConsentVoteClient({
             </Link>
           </Box>
         </Box>
-
-        {/* Stepper */}
-        {decision.status === 'OPEN' && (
-          <Box sx={{ mb: 4 }}>
-            <Stepper activeStep={getActiveStep()} alternativeLabel>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box>
-        )}
 
         {/* Messages */}
         {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
@@ -575,20 +627,19 @@ export default function ConsentVoteClient({
           onAmendProposal={handleAmendProposal}
           onKeepProposal={handleKeepProposal}
           onWithdrawProposal={handleWithdrawProposal}
+          comments={decision.comments}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          editingCommentId={editingCommentId}
+          setEditingCommentId={setEditingCommentId}
+          editingCommentContent={editingCommentContent}
+          setEditingCommentContent={setEditingCommentContent}
+          onAddComment={handleAddComment}
+          onUpdateComment={handleUpdateComment}
+          userId={userId}
+          slug={slug}
           loading={loading}
         />
-
-        {/* Commentaires */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2 }}>
-              Discussion
-            </Typography>
-            <Alert severity="info">
-              Les commentaires apparaîtront ici. Cette fonctionnalité réutilise le système de commentaires existant.
-            </Alert>
-          </CardContent>
-        </Card>
       </Box>
     </Box>
   );

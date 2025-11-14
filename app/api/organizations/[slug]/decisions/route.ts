@@ -453,12 +453,23 @@ export async function POST(
       endDate: endDate ? new Date(endDate) : null,
       initialProposal: body.initialProposal || null,
       // Pour CONSENSUS, copier initialProposal vers proposal
-      proposal: (decisionType === 'CONSENSUS' || decisionType === 'ADVICE_SOLICITATION') && body.initialProposal
+      proposal: (decisionType === 'CONSENSUS' || decisionType === 'ADVICE_SOLICITATION' || decisionType === 'CONSENT') && body.initialProposal
         ? body.initialProposal
         : null,
       votingMode,
       publicSlug: votingMode === 'PUBLIC_LINK' ? body.publicSlug : null,
     };
+
+    // Pour CONSENT, initialiser les champs spécifiques
+    if (decisionType === 'CONSENT') {
+      decisionData.consentStepMode = body.consentStepMode || 'DISTINCT';
+      // Initialiser le stade actuel en fonction du mode
+      if (decisionData.consentStepMode === 'MERGED') {
+        decisionData.consentCurrentStage = 'CLARIFAVIS';
+      } else {
+        decisionData.consentCurrentStage = 'CLARIFICATIONS';
+      }
+    }
 
     // Ajouter le créateur comme participant uniquement en mode INVITED (brouillon ou lancé)
     // SAUF pour ADVICE_SOLICITATION où le créateur ne participe pas au vote
