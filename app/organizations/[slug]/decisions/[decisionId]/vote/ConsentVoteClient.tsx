@@ -53,6 +53,18 @@ interface OpinionResponse {
   updatedAt: Date;
 }
 
+interface TeamMember {
+  member: {
+    userId: string;
+  };
+}
+
+interface OrganizationTeam {
+  id: string;
+  name: string;
+  members: TeamMember[];
+}
+
 interface Decision {
   id: string;
   title: string;
@@ -60,6 +72,7 @@ interface Decision {
   initialProposal: string | null;
   proposal: string | null;
   status: string;
+  result: string | null;
   startDate: Date | null;
   endDate: Date | null;
   consentStepMode: string | null;
@@ -79,6 +92,7 @@ interface Props {
   clarificationQuestions: ClarificationQuestion[] | null;
   userObjection: ConsentObjection | null;
   allObjections: ConsentObjection[] | null;
+  organizationTeams: OrganizationTeam[];
   slug: string;
   userId: string;
   isCreator: boolean;
@@ -89,6 +103,7 @@ export default function ConsentVoteClient({
   clarificationQuestions: initialQuestions,
   userObjection: initialUserObjection,
   allObjections: initialAllObjections,
+  organizationTeams,
   slug,
   userId,
   isCreator,
@@ -133,6 +148,85 @@ export default function ConsentVoteClient({
     : null;
 
   const isParticipant = decision.participants.some(p => p.userId === userId);
+
+  // Formater la liste des participants
+  const formatParticipantsList = () => {
+    const participantItems: string[] = [];
+    const processedTeamIds = new Set<string>();
+    const processedUserIds = new Set<string>();
+
+    // Regrouper les participants par équipe
+    const participantsByTeam = new Map<string, any[]>();
+    const participantsWithoutTeam: any[] = [];
+
+    decision.participants.forEach(participant => {
+      if (participant.teamId) {
+        if (!participantsByTeam.has(participant.teamId)) {
+          participantsByTeam.set(participant.teamId, []);
+        }
+        participantsByTeam.get(participant.teamId)!.push(participant);
+      } else {
+        participantsWithoutTeam.push(participant);
+      }
+    });
+
+    // Vérifier chaque équipe de l'organisation
+    organizationTeams.forEach(team => {
+      const teamParticipants = participantsByTeam.get(team.id) || [];
+      const teamMemberUserIds = team.members.map(m => m.member.userId);
+
+      // Vérifier si TOUS les membres de l'équipe sont participants
+      const allMembersAreParticipants = teamMemberUserIds.length > 0 &&
+        teamMemberUserIds.every(userId =>
+          teamParticipants.some(p => p.userId === userId)
+        );
+
+      if (allMembersAreParticipants) {
+        // Toute l'équipe est invitée
+        participantItems.push(`Équipe ${team.name}`);
+        processedTeamIds.add(team.id);
+        // Marquer tous les membres de l'équipe comme traités
+        teamParticipants.forEach(p => {
+          if (p.userId) processedUserIds.add(p.userId);
+        });
+      }
+    });
+
+    // Ajouter les participants individuels des équipes partiellement invitées
+    participantsByTeam.forEach((teamParticipants, teamId) => {
+      if (!processedTeamIds.has(teamId)) {
+        teamParticipants.forEach(participant => {
+          if (participant.userId && !processedUserIds.has(participant.userId)) {
+            const name = participant.user?.name || participant.user?.email || 'Utilisateur';
+            participantItems.push(name);
+            processedUserIds.add(participant.userId);
+          } else if (!participant.userId && participant.externalName) {
+            // Participant externe
+            participantItems.push(participant.externalName);
+          }
+        });
+      }
+    });
+
+    // Ajouter les participants sans équipe
+    participantsWithoutTeam.forEach(participant => {
+      if (participant.userId && !processedUserIds.has(participant.userId)) {
+        const name = participant.user?.name || participant.user?.email || 'Utilisateur';
+        participantItems.push(name);
+        processedUserIds.add(participant.userId);
+      } else if (!participant.userId && participant.externalName) {
+        // Participant externe
+        participantItems.push(participant.externalName);
+      }
+    });
+
+    return {
+      count: decision.participants.length,
+      items: participantItems
+    };
+  };
+
+  const participantsInfo = formatParticipantsList();
 
   // Charger les avis au montage du composant
   useEffect(() => {
@@ -535,6 +629,10 @@ export default function ConsentVoteClient({
                 />
               )}
             </Box>
+            {/* Liste des participants */}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              {participantsInfo.count} participant{participantsInfo.count > 1 ? 's' : ''} : {participantsInfo.items.join(', ')}
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <HistoryButton onClick={() => setHistoryOpen(true)} />

@@ -121,6 +121,7 @@ export default async function VotePage({
         select: {
           id: true,
           userId: true,
+          teamId: true,
           externalName: true,
           externalEmail: true,
           hasVoted: true,
@@ -139,6 +140,24 @@ export default async function VotePage({
   if (!decision) {
     redirect(`/organizations/${slug}/decisions`);
   }
+
+  // Récupérer les équipes de l'organisation avec leurs membres
+  const organizationTeams = await prisma.team.findMany({
+    where: {
+      organizationId: organization.id,
+    },
+    include: {
+      members: {
+        include: {
+          member: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
   // Vérifier si l'utilisateur est autorisé à accéder à la page de vote
   if (decision.votingMode === 'INVITED') {
@@ -312,6 +331,7 @@ export default async function VotePage({
       clarificationQuestions={clarificationQuestions}
       userObjection={userObjection}
       allObjections={allObjections}
+      organizationTeams={organizationTeams}
       slug={slug}
       userId={session.user.id}
       isCreator={decision.creatorId === session.user.id}

@@ -80,6 +80,18 @@ interface OpinionResponse {
   } | null;
 }
 
+interface TeamMember {
+  member: {
+    userId: string;
+  };
+}
+
+interface OrganizationTeam {
+  id: string;
+  name: string;
+  members: TeamMember[];
+}
+
 interface Decision {
   id: string;
   title: string;
@@ -113,6 +125,7 @@ interface Props {
   clarificationQuestions?: any[] | null;
   userObjection?: any | null;
   allObjections?: any[] | null;
+  organizationTeams: OrganizationTeam[];
   slug: string;
   userId: string;
   isCreator: boolean;
@@ -128,6 +141,7 @@ export default function VotePageClient({
   clarificationQuestions,
   userObjection,
   allObjections,
+  organizationTeams,
   slug,
   userId,
   isCreator,
@@ -434,6 +448,7 @@ export default function VotePageClient({
         clarificationQuestions={clarificationQuestions || null}
         userObjection={userObjection || null}
         allObjections={allObjections || null}
+        organizationTeams={organizationTeams}
         slug={slug}
         userId={userId}
         isCreator={isCreator}
