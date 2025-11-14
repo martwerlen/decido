@@ -149,7 +149,7 @@ export default async function VotePage({
     include: {
       members: {
         include: {
-          member: {
+          organizationMember: {
             select: {
               userId: true,
             },

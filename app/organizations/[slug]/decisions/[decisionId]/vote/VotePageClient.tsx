@@ -81,7 +81,7 @@ interface OpinionResponse {
 }
 
 interface TeamMember {
-  member: {
+  organizationMember: {
     userId: string;
   };
 }

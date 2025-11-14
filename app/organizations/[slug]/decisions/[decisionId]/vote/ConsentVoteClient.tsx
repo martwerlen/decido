@@ -54,7 +54,7 @@ interface OpinionResponse {
 }
 
 interface TeamMember {
-  member: {
+  organizationMember: {
     userId: string;
   };
 }
@@ -173,7 +173,7 @@ export default function ConsentVoteClient({
     // Vérifier chaque équipe de l'organisation
     organizationTeams.forEach(team => {
       const teamParticipants = participantsByTeam.get(team.id) || [];
-      const teamMemberUserIds = team.members.map(m => m.member.userId);
+      const teamMemberUserIds = team.members.map(m => m.organizationMember.userId);
 
       // Vérifier si TOUS les membres de l'équipe sont participants
       const allMembersAreParticipants = teamMemberUserIds.length > 0 &&
