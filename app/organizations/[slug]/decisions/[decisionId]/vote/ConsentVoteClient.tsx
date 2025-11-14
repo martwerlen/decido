@@ -21,8 +21,10 @@ import {
   Card,
   CardContent,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { AccessTime, CheckCircle, Info } from '@mui/icons-material';
+import { AccessTime, CheckCircle, Info, QuestionAnswer, Comment } from '@mui/icons-material';
 import { ConsentStage, ConsentStepMode } from '@/types/enums';
 import { calculateConsentStageTimings, getCurrentConsentStage } from '@/lib/consent-logic';
 import HistoryButton from '@/components/decisions/HistoryButton';
@@ -45,6 +47,14 @@ interface ConsentObjection {
   user: { id: string; name: string | null; email: string } | null;
   withdrawnAt: Date | null;
   createdAt: Date;
+}
+
+interface OpinionResponse {
+  id: string;
+  content: string;
+  user: { id: string; name: string | null; email: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface Decision {
@@ -93,11 +103,19 @@ export default function ConsentVoteClient({
   const [success, setSuccess] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // Tabs pour Questions/Avis
+  const [activeTab, setActiveTab] = useState(0);
+
   // Questions de clarification
   const [questions, setQuestions] = useState<ClarificationQuestion[]>(initialQuestions || []);
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
   const [answeringQuestionId, setAnsweringQuestionId] = useState<string | null>(null);
+
+  // Avis (opinions)
+  const [opinions, setOpinions] = useState<OpinionResponse[]>([]);
+  const [userOpinion, setUserOpinion] = useState<OpinionResponse | null>(null);
+  const [newOpinion, setNewOpinion] = useState('');
 
   // Objections
   const [objections, setObjections] = useState<ConsentObjection[]>(initialAllObjections || []);
@@ -117,6 +135,34 @@ export default function ConsentVoteClient({
     : null;
 
   const isParticipant = decision.participants.some(p => p.userId === userId);
+
+  // Charger les avis au montage du composant
+  useEffect(() => {
+    const fetchOpinions = async () => {
+      try {
+        const response = await fetch(
+          `/api/organizations/${slug}/decisions/${decision.id}/opinions`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setOpinions(data.opinions || []);
+
+          // Trouver l'avis de l'utilisateur courant
+          const myOpinion = data.opinions?.find((o: OpinionResponse) => o.user?.id === userId);
+          if (myOpinion) {
+            setUserOpinion(myOpinion);
+            setNewOpinion(myOpinion.content);
+          }
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des avis:', err);
+      }
+    };
+
+    if (currentStage === 'CLARIFICATIONS' || currentStage === 'CLARIFAVIS' || currentStage === 'AVIS') {
+      fetchOpinions();
+    }
+  }, [slug, decision.id, userId, currentStage]);
 
   // Déterminer les étapes pour le stepper
   const steps = stepMode === 'MERGED'
@@ -200,6 +246,50 @@ export default function ConsentVoteClient({
       setNewAnswer('');
       setAnsweringQuestionId(null);
       setSuccess('Réponse envoyée avec succès');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction pour soumettre ou modifier un avis
+  const handleSubmitOpinion = async () => {
+    if (!newOpinion.trim()) {
+      setError('Veuillez entrer votre avis');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${slug}/decisions/${decision.id}/opinions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: newOpinion }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erreur lors de l\'enregistrement de l\'avis');
+      }
+
+      const data = await response.json();
+      setUserOpinion(data.opinion);
+
+      // Rafraîchir la liste des avis
+      const opResponse = await fetch(`/api/organizations/${slug}/decisions/${decision.id}/opinions`);
+      if (opResponse.ok) {
+        const opData = await opResponse.json();
+        setOpinions(opData.opinions);
+      }
+
+      setSuccess(data.isUpdate ? 'Avis modifié avec succès' : 'Avis enregistré avec succès');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -454,13 +544,13 @@ export default function ConsentVoteClient({
           </CardContent>
         </Card>
 
-        {/* Stade 1: Questions de clarification */}
-        {(currentStage === 'CLARIFICATIONS' || currentStage === 'CLARIFAVIS') && (
+        {/* Stades 1 & 2: Questions et Avis */}
+        {(currentStage === 'CLARIFICATIONS' || currentStage === 'CLARIFAVIS' || currentStage === 'AVIS') && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
+              {/* En-tête */}
               <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2 }}>
-                <Info sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Questions de clarification
+                {currentStage === 'CLARIFAVIS' ? 'Clarifications & Avis' : currentStage === 'CLARIFICATIONS' ? 'Questions de clarification' : 'Avis'}
               </Typography>
 
               {/* Timings */}
@@ -468,123 +558,285 @@ export default function ConsentVoteClient({
                 <Alert severity="info" sx={{ mb: 3 }}>
                   <Typography variant="body2">
                     Cette phase se termine le{' '}
-                    {new Date(stepMode === 'MERGED' ? timings.clarifavis!.endDate : timings.clarifications!.endDate).toLocaleString('fr-FR')}
+                    {currentStage === 'CLARIFAVIS' && timings.clarifavis
+                      ? new Date(timings.clarifavis.endDate).toLocaleString('fr-FR')
+                      : currentStage === 'CLARIFICATIONS' && timings.clarifications
+                      ? new Date(timings.clarifications.endDate).toLocaleString('fr-FR')
+                      : currentStage === 'AVIS' && timings.avis
+                      ? new Date(timings.avis.endDate).toLocaleString('fr-FR')
+                      : ''}
                   </Typography>
                 </Alert>
               )}
 
-              {/* Liste des questions */}
-              {questions.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  {questions.map(q => (
-                    <Box key={q.id} sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          Question de {q.questioner?.name || 'Anonyme'} •{' '}
-                          {new Date(q.createdAt).toLocaleDateString('fr-FR')}
-                        </Typography>
-                        <Typography variant="body1" fontWeight="medium">{q.questionText}</Typography>
-                      </Box>
+              {/* Tabs pour CLARIFAVIS (questions + avis) */}
+              {(currentStage === 'CLARIFAVIS' || currentStage === 'AVIS') ? (
+                <>
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+                      <Tab label="Questions" icon={<QuestionAnswer />} iconPosition="start" />
+                      <Tab label="Avis" icon={<Comment />} iconPosition="start" />
+                    </Tabs>
+                  </Box>
 
-                      {q.answerText ? (
-                        <Box sx={{ pl: 3, borderLeft: 3, borderColor: 'success.main' }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Réponse de {q.answerer?.name || 'Créateur'}
-                          </Typography>
-                          <Typography variant="body1">{q.answerText}</Typography>
+                  {/* Tab 1: Questions */}
+                  {activeTab === 0 && (
+                    <Box>
+                      {/* Liste des questions */}
+                      {questions.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          {questions.map(q => (
+                            <Box key={q.id} sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Question de {q.questioner?.name || 'Anonyme'} •{' '}
+                                  {new Date(q.createdAt).toLocaleDateString('fr-FR')}
+                                </Typography>
+                                <Typography variant="body1" fontWeight="medium">{q.questionText}</Typography>
+                              </Box>
+
+                              {q.answerText ? (
+                                <Box sx={{ pl: 3, borderLeft: 3, borderColor: 'success.main' }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Réponse de {q.answerer?.name || 'Créateur'}
+                                  </Typography>
+                                  <Typography variant="body1">{q.answerText}</Typography>
+                                </Box>
+                              ) : isCreator && answeringQuestionId === q.id ? (
+                                <Box sx={{ pl: 3 }}>
+                                  <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    value={newAnswer}
+                                    onChange={(e) => setNewAnswer(e.target.value)}
+                                    placeholder="Votre réponse..."
+                                    sx={{ mb: 2 }}
+                                  />
+                                  <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Button
+                                      variant="contained"
+                                      onClick={() => handleAnswerQuestion(q.id)}
+                                      disabled={loading}
+                                    >
+                                      Envoyer la réponse
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      onClick={() => {
+                                        setAnsweringQuestionId(null);
+                                        setNewAnswer('');
+                                      }}
+                                    >
+                                      Annuler
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              ) : isCreator ? (
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => setAnsweringQuestionId(q.id)}
+                                  sx={{ ml: 3 }}
+                                >
+                                  Répondre
+                                </Button>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ pl: 3, fontStyle: 'italic' }}>
+                                  En attente de réponse
+                                </Typography>
+                              )}
+                            </Box>
+                          ))}
                         </Box>
-                      ) : isCreator && answeringQuestionId === q.id ? (
-                        <Box sx={{ pl: 3 }}>
+                      )}
+
+                      {/* Formulaire pour poser une question */}
+                      {isParticipant && decision.status === 'OPEN' && (
+                        <Box>
+                          {questions.length > 0 && <Divider sx={{ my: 3 }} />}
+                          <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
+                            Poser une question
+                          </Typography>
                           <TextField
                             fullWidth
                             multiline
                             rows={3}
-                            value={newAnswer}
-                            onChange={(e) => setNewAnswer(e.target.value)}
-                            placeholder="Votre réponse..."
+                            value={newQuestion}
+                            onChange={(e) => setNewQuestion(e.target.value)}
+                            placeholder="Votre question..."
                             sx={{ mb: 2 }}
                           />
-                          <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Button
-                              variant="contained"
-                              onClick={() => handleAnswerQuestion(q.id)}
-                              disabled={loading}
-                            >
-                              Envoyer la réponse
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              onClick={() => {
-                                setAnsweringQuestionId(null);
-                                setNewAnswer('');
-                              }}
-                            >
-                              Annuler
-                            </Button>
-                          </Box>
+                          <Button
+                            variant="contained"
+                            onClick={handleSubmitQuestion}
+                            disabled={loading || !newQuestion.trim()}
+                          >
+                            Envoyer la question
+                          </Button>
                         </Box>
-                      ) : isCreator ? (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => setAnsweringQuestionId(q.id)}
-                          sx={{ ml: 3 }}
-                        >
-                          Répondre
-                        </Button>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{ pl: 3, fontStyle: 'italic' }}>
-                          En attente de réponse
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Tab 2: Avis */}
+                  {activeTab === 1 && (
+                    <Box>
+                      {/* Liste des avis */}
+                      {opinions.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          {opinions.map(opinion => (
+                            <Box key={opinion.id} sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Avis de {opinion.user?.name || 'Anonyme'} •{' '}
+                                {new Date(opinion.createdAt).toLocaleDateString('fr-FR')}
+                                {opinion.updatedAt && new Date(opinion.updatedAt).getTime() > new Date(opinion.createdAt).getTime() && (
+                                  <> (modifié le {new Date(opinion.updatedAt).toLocaleDateString('fr-FR')})</>
+                                )}
+                              </Typography>
+                              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{opinion.content}</Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+
+                      {/* Formulaire pour donner/modifier son avis */}
+                      {isParticipant && decision.status === 'OPEN' && (
+                        <Box>
+                          {opinions.length > 0 && <Divider sx={{ my: 3 }} />}
+                          <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
+                            {userOpinion ? 'Modifier votre avis' : 'Donner votre avis'}
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={5}
+                            value={newOpinion}
+                            onChange={(e) => setNewOpinion(e.target.value)}
+                            placeholder="Partagez votre avis sur cette proposition..."
+                            sx={{ mb: 2 }}
+                          />
+                          <Button
+                            variant="contained"
+                            onClick={handleSubmitOpinion}
+                            disabled={loading || !newOpinion.trim()}
+                          >
+                            {userOpinion ? 'Modifier mon avis' : 'Envoyer mon avis'}
+                          </Button>
+                          {userOpinion && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                              Vous pouvez modifier votre avis à tout moment tant que la décision n'est pas terminée.
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+
+                      {opinions.length === 0 && (!isParticipant || decision.status !== 'OPEN') && (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          Aucun avis n'a encore été donné.
                         </Typography>
                       )}
                     </Box>
-                  ))}
-                </Box>
-              )}
-
-              {/* Formulaire pour poser une question (participants seulement, pas le créateur) */}
-              {isParticipant && !isCreator && decision.status === 'OPEN' && (
+                  )}
+                </>
+              ) : (
+                /* Mode CLARIFICATIONS uniquement (pas de tabs, juste les questions) */
                 <Box>
-                  <Divider sx={{ my: 3 }} />
-                  <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
-                    Poser une question
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    value={newQuestion}
-                    onChange={(e) => setNewQuestion(e.target.value)}
-                    placeholder="Votre question..."
-                    sx={{ mb: 2 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleSubmitQuestion}
-                    disabled={loading || !newQuestion.trim()}
-                  >
-                    Envoyer la question
-                  </Button>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                  {/* Liste des questions */}
+                  {questions.length > 0 && (
+                    <Box sx={{ mb: 3 }}>
+                      {questions.map(q => (
+                        <Box key={q.id} sx={{ mb: 3, pb: 3, borderBottom: 1, borderColor: 'divider' }}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              Question de {q.questioner?.name || 'Anonyme'} •{' '}
+                              {new Date(q.createdAt).toLocaleDateString('fr-FR')}
+                            </Typography>
+                            <Typography variant="body1" fontWeight="medium">{q.questionText}</Typography>
+                          </Box>
 
-        {/* Stade 2: Avis (mode DISTINCT uniquement) */}
-        {currentStage === 'AVIS' && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2 }}>
-                Avis et retours
-              </Typography>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Les participants donnent leur avis sur la proposition via les commentaires ci-dessous.
-              </Alert>
-              {timings && timings.avis && (
-                <Typography variant="body2" color="text.secondary">
-                  Cette phase se termine le {new Date(timings.avis.endDate).toLocaleString('fr-FR')}
-                </Typography>
+                          {q.answerText ? (
+                            <Box sx={{ pl: 3, borderLeft: 3, borderColor: 'success.main' }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Réponse de {q.answerer?.name || 'Créateur'}
+                              </Typography>
+                              <Typography variant="body1">{q.answerText}</Typography>
+                            </Box>
+                          ) : isCreator && answeringQuestionId === q.id ? (
+                            <Box sx={{ pl: 3 }}>
+                              <TextField
+                                fullWidth
+                                multiline
+                                rows={3}
+                                value={newAnswer}
+                                onChange={(e) => setNewAnswer(e.target.value)}
+                                placeholder="Votre réponse..."
+                                sx={{ mb: 2 }}
+                              />
+                              <Box sx={{ display: 'flex', gap: 2 }}>
+                                <Button
+                                  variant="contained"
+                                  onClick={() => handleAnswerQuestion(q.id)}
+                                  disabled={loading}
+                                >
+                                  Envoyer la réponse
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  onClick={() => {
+                                    setAnsweringQuestionId(null);
+                                    setNewAnswer('');
+                                  }}
+                                >
+                                  Annuler
+                                </Button>
+                              </Box>
+                            </Box>
+                          ) : isCreator ? (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => setAnsweringQuestionId(q.id)}
+                              sx={{ ml: 3 }}
+                            >
+                              Répondre
+                            </Button>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ pl: 3, fontStyle: 'italic' }}>
+                              En attente de réponse
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+
+                  {/* Formulaire pour poser une question */}
+                  {isParticipant && decision.status === 'OPEN' && (
+                    <Box>
+                      {questions.length > 0 && <Divider sx={{ my: 3 }} />}
+                      <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
+                        Poser une question
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        placeholder="Votre question..."
+                        sx={{ mb: 2 }}
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmitQuestion}
+                        disabled={loading || !newQuestion.trim()}
+                      >
+                        Envoyer la question
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
               )}
             </CardContent>
           </Card>
