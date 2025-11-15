@@ -124,15 +124,14 @@ async function main() {
         const participantId = cuid();
         db.prepare(`
           INSERT INTO decision_participants (
-            id, decisionId, userId, invitedVia, hasVoted, createdAt, updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            id, decisionId, userId, invitedVia, hasVoted, createdAt
+          ) VALUES (?, ?, ?, ?, ?, ?)
         `).run(
           participantId,
           decisionId,
           userId,
           'MANUAL',
           config.hasVoted ? 1 : 0,
-          startDate.toISOString(),
           startDate.toISOString()
         );
       }
