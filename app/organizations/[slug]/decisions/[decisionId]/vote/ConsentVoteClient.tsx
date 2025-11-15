@@ -130,6 +130,7 @@ export default function ConsentVoteClient({
   const [userObjection, setUserObjection] = useState<ConsentObjection | null>(initialUserObjection);
   const [objectionStatus, setObjectionStatus] = useState(initialUserObjection?.status || 'NO_POSITION');
   const [objectionText, setObjectionText] = useState(initialUserObjection?.objectionText || '');
+  const [isEditingObjection, setIsEditingObjection] = useState(false);
 
   // Amendements (créateur seulement)
   const [amendedProposal, setAmendedProposal] = useState(decision.proposal || decision.initialProposal || '');
@@ -504,6 +505,7 @@ export default function ConsentVoteClient({
       const data = await response.json();
       setUserObjection(data.objection);
       setSuccess('Votre position a été enregistrée');
+      setIsEditingObjection(false); // Fermer le mode édition
 
       // Rafraîchir la liste des objections
       const objResponse = await fetch(`/api/organizations/${slug}/decisions/${decision.id}/consent-objections`);
@@ -511,6 +513,9 @@ export default function ConsentVoteClient({
         const objData = await objResponse.json();
         setObjections(objData.objections);
       }
+
+      // Rafraîchir la page si la décision a été auto-clôturée
+      setTimeout(() => router.refresh(), 1500);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -720,6 +725,8 @@ export default function ConsentVoteClient({
           objectionText={objectionText}
           setObjectionText={setObjectionText}
           onSubmitObjection={handleSubmitObjection}
+          isEditingObjection={isEditingObjection}
+          setIsEditingObjection={setIsEditingObjection}
           amendedProposal={amendedProposal}
           setAmendedProposal={setAmendedProposal}
           onAmendProposal={handleAmendProposal}

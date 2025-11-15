@@ -100,6 +100,8 @@ interface Props {
   objectionText: string;
   setObjectionText: (value: string) => void;
   onSubmitObjection: () => void;
+  isEditingObjection: boolean;
+  setIsEditingObjection: (value: boolean) => void;
 
   // Amendements (creator only)
   amendedProposal: string;
@@ -157,6 +159,8 @@ export default function ConsentAccordionStages({
   objectionText,
   setObjectionText,
   onSubmitObjection,
+  isEditingObjection,
+  setIsEditingObjection,
   amendedProposal,
   setAmendedProposal,
   onAmendProposal,
@@ -189,9 +193,6 @@ export default function ConsentAccordionStages({
   const [expandedStage3, setExpandedStage3] = useState(currentStage === 'AMENDEMENTS');
   const [expandedStage4, setExpandedStage4] = useState(currentStage === 'OBJECTIONS');
   const [expandedStage5, setExpandedStage5] = useState(currentStage === 'TERMINEE');
-
-  // État pour le mode édition de l'objection
-  const [isEditingObjection, setIsEditingObjection] = useState(false);
 
   // Déterminer l'état de chaque étape (ACTIF, PASSÉ, FUTUR)
   const getStageStatus = (stage: ConsentStage): 'ACTIF' | 'PASSÉ' | 'FUTUR' => {
@@ -764,7 +765,13 @@ export default function ConsentAccordionStages({
                       variant="outlined"
                       size="small"
                       startIcon={<Edit />}
-                      onClick={() => setIsEditingObjection(true)}
+                      onClick={() => {
+                        if (userObjection) {
+                          setObjectionStatus(userObjection.status);
+                          setObjectionText(userObjection.objectionText || '');
+                        }
+                        setIsEditingObjection(true);
+                      }}
                     >
                       Modifier
                     </Button>
