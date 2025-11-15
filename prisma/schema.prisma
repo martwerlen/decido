@@ -37,6 +37,7 @@ model User {
   decisionLogs             DecisionLog[]
   accounts                 Account[]
   sessions                 Session[]
+  passwordResetTokens      PasswordResetToken[]
   clarificationQuestions   ClarificationQuestion[] @relation("ClarificationQuestioner")
   clarificationAnswers     ClarificationQuestion[] @relation("ClarificationAnswerer")
   consentObjections        ConsentObjection[]      @relation("ConsentObjectionUser")
@@ -73,6 +74,20 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+// Tokens de réinitialisation de mot de passe
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 // ============================================

@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   Box,
   TextField,
   Button,
   Alert,
   CircularProgress,
+  Link as MuiLink,
 } from "@mui/material"
 
 export default function SignInForm() {
@@ -81,6 +83,18 @@ export default function SignInForm() {
         fullWidth
         disabled={isLoading}
       />
+
+      <Box sx={{ textAlign: 'right' }}>
+        <MuiLink
+          component={Link}
+          href="/auth/forgot-password"
+          color="primary"
+          variant="body2"
+          sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          Mot de passe oublié ?
+        </MuiLink>
+      </Box>
 
       <Button
         type="submit"

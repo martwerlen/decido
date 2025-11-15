@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Box,
   TextField,
@@ -30,59 +30,75 @@ const passwordRequirements: PasswordRequirement[] = [
   { label: "Au moins un caractère spécial (!@#$%^&*...)", test: (pwd) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd) },
 ]
 
-export default function SignUpForm() {
+export default function ResetPasswordForm() {
   const router = useRouter()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token")
+
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!token) {
+      setError("Lien de réinitialisation invalide. Veuillez faire une nouvelle demande.")
+    }
+  }, [token])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setSuccess(false)
 
-    if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas")
+    if (!token) {
+      setError("Lien de réinitialisation invalide")
       return
     }
 
-    // Vérifier que toutes les exigences sont respectées
-    const allRequirementsMet = passwordRequirements.every(req => req.test(password))
-    if (!allRequirementsMet) {
-      setError("Le mot de passe ne respecte pas toutes les exigences de sécurité")
+    if (password !== confirmPassword) {
+      setError("Les deux mots de passe ne correspondent pas")
       return
     }
 
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password, confirmPassword })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Une erreur s'est produite")
-        return
+        setError(data.error || "Une erreur est survenue")
+      } else {
+        setSuccess(true)
+        // Rediriger vers la page de connexion après 2 secondes
+        setTimeout(() => {
+          router.push("/auth/signin")
+        }, 2000)
       }
-
-      router.push("/auth/signin?registered=true")
     } catch (error) {
-      setError("Une erreur s'est produite. Veuillez réessayer.")
+      setError("Une erreur est survenue. Veuillez réessayer.")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!token) {
+    return (
+      <Alert severity="error">
+        Lien de réinitialisation invalide. Veuillez faire une nouvelle{" "}
+        <a href="/auth/forgot-password" style={{ color: "inherit", textDecoration: "underline" }}>
+          demande de réinitialisation
+        </a>
+        .
+      </Alert>
+    )
   }
 
   return (
@@ -93,41 +109,36 @@ export default function SignUpForm() {
         </Alert>
       )}
 
-      <TextField
-        id="name"
-        label="Nom"
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        fullWidth
-        disabled={isLoading}
-      />
-
-      <TextField
-        id="email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        fullWidth
-        disabled={isLoading}
-      />
+      {success && (
+        <Alert severity="success">
+          Votre mot de passe a été réinitialisé avec succès. Redirection vers la page de connexion...
+        </Alert>
+      )}
 
       <TextField
         id="password"
-        label="Mot de passe"
+        label="Nouveau mot de passe"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
         fullWidth
-        disabled={isLoading}
+        disabled={isLoading || success}
+      />
+
+      <TextField
+        id="confirmPassword"
+        label="Confirmer le nouveau mot de passe"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+        fullWidth
+        disabled={isLoading || success}
       />
 
       {password && (
-        <Box>
+        <Box sx={{ mt: 1 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Exigences du mot de passe :
           </Typography>
@@ -157,26 +168,16 @@ export default function SignUpForm() {
         </Box>
       )}
 
-      <TextField
-        id="confirmPassword"
-        label="Confirmer le mot de passe"
-        type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        required
-        fullWidth
-        disabled={isLoading}
-      />
-
       <Button
         type="submit"
         variant="contained"
         size="large"
         fullWidth
-        disabled={isLoading}
+        disabled={isLoading || success || !token}
         startIcon={isLoading ? <CircularProgress size={20} /> : null}
+        sx={{ mt: 2 }}
       >
-        {isLoading ? "Inscription..." : "S'inscrire"}
+        {isLoading ? "Réinitialisation..." : "Réinitialiser mon mot de passe"}
       </Button>
     </Box>
   )

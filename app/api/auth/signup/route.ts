@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { validatePassword } from "@/lib/password-validation"
 
 export async function POST(req: Request) {
   try {
@@ -14,9 +15,11 @@ export async function POST(req: Request) {
       )
     }
 
-    if (password.length < 8) {
+    // Valider la force du mot de passe
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.isValid) {
       return NextResponse.json(
-        { error: "Le mot de passe doit contenir au moins 8 caractères" },
+        { error: passwordValidation.errors.join(". ") },
         { status: 400 }
       )
     }
