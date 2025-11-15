@@ -190,6 +190,9 @@ export default function ConsentAccordionStages({
   const [expandedStage4, setExpandedStage4] = useState(currentStage === 'OBJECTIONS');
   const [expandedStage5, setExpandedStage5] = useState(currentStage === 'TERMINEE');
 
+  // État pour le mode édition de l'objection
+  const [isEditingObjection, setIsEditingObjection] = useState(false);
+
   // Déterminer l'état de chaque étape (ACTIF, PASSÉ, FUTUR)
   const getStageStatus = (stage: ConsentStage): 'ACTIF' | 'PASSÉ' | 'FUTUR' => {
     // Mode MERGED: CLARIFAVIS active les étapes 1 et 2 simultanément
@@ -646,10 +649,23 @@ export default function ConsentAccordionStages({
           {status4 === 'ACTIF' && (
             <Box>
               {/* Formulaire objection */}
-              {isParticipant && !userObjection && (
+              {isParticipant && (!userObjection || isEditingObjection) && (
                 <Box>
                   <Alert severity="info" sx={{ mb: 3 }}>
-                    Donnez votre position sur la proposition
+                    {isEditingObjection ? 'Modifiez votre position' : 'Donnez votre position sur la proposition'}
+                  </Alert>
+
+                  {/* Encart explicatif sur les objections valables */}
+                  <Alert severity="warning" sx={{ mb: 3 }}>
+                    <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                      Une objection est valable si :
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      <ol style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                        <li>Elle est argumentée, précise et concrète et s'appuie sur des données connues</li>
+                        <li>Elle démontre en quoi la proposition est impossible à réaliser OU elle dit en quoi la proposition va nuire au groupe ou à sa raison d'être</li>
+                      </ol>
+                    </Typography>
                   </Alert>
 
                   <Typography variant="body1" fontWeight="medium" sx={{ mb: 2 }}>
@@ -673,6 +689,7 @@ export default function ConsentAccordionStages({
                     </Button>
                     <Button
                       variant={objectionStatus === 'NO_POSITION' ? 'contained' : 'outlined'}
+                      color="warning"
                       onClick={() => setObjectionStatus('NO_POSITION')}
                     >
                       Je ne me prononce pas
@@ -691,13 +708,67 @@ export default function ConsentAccordionStages({
                     />
                   )}
 
-                  <Button
-                    variant="contained"
-                    onClick={onSubmitObjection}
-                    disabled={loading}
-                  >
-                    Enregistrer ma position
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="contained"
+                      onClick={onSubmitObjection}
+                      disabled={loading}
+                    >
+                      {isEditingObjection ? 'Enregistrer les modifications' : 'Enregistrer ma position'}
+                    </Button>
+                    {isEditingObjection && (
+                      <Button
+                        variant="outlined"
+                        onClick={() => setIsEditingObjection(false)}
+                        disabled={loading}
+                      >
+                        Annuler
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Position actuelle (si déjà votée et pas en mode édition) */}
+              {isParticipant && userObjection && !isEditingObjection && (
+                <Box sx={{ mb: 3 }}>
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    Vous avez enregistré votre position
+                  </Alert>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                    <Box>
+                      {userObjection.status === 'NO_POSITION' && (
+                        <Typography variant="body1">
+                          <strong>Votre position :</strong> Je ne me prononce pas
+                        </Typography>
+                      )}
+                      {userObjection.status === 'NO_OBJECTION' && (
+                        <Typography variant="body1">
+                          <strong>Votre position :</strong> Pas d'objection
+                        </Typography>
+                      )}
+                      {userObjection.status === 'OBJECTION' && (
+                        <Box>
+                          <Typography variant="body1" sx={{ mb: 1 }}>
+                            <strong>Votre position :</strong> Objection
+                          </Typography>
+                          <Box sx={{ pl: 2, borderLeft: 3, borderColor: 'error.main' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {userObjection.objectionText}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Edit />}
+                      onClick={() => setIsEditingObjection(true)}
+                    >
+                      Modifier
+                    </Button>
+                  </Box>
                 </Box>
               )}
 
@@ -878,20 +949,34 @@ export default function ConsentAccordionStages({
         <AccordionDetails>
           {status5 === 'ACTIF' && decisionResult && (
             <Box>
-              <Alert
-                severity={
-                  decisionResult === 'APPROVED' ? 'success' :
-                  decisionResult === 'BLOCKED' ? 'error' :
-                  'info'
-                }
-                sx={{ mb: 2 }}
-              >
-                <Typography variant="h6">
-                  {decisionResult === 'APPROVED' && 'Décision approuvée par consentement'}
-                  {decisionResult === 'BLOCKED' && 'Décision bloquée par une objection'}
-                  {decisionResult === 'WITHDRAWN' && 'Proposition retirée'}
-                </Typography>
-              </Alert>
+              {decisionResult === 'APPROVED' && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="body1">
+                    {timings?.objections?.endDate && (
+                      <>
+                        {new Date(timings.objections.endDate).toLocaleDateString('fr-FR')}{' '}
+                        {new Date(timings.objections.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} -{' '}
+                      </>
+                    )}
+                    La décision a été prise par consentement
+                    {objections.length > 0 && objections.every(obj => obj.status === 'NO_OBJECTION') && '. 100% de consentement'}
+                  </Typography>
+                </Alert>
+              )}
+              {decisionResult === 'BLOCKED' && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  <Typography variant="h6">
+                    Décision bloquée par une objection
+                  </Typography>
+                </Alert>
+              )}
+              {decisionResult === 'WITHDRAWN' && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="h6">
+                    Proposition retirée
+                  </Typography>
+                </Alert>
+              )}
             </Box>
           )}
           {status5 === 'FUTUR' && (

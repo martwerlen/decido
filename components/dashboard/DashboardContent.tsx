@@ -321,6 +321,22 @@ export default function DashboardContent({
                             sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
                           />
                         )}
+                        {!isClosed && decision.decisionType === 'CONSENT' && decision.consentCurrentStage && (
+                          <Chip
+                            label={
+                              decision.consentCurrentStage === 'CLARIFICATIONS' ? 'Questions' :
+                              decision.consentCurrentStage === 'CLARIFAVIS' ? 'Questions & Avis' :
+                              decision.consentCurrentStage === 'AVIS' ? 'Avis' :
+                              decision.consentCurrentStage === 'AMENDEMENTS' ? 'Amendements' :
+                              decision.consentCurrentStage === 'OBJECTIONS' ? 'Objections' :
+                              decision.consentCurrentStage
+                            }
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
+                        )}
                         {isClosed && decision.result && (
                           <Chip
                             label={

@@ -166,6 +166,36 @@ export async function POST(
       },
     })
 
+    // Vérifier si tous les participants ont voté et s'il n'y a aucune objection
+    // Si oui, clôturer automatiquement la décision
+    const allParticipants = await prisma.decisionParticipant.count({
+      where: { decisionId },
+    })
+
+    const allObjections = await prisma.consentObjection.findMany({
+      where: { decisionId },
+      select: { status: true },
+    })
+
+    // Vérifier si tous les participants ont enregistré une objection
+    if (allObjections.length === allParticipants) {
+      // Vérifier s'il n'y a aucune vraie objection (seulement NO_OBJECTION et NO_POSITION)
+      const hasRealObjection = allObjections.some((obj) => obj.status === 'OBJECTION')
+
+      if (!hasRealObjection) {
+        // Clôturer automatiquement la décision
+        await prisma.decision.update({
+          where: { id: decisionId },
+          data: {
+            status: 'CLOSED',
+            consentCurrentStage: 'TERMINEE',
+            result: 'APPROVED',
+            decidedAt: new Date(),
+          },
+        })
+      }
+    }
+
     return NextResponse.json({ objection })
   } catch (error) {
     console.error('Error creating/updating objection:', error)
