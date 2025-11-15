@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canGiveOpinion } from '@/lib/consent-logic';
+import { ConsentStage, ConsentStepMode } from '@/types/enums';
 
 // GET /api/organizations/[slug]/decisions/[decisionId]/opinions - Récupère tous les avis
 export async function GET(
@@ -49,8 +51,8 @@ export async function GET(
       return Response.json({ error: 'Décision non trouvée' }, { status: 404 });
     }
 
-    // Vérifier que c'est bien une décision de type ADVICE_SOLICITATION
-    if (decision.decisionType !== 'ADVICE_SOLICITATION') {
+    // Vérifier que c'est bien une décision qui utilise le système d'avis
+    if (decision.decisionType !== 'ADVICE_SOLICITATION' && decision.decisionType !== 'CONSENT') {
       return Response.json(
         { error: 'Cette décision n\'utilise pas le système d\'avis' },
         { status: 400 }
@@ -141,8 +143,8 @@ export async function POST(
       return Response.json({ error: 'Décision non trouvée' }, { status: 404 });
     }
 
-    // Vérifier que c'est bien une décision de type ADVICE_SOLICITATION
-    if (decision.decisionType !== 'ADVICE_SOLICITATION') {
+    // Vérifier que c'est bien une décision qui utilise le système d'avis
+    if (decision.decisionType !== 'ADVICE_SOLICITATION' && decision.decisionType !== 'CONSENT') {
       return Response.json(
         { error: 'Cette décision n\'utilise pas le système d\'avis' },
         { status: 400 }
@@ -155,6 +157,19 @@ export async function POST(
         { error: 'Cette décision n\'est pas ouverte aux avis' },
         { status: 400 }
       );
+    }
+
+    // Pour CONSENT: vérifier que le stade actuel permet de donner des avis
+    if (decision.decisionType === 'CONSENT') {
+      const currentStage = decision.consentCurrentStage as ConsentStage | null;
+      const stepMode = decision.consentStepMode as ConsentStepMode || 'DISTINCT';
+
+      if (!canGiveOpinion(currentStage, stepMode)) {
+        return Response.json(
+          { error: 'Les avis ne peuvent pas être donnés à ce stade de la décision' },
+          { status: 400 }
+        );
+      }
     }
 
     // Vérifier que l'utilisateur est un participant invité à donner son avis
@@ -238,15 +253,18 @@ export async function POST(
         },
       });
 
-      // Marquer le participant comme ayant donné son avis
-      await prisma.decisionParticipant.update({
-        where: {
-          id: participant.id,
-        },
-        data: {
-          hasVoted: true,
-        },
-      });
+      // Marquer le participant comme ayant donné son avis (uniquement pour ADVICE_SOLICITATION)
+      // Pour CONSENT, hasVoted est réservé pour le stade OBJECTIONS
+      if (decision.decisionType === 'ADVICE_SOLICITATION') {
+        await prisma.decisionParticipant.update({
+          where: {
+            id: participant.id,
+          },
+          data: {
+            hasVoted: true,
+          },
+        });
+      }
 
       // Logger le dépôt de l'avis
       const userName = session.user.name || session.user.email || 'Utilisateur';

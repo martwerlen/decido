@@ -335,6 +335,48 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - The "Paramètres de l'organisation" menu option is only visible to users with OWNER or ADMIN role
 - User role is determined by checking the `OrganizationMember` relationship with the current organization
 
+**CONSENT-Specific Participation Tracking** (see detailed section above):
+- Sidebar queries additional fields for CONSENT decisions: `clarificationQuestions`, `opinionResponses`, `consentObjections`
+- Custom `hasVoted` logic based on `consentCurrentStage`:
+  - CLARIFICATIONS: User posted ≥1 question
+  - CLARIFAVIS: User posted question OR submitted opinion
+  - AVIS: User submitted opinion
+  - OBJECTIONS: User recorded position
+- Icons adapt to show participation state per stage, not just final vote
+
+### Organization Dashboard & Filters
+
+**Dashboard Page** (`/organizations/[slug]`):
+- Server-side rendering with initial 20 decisions loaded
+- Client-side pagination ("Charger 20 décisions de plus" button)
+- Real-time filter updates without page reload
+- Stage-specific participation tracking for CONSENT decisions (same logic as sidebar)
+
+**Filter System** (`components/dashboard/DecisionFilters.tsx`):
+- **Controlled component pattern**: Filter state managed by parent (`DashboardContent`)
+- Three filter types:
+  1. **Statut** (multi-select): DRAFT, OPEN, CLOSED
+  2. **Périmètre** (single select): All organization, specific team, or user's decisions
+  3. **Type** (multi-select): ADVICE_SOLICITATION, CONSENSUS, CONSENT, MAJORITY, NUANCED_VOTE
+- **State synchronization**:
+  - Initial values from URL params (`?status=OPEN`)
+  - URL params used for initialization only (not continuously synced)
+  - User changes update state immediately via `onFilterChange` callback
+  - No automatic URL updates (prevents filter reset issues)
+- Responsive layout: stacked on mobile (< 900px), inline on desktop
+
+**CONSENT Stage Chips**:
+- Displayed on dashboard for CONSENT decisions with `status=OPEN`
+- Shows current stage: Questions, Questions & Avis, Avis, Amendements, Objections
+- Color: info (blue), outlined variant
+- Located between team chip and result chip
+
+**Key files**:
+- `app/organizations/[slug]/page.tsx` - Server component loading initial data
+- `components/dashboard/DashboardContent.tsx` - Client component with filters and participation logic
+- `components/dashboard/DecisionFilters.tsx` - Controlled filter component
+- `app/api/organizations/[slug]/decisions/route.ts` - API with pagination and filtering
+
 ## Critical Architecture Details
 
 ### Vote Storage Models (3 Parallel Systems)
@@ -442,7 +484,20 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 - When the creator modifies the proposal, a system comment is automatically created to notify participants
 - Both initial and current proposals are displayed on vote/results pages if they differ
 
-**CONSENT**: Blocked by any "BLOCK" vote → BLOCKED; Rejected by "STRONG_OPPOSE" → REJECTED; Otherwise APPROVED
+**CONSENT**: Multi-stage decision-making process based on the sociocratic consent method
+- **Five sequential stages**: CLARIFICATIONS, CLARIFAVIS (merged mode) or AVIS, AMENDEMENTS, OBJECTIONS, TERMINEE
+- **Two modes**: DISTINCT (5 separate stages) or MERGED (questions+opinions combined into CLARIFAVIS)
+- **Stage-specific participation tracking**: Each stage has unique contribution requirements (questions, opinions, positions)
+- **Auto-closure**: Decision closes automatically when all participants consent (NO_OBJECTION or NO_POSITION, no real objections)
+- **Objection system**:
+  - Three position types: NO_OBJECTION (green), NO_POSITION (yellow/warning), OBJECTION (red/error)
+  - Valid objections must be: (1) argued, precise, concrete, based on known data AND (2) demonstrate impossibility OR harm to group/purpose
+  - Participants can modify their position during OBJECTIONS stage
+- **Creator powers**: Can amend, keep, or withdraw proposal during AMENDEMENTS stage
+- **Comprehensive UI**: Accordion-based interface showing all stages with progress indicators and locked/unlocked icons
+- **Stage chips**: Current stage displayed on organization dashboard (Questions, Avis, Amendements, Objections)
+- **Results**: "100% de consentement" if all NO_OBJECTION, otherwise "La décision a été prise par consentement"
+- See detailed CONSENT workflow documentation below
 
 **MAJORITY**: Simple majority → APPROVED if (support votes > oppose votes)
 
@@ -538,6 +593,191 @@ When a decision is automatically closed (via results page access), the `reason` 
 - Logs are displayed in reverse chronological order (most recent first)
 
 **Note:** See `/DECISIONLOG_ANALYSIS.md` for a comprehensive analysis of logging coverage and recommendations for future improvements.
+
+### CONSENT Decision Workflow (Detailed)
+
+CONSENT decisions follow a multi-stage sociocratic process implemented with accordion-based UI and stage-specific participation tracking.
+
+#### Stage Flow & Timing
+
+**Two modes available:**
+1. **DISTINCT**: 5 separate stages (CLARIFICATIONS → AVIS → AMENDEMENTS → OBJECTIONS → TERMINEE)
+2. **MERGED**: 4 stages (CLARIFAVIS [questions+opinions combined] → AMENDEMENTS → OBJECTIONS → TERMINEE)
+
+**Timing calculation** (`lib/consent-logic.ts`):
+- Total duration split across active stages (20% each stage in MERGED, proportional in DISTINCT)
+- Each stage has `startDate` and `endDate` calculated from decision `startDate` and `endDate`
+- Current stage determined by comparing `new Date()` with stage timings
+
+#### Stage 1: CLARIFICATIONS (Questions de clarification)
+
+**Purpose**: Participants ask clarifying questions to better understand the proposal
+
+**Participation**:
+- Any participant (including creator) can post questions
+- Only creator can answer questions
+- Questions and answers displayed in chronological order
+- **Participation tracked**: User has "participé" if they posted ≥1 question
+
+**UI Elements**:
+- Question input field (multiline, 4 rows)
+- Submit button "Envoyer la question"
+- List of questions with creator's answers
+- "Répondre" button for creator on unanswered questions
+
+**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/clarifications`
+
+#### Stage 2: AVIS (Partage d'avis) / CLARIFAVIS (Combined)
+
+**Purpose**: Participants share their opinions on the proposal
+
+**Participation**:
+- Each participant submits one opinion (can update before stage ends)
+- Opinions visible to all participants
+- **CLARIFAVIS mode**: Questions and opinions collected simultaneously
+- **Participation tracked**:
+  - AVIS: User has "participé" if they submitted opinion
+  - CLARIFAVIS: User has "participé" if they posted question OR submitted opinion
+
+**UI Elements**:
+- Opinion textarea (multiline, 6 rows)
+- Submit button "Enregistrer mon avis" (or "Modifier mon avis" if existing)
+- List of all opinions with participant names and timestamps
+
+**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/opinions`
+
+#### Stage 3: AMENDEMENTS (Amendements)
+
+**Purpose**: Creator reviews feedback and decides whether to amend, keep, or withdraw proposal
+
+**Creator-only stage** - participants wait
+
+**Creator actions** (mutually exclusive):
+1. **Amend proposal**: Edit proposal text → `consentAmendmentAction = 'AMENDED'`
+2. **Keep proposal**: Proceed unchanged → `consentAmendmentAction = 'KEPT'`
+3. **Withdraw proposal**: Cancel decision → `status = 'CLOSED'`, `result = 'WITHDRAWN'`
+
+**UI Elements**:
+- Textarea pre-filled with current proposal
+- Three action buttons: "Amender la proposition", "Garder la proposition initiale", "Retirer la proposition"
+- Confirmation dialogs for keep/withdraw actions
+- **After stage ends**: Display shows what creator did with timestamp and proposal text
+
+**APIs**:
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-amend`
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-keep`
+- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-withdraw`
+
+**History tracking**:
+- KEPT: "JJ/MM/AAAA HH:MM - [Creator name] a gardé sa proposition initiale que voici : [initial proposal]"
+- AMENDED: "JJ/MM/AAAA HH:MM - [Creator name] a amendé sa proposition initiale comme suit : [new proposal]"
+- WITHDRAWN: "JJ/MM/AAAA HH:MM - [Creator name] a retiré sa proposition."
+
+#### Stage 4: OBJECTIONS (Objections)
+
+**Purpose**: Participants express their final position on the proposal
+
+**Participation**:
+- Three position options:
+  1. **NO_OBJECTION** (green button): "Pas d'objection" - Full consent
+  2. **NO_POSITION** (yellow/warning button): "Je ne me prononce pas" - Abstention
+  3. **OBJECTION** (red/error button): "J'ai une objection" - Requires explanation text
+- **Modification allowed**: Participants can change their position at any time during this stage
+- **Participation tracked**: User has "participé" if they recorded a position
+
+**Valid objection criteria** (displayed in warning Alert):
+1. Argued, precise, concrete, based on known data
+2. Demonstrates proposal is impossible to realize OR will harm group/purpose
+
+**UI Elements**:
+- Warning Alert explaining valid objection criteria
+- Three colored buttons for position selection
+- Textarea for objection text (required if OBJECTION selected)
+- "Enregistrer ma position" button (or "Enregistrer les modifications" in edit mode)
+- **After voting**: Display position with "Modifier" button
+- **Positions list**: Shows all participants' positions:
+  - "[Name] ne se prononce pas" (NO_POSITION)
+  - "[Name] - pas d'objection" (NO_OBJECTION)
+  - "[Name] a émis l'objection suivante : [text]" (OBJECTION with indented text)
+
+**Edit mode**:
+- Click "Modifier" button → Form reappears with current values pre-filled
+- Can change position type and objection text
+- "Annuler" button to exit edit mode without saving
+
+**Auto-closure logic** (`consent-objections/route.ts`):
+```typescript
+// After each position submission:
+if (allObjections.length === allParticipants) {
+  const hasRealObjection = allObjections.some(obj => obj.status === 'OBJECTION');
+  if (!hasRealObjection) {
+    // Close automatically: status=CLOSED, consentCurrentStage=TERMINEE, result=APPROVED
+  }
+}
+```
+
+**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/consent-objections`
+
+#### Stage 5: TERMINEE (Décision finalisée)
+
+**Purpose**: Display final decision outcome
+
+**Possible outcomes**:
+1. **APPROVED** (consent reached):
+   - If all positions are NO_OBJECTION: "JJ/MM/AAAA HH:MM - La décision a été prise par consentement. **100% de consentement**"
+   - If some NO_POSITION: "JJ/MM/AAAA HH:MM - La décision a été prise par consentement"
+2. **BLOCKED** (real objection): "Décision bloquée par une objection"
+3. **WITHDRAWN**: "Proposition retirée"
+
+**UI**: Success/Error/Info Alert with appropriate message and icon
+
+#### Stage-Specific Participation Tracking
+
+**Sidebar & Dashboard** (`/api/organizations/[slug]/decisions/sidebar`, `DashboardContent.tsx`):
+- **CLARIFICATIONS**: `hasVoted = clarificationQuestions.length > 0`
+- **CLARIFAVIS**: `hasVoted = clarificationQuestions.length > 0 || opinionResponses.length > 0`
+- **AVIS**: `hasVoted = opinionResponses.length > 0`
+- **OBJECTIONS**: `hasVoted = consentObjections.length > 0`
+- **Other stages**: Use default `DecisionParticipant.hasVoted` field
+
+**Visual indicators**:
+- Sidebar: AccessTime (clock) = action required, ThumbUp = participated, Visibility = not participant
+- Dashboard chips: "Action requise" (warning/orange) vs "✓ Participé" (success/green)
+- Dashboard stage chip: Shows current stage name (Questions, Questions & Avis, Avis, Amendements, Objections) in blue/info color
+
+#### Data Model
+
+**CONSENT-specific fields on Decision:**
+```typescript
+consentStepMode: 'DISTINCT' | 'MERGED'
+consentCurrentStage: 'CLARIFICATIONS' | 'CLARIFAVIS' | 'AVIS' | 'AMENDEMENTS' | 'OBJECTIONS' | 'TERMINEE'
+consentAmendmentAction: 'KEPT' | 'AMENDED' | 'WITHDRAWN' | null
+```
+
+**Related tables:**
+- `ClarificationQuestion`: Questions with creator answers
+- `OpinionResponse`: Participant opinions
+- `ConsentObjection`: Participant positions (NO_OBJECTION, NO_POSITION, OBJECTION)
+
+#### Key Files
+
+**Frontend (Accordion UI):**
+- `app/organizations/[slug]/decisions/[decisionId]/vote/ConsentAccordionStages.tsx` - Main accordion component
+- `app/organizations/[slug]/decisions/[decisionId]/vote/ConsentVoteClient.tsx` - Parent with state management
+- `lib/consent-logic.ts` - Stage timing calculations
+
+**Backend (APIs):**
+- `app/api/organizations/[slug]/decisions/[decisionId]/clarifications/route.ts` - Questions
+- `app/api/organizations/[slug]/decisions/[decisionId]/opinions/route.ts` - Opinions
+- `app/api/organizations/[slug]/decisions/[decisionId]/consent-amend/route.ts` - Amend proposal
+- `app/api/organizations/[slug]/decisions/[decisionId]/consent-keep/route.ts` - Keep proposal
+- `app/api/organizations/[slug]/decisions/[decisionId]/consent-withdraw/route.ts` - Withdraw proposal
+- `app/api/organizations/[slug]/decisions/[decisionId]/consent-objections/route.ts` - Positions + auto-close
+
+**Participation tracking:**
+- `app/api/organizations/[slug]/decisions/sidebar/route.ts` - Sidebar with stage-specific hasVoted
+- `components/dashboard/DashboardContent.tsx` - Dashboard with stage-specific participation logic
+- `app/organizations/[slug]/page.tsx` - Server-side initial data load
 
 ### Authentication Flow
 

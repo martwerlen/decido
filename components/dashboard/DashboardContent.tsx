@@ -48,7 +48,7 @@ export default function DashboardContent({
   const [filters, setFilters] = useState<DecisionFiltersType>({
     statusFilter: getInitialStatusFilter(),
     scopeFilter: 'ALL', // Par défaut : Toute l'organisation
-    typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
+    typeFilter: ['ADVICE_SOLICITATION', 'CONSENSUS', 'CONSENT', 'MAJORITY', 'NUANCED_VOTE'], // Par défaut : tous
   });
   const [decisions, setDecisions] = useState(initialDecisions);
   const [total, setTotal] = useState(totalCount);
@@ -122,22 +122,6 @@ export default function DashboardContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchQuery]);
 
-  // Synchroniser les filtres avec les query params de l'URL
-  useEffect(() => {
-    const statusParam = searchParams.get('status');
-    if (statusParam) {
-      let newStatusFilter: string[] = [];
-      if (statusParam === 'DRAFT') newStatusFilter = ['DRAFT'];
-      else if (statusParam === 'CLOSED') newStatusFilter = ['CLOSED'];
-      else if (statusParam === 'OPEN') newStatusFilter = ['OPEN'];
-
-      // Mettre à jour les filtres seulement si différents
-      if (JSON.stringify(newStatusFilter) !== JSON.stringify(filters.statusFilter)) {
-        setFilters(prev => ({ ...prev, statusFilter: newStatusFilter }));
-      }
-    }
-  }, [searchParams, filters.statusFilter]);
-
   // Fonction pour charger plus de décisions
   const loadMore = async () => {
     setIsLoadingMore(true);
@@ -201,7 +185,7 @@ export default function DashboardContent({
       </Box>
 
       {/* Filtres */}
-      <DecisionFilters userTeams={userTeams} onFilterChange={setFilters} />
+      <DecisionFilters userTeams={userTeams} filters={filters} onFilterChange={setFilters} />
 
       {/* Décisions filtrées */}
       <section className="mb-8">
@@ -223,7 +207,34 @@ export default function DashboardContent({
 
               // Pour toutes les autres décisions : afficher une card compacte
               const userParticipant = decision.participants?.find((p: any) => p.userId === userId);
-              const hasVoted = userParticipant?.hasVoted || false;
+
+              // Déterminer hasVoted selon le type de décision
+              let hasVoted = false;
+              if (decision.decisionType === 'CONSENT') {
+                // Pour les décisions CONSENT, déterminer hasVoted selon le stade actuel
+                const currentStage = decision.consentCurrentStage;
+
+                if (currentStage === 'CLARIFICATIONS') {
+                  // Stade questions : a-t-il posé au moins une question ?
+                  hasVoted = decision.clarificationQuestions?.length > 0;
+                } else if (currentStage === 'CLARIFAVIS') {
+                  // Stade clarifavis : a-t-il posé une question OU donné son avis ?
+                  hasVoted = (decision.clarificationQuestions?.length > 0) || (decision.opinionResponses?.length > 0);
+                } else if (currentStage === 'AVIS') {
+                  // Stade avis : a-t-il donné son avis ?
+                  hasVoted = decision.opinionResponses?.length > 0;
+                } else if (currentStage === 'OBJECTIONS') {
+                  // Stade objections : a-t-il enregistré sa position ?
+                  hasVoted = decision.consentObjections?.length > 0;
+                } else {
+                  // Pour les autres stades (AMENDEMENTS, TERMINEE)
+                  hasVoted = userParticipant?.hasVoted || false;
+                }
+              } else {
+                // Pour les autres types de décisions, utiliser hasVoted standard
+                hasVoted = userParticipant?.hasVoted || false;
+              }
+
               const isPublicLink = decision._meta.category === 'publicLink';
               const isClosed = decision._meta.category === 'closed';
 
@@ -306,6 +317,22 @@ export default function DashboardContent({
                             label={decision.team.name}
                             size="small"
                             color="secondary"
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                          />
+                        )}
+                        {!isClosed && decision.decisionType === 'CONSENT' && decision.consentCurrentStage && (
+                          <Chip
+                            label={
+                              decision.consentCurrentStage === 'CLARIFICATIONS' ? 'Questions' :
+                              decision.consentCurrentStage === 'CLARIFAVIS' ? 'Questions & Avis' :
+                              decision.consentCurrentStage === 'AVIS' ? 'Avis' :
+                              decision.consentCurrentStage === 'AMENDEMENTS' ? 'Amendements' :
+                              decision.consentCurrentStage === 'OBJECTIONS' ? 'Objections' :
+                              decision.consentCurrentStage
+                            }
+                            size="small"
+                            color="info"
                             variant="outlined"
                             sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
                           />

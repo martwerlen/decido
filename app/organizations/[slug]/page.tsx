@@ -102,6 +102,7 @@ export default async function OrganizationDashboard({
       createdAt: true,
       updatedAt: true,
       creatorId: true,
+      consentCurrentStage: true,
       // Relations
       creator: {
         select: {
@@ -122,6 +123,30 @@ export default async function OrganizationDashboard({
           userId: true,
           hasVoted: true,
           teamId: true,
+        },
+      },
+      clarificationQuestions: {
+        where: {
+          questionerId: session.user.id,
+        },
+        select: {
+          id: true,
+        },
+      },
+      opinionResponses: {
+        where: {
+          userId: session.user.id,
+        },
+        select: {
+          id: true,
+        },
+      },
+      consentObjections: {
+        where: {
+          userId: session.user.id,
+        },
+        select: {
+          id: true,
         },
       },
       _count: {

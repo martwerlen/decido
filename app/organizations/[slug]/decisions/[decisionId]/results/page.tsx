@@ -131,6 +131,54 @@ export default async function ResultsPage({
           createdAt: 'asc',
         },
       },
+      clarificationQuestions: {
+        include: {
+          questioner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          externalQuestioner: {
+            select: {
+              id: true,
+              externalName: true,
+              externalEmail: true,
+            },
+          },
+          answerer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
+      consentObjections: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          externalParticipant: {
+            select: {
+              id: true,
+              externalName: true,
+              externalEmail: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
     },
   });
 
@@ -179,12 +227,14 @@ export default async function ResultsPage({
   // Vérifier si l'utilisateur peut voir les résultats
   // Pour PUBLIC_LINK : le créateur peut toujours voir les résultats (suivi en temps réel)
   // Pour CONSENSUS : accès libre à tout moment
+  // Pour CONSENT : accès libre à tout moment
   // Pour ADVICE_SOLICITATION : accès libre à tout moment (membres peuvent voir les avis)
   // Pour MAJORITY et NUANCED_VOTE : accès uniquement quand le vote est terminé ou fermé manuellement
   const isManuallyClosedOrFinished = ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'].includes(decision.status) || isVotingFinished;
   const canSeeResults =
     (decision.votingMode === 'PUBLIC_LINK' && isCreator) ||
     decision.decisionType === 'CONSENSUS' ||
+    decision.decisionType === 'CONSENT' ||
     decision.decisionType === 'ADVICE_SOLICITATION' ||
     isManuallyClosedOrFinished;
 
@@ -266,6 +316,8 @@ export default async function ResultsPage({
       disagreeCount={disagreeCount}
       consensusReached={consensusReached}
       opinionResponses={decision.opinionResponses || []}
+      clarificationQuestions={decision.clarificationQuestions || []}
+      consentObjections={decision.consentObjections || []}
       slug={slug}
       isCreator={isCreator}
       votingMode={decision.votingMode}

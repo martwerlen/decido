@@ -16,6 +16,7 @@ import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 import UserAvatar from '@/components/common/UserAvatar';
+import ConsentVoteClient from './ConsentVoteClient';
 
 interface Proposal {
   id: string;
@@ -79,6 +80,18 @@ interface OpinionResponse {
   } | null;
 }
 
+interface TeamMember {
+  organizationMember: {
+    userId: string;
+  };
+}
+
+interface OrganizationTeam {
+  id: string;
+  name: string;
+  members: TeamMember[];
+}
+
 interface Decision {
   id: string;
   title: string;
@@ -109,6 +122,10 @@ interface Props {
   userNuancedVotes: NuancedVote[] | null;
   userOpinion: { id: string; content: string } | null;
   allOpinions: OpinionResponse[] | null;
+  clarificationQuestions?: any[] | null;
+  userObjection?: any | null;
+  allObjections?: any[] | null;
+  organizationTeams: OrganizationTeam[];
   slug: string;
   userId: string;
   isCreator: boolean;
@@ -121,6 +138,10 @@ export default function VotePageClient({
   userNuancedVotes: initialUserNuancedVotes,
   userOpinion: initialUserOpinion,
   allOpinions: initialAllOpinions,
+  clarificationQuestions,
+  userObjection,
+  allObjections,
+  organizationTeams,
   slug,
   userId,
   isCreator,
@@ -418,6 +439,22 @@ export default function VotePageClient({
       setLoading(false);
     }
   };
+
+  // Render CONSENT voting interface
+  if (decision.decisionType === 'CONSENT') {
+    return (
+      <ConsentVoteClient
+        decision={decision}
+        clarificationQuestions={clarificationQuestions || null}
+        userObjection={userObjection || null}
+        allObjections={allObjections || null}
+        organizationTeams={organizationTeams}
+        slug={slug}
+        userId={userId}
+        isCreator={isCreator}
+      />
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">

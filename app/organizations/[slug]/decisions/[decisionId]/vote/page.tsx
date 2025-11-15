@@ -121,6 +121,7 @@ export default async function VotePage({
         select: {
           id: true,
           userId: true,
+          teamId: true,
           externalName: true,
           externalEmail: true,
           hasVoted: true,
@@ -140,11 +141,30 @@ export default async function VotePage({
     redirect(`/organizations/${slug}/decisions`);
   }
 
+  // Récupérer les équipes de l'organisation avec leurs membres
+  const organizationTeams = await prisma.team.findMany({
+    where: {
+      organizationId: organization.id,
+    },
+    include: {
+      members: {
+        include: {
+          organizationMember: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
   // Vérifier si l'utilisateur est autorisé à accéder à la page de vote
   if (decision.votingMode === 'INVITED') {
-    // Pour ADVICE_SOLICITATION, tous les membres de l'organisation peuvent accéder (pour commenter)
-    // Seuls les participants sollicités peuvent donner leur avis
-    if (decision.decisionType !== 'ADVICE_SOLICITATION') {
+    // Pour ADVICE_SOLICITATION et CONSENT, tous les membres de l'organisation peuvent accéder
+    // Pour ADVICE_SOLICITATION: pour commenter, seuls les participants peuvent donner leur avis
+    // Pour CONSENT: tous peuvent voir, seuls les participants peuvent participer
+    if (decision.decisionType !== 'ADVICE_SOLICITATION' && decision.decisionType !== 'CONSENT') {
       // Pour les autres types de décisions, seuls les participants peuvent voter
       const participant = await prisma.decisionParticipant.findFirst({
         where: {
@@ -165,6 +185,9 @@ export default async function VotePage({
   let userNuancedVotes = null;
   let userOpinion = null;
   let allOpinions = null;
+  let clarificationQuestions = null;
+  let userObjection = null;
+  let allObjections = null;
 
   if (decision.decisionType === 'CONSENSUS') {
     userVote = await prisma.vote.findUnique({
@@ -229,6 +252,72 @@ export default async function VotePage({
         createdAt: 'asc',
       },
     });
+  } else if (decision.decisionType === 'CONSENT') {
+    // Récupérer toutes les questions de clarification
+    clarificationQuestions = await prisma.clarificationQuestion.findMany({
+      where: {
+        decisionId,
+      },
+      include: {
+        questioner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        externalQuestioner: {
+          select: {
+            id: true,
+            externalName: true,
+            externalEmail: true,
+          },
+        },
+        answerer: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // Récupérer l'objection de l'utilisateur
+    userObjection = await prisma.consentObjection.findFirst({
+      where: {
+        userId: session.user.id,
+        decisionId,
+      },
+    });
+
+    // Récupérer toutes les objections
+    allObjections = await prisma.consentObjection.findMany({
+      where: {
+        decisionId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        externalParticipant: {
+          select: {
+            id: true,
+            externalName: true,
+            externalEmail: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
   }
 
   return (
@@ -239,6 +328,10 @@ export default async function VotePage({
       userNuancedVotes={userNuancedVotes}
       userOpinion={userOpinion}
       allOpinions={allOpinions}
+      clarificationQuestions={clarificationQuestions}
+      userObjection={userObjection}
+      allObjections={allObjections}
+      organizationTeams={organizationTeams}
       slug={slug}
       userId={session.user.id}
       isCreator={decision.creatorId === session.user.id}

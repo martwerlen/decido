@@ -25,18 +25,21 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  memberships           OrganizationMember[]
-  invitationsSent       Invitation[]
-  decisions             Decision[]              @relation("DecisionCreator")
-  votes                 Vote[]
-  proposalVotes         ProposalVote[]
-  nuancedVotes          NuancedVote[]
-  opinionResponses      OpinionResponse[]
-  comments              Comment[]
-  decisionParticipants  DecisionParticipant[]
-  decisionLogs          DecisionLog[]
-  accounts              Account[]
-  sessions              Session[]
+  memberships              OrganizationMember[]
+  invitationsSent          Invitation[]
+  decisions                Decision[]              @relation("DecisionCreator")
+  votes                    Vote[]
+  proposalVotes            ProposalVote[]
+  nuancedVotes             NuancedVote[]
+  opinionResponses         OpinionResponse[]
+  comments                 Comment[]
+  decisionParticipants     DecisionParticipant[]
+  decisionLogs             DecisionLog[]
+  accounts                 Account[]
+  sessions                 Session[]
+  clarificationQuestions   ClarificationQuestion[] @relation("ClarificationQuestioner")
+  clarificationAnswers     ClarificationQuestion[] @relation("ClarificationAnswerer")
+  consentObjections        ConsentObjection[]      @relation("ConsentObjectionUser")
 
   @@map("users")
 }
@@ -203,12 +206,18 @@ model Decision {
   initialProposal  String?      // Proposition originale (historique, immuable)
   proposal         String?      // Proposition actuelle (modifiable par le créateur)
 
-  // Pour le vote nuancé 
+  // Pour le vote nuancé
   nuancedScale        String?   // 3_LEVELS, 5_LEVELS, 7_LEVELS
   nuancedWinnerCount  Int?      // Nombre de propositions gagnantes
 
   // Slug pour l'URL publique (tous types de décisions si PUBLIC_LINK)
   publicSlug          String?   // Slug unique par organisation pour accès public
+
+  // Pour la décision par consentement
+  consentStepMode       String?  // 'MERGED' ou 'DISTINCT'
+  consentCurrentStage   String?  // Stade actuel (CLARIFICATIONS, AVIS, CLARIFAVIS, AMENDEMENTS, OBJECTIONS, TERMINEE)
+  lastNotifiedStage     String?  // Dernier stade pour lequel une notification a été envoyée
+  consentAmendmentAction String? // 'AMENDED', 'KEPT', 'WITHDRAWN'
 
   // Résultat de la décision
   result         String?        // APPROVED, REJECTED, BLOCKED, WITHDRAWN
@@ -227,18 +236,20 @@ model Decision {
   organizationId String
   teamId         String?
 
-  creator           User                  @relation("DecisionCreator", fields: [creatorId], references: [id])
-  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  team              Team?                 @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  votes             Vote[]
-  opinionResponses  OpinionResponse[]     // Avis pour sollicitation d'avis
-  comments          Comment[]
-  tags              DecisionTag[]
-  proposals         Proposal[]            // Pour vote à la majorité
-  nuancedProposals  NuancedProposal[]     // Pour vote nuancé
-  participants      DecisionParticipant[] // Qui peut voter
-  logs              DecisionLog[]         // Historique des événements
-  anonymousVoteLogs AnonymousVoteLog[]    // Logs des votes anonymes (tracking IP)
+  creator                User                       @relation("DecisionCreator", fields: [creatorId], references: [id])
+  organization           Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team                   Team?                      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  votes                  Vote[]
+  opinionResponses       OpinionResponse[]          // Avis pour sollicitation d'avis et consentement
+  comments               Comment[]
+  tags                   DecisionTag[]
+  proposals              Proposal[]                 // Pour vote à la majorité
+  nuancedProposals       NuancedProposal[]          // Pour vote nuancé
+  participants           DecisionParticipant[]      // Qui peut voter
+  logs                   DecisionLog[]              // Historique des événements
+  anonymousVoteLogs      AnonymousVoteLog[]         // Logs des votes anonymes (tracking IP)
+  clarificationQuestions ClarificationQuestion[]    // Questions de clarification (consentement)
+  consentObjections      ConsentObjection[]         // Objections (consentement)
 
   @@unique([organizationId, publicSlug])
   @@map("decisions")
@@ -308,13 +319,15 @@ model DecisionParticipant {
 
   createdAt      DateTime @default(now())
 
-  decision         Decision          @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes            Vote[]
-  proposalVotes    ProposalVote[]
-  nuancedVotes     NuancedVote[]
-  opinionResponses OpinionResponse[]
-  comments         Comment[]
+  decision                Decision                  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  user                    User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes                   Vote[]
+  proposalVotes           ProposalVote[]
+  nuancedVotes            NuancedVote[]
+  opinionResponses        OpinionResponse[]
+  comments                Comment[]
+  clarificationQuestions  ClarificationQuestion[]   @relation("ClarificationExternalQuestioner")
+  consentObjections       ConsentObjection[]        @relation("ConsentObjectionExternal")
 
   @@unique([decisionId, userId])
   @@unique([decisionId, externalEmail])
@@ -505,4 +518,60 @@ model AnonymousVoteLog {
 
   @@unique([decisionId, ipHash])
   @@map("anonymous_vote_logs")
+}
+
+// ============================================
+// DÉCISION PAR CONSENTEMENT
+// ============================================
+
+// Questions de clarification
+model ClarificationQuestion {
+  id            String   @id @default(cuid())
+  decisionId    String
+  decision      Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  questionText  String
+  answerText    String?
+
+  // Auteur de la question (membre ou externe)
+  questionerId        String?
+  questioner          User?                @relation("ClarificationQuestioner", fields: [questionerId], references: [id], onDelete: SetNull)
+  externalQuestionerId String?
+  externalQuestioner   DecisionParticipant? @relation("ClarificationExternalQuestioner", fields: [externalQuestionerId], references: [id], onDelete: SetNull)
+
+  // Auteur de la réponse (créateur de la décision)
+  answererId          String?
+  answerer            User?                @relation("ClarificationAnswerer", fields: [answererId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  answeredAt    DateTime?
+
+  @@index([decisionId])
+  @@map("clarification_questions")
+}
+
+// Objections au consentement
+model ConsentObjection {
+  id            String   @id @default(cuid())
+  decisionId    String
+  decision      Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  status        String   // 'NO_OBJECTION', 'OBJECTION', 'NO_POSITION'
+  objectionText String?  // Requis si status='OBJECTION'
+
+  // Auteur de l'objection (membre ou externe)
+  userId              String?
+  user                User?                @relation("ConsentObjectionUser", fields: [userId], references: [id], onDelete: SetNull)
+  externalParticipantId String?
+  externalParticipant   DecisionParticipant? @relation("ConsentObjectionExternal", fields: [externalParticipantId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  withdrawnAt   DateTime? // Si l'objection a été retirée
+
+  @@unique([decisionId, userId])
+  @@unique([decisionId, externalParticipantId])
+  @@index([decisionId])
+  @@map("consent_objections")
 }

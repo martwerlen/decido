@@ -21,11 +21,12 @@ interface Team {
 export interface DecisionFiltersType {
   statusFilter: string[]; // 'DRAFT', 'OPEN', 'CLOSED'
   scopeFilter: string; // 'ALL', 'MY_TEAMS', 'ME', or team ID
-  typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'
+  typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'CONSENT', 'MAJORITY', 'NUANCED_VOTE'
 }
 
 interface DecisionFiltersProps {
   userTeams: Team[];
+  filters: DecisionFiltersType;
   onFilterChange: (filters: DecisionFiltersType) => void;
 }
 
@@ -40,38 +41,23 @@ const MenuProps = {
   },
 };
 
-export default function DecisionFilters({ userTeams, onFilterChange }: DecisionFiltersProps) {
-  // Filtre 1: Statut (multi-sélection) - Par défaut: "En cours"
-  const [statusFilter, setStatusFilter] = useState<string[]>(['OPEN']);
-
-  // Filtre 2: Périmètre (sélection simple) - Par défaut: "Toute l'organisation"
-  const [scopeFilter, setScopeFilter] = useState<string>('ALL');
-
-  // Filtre 3: Type (multi-sélection) - Par défaut: tous cochés
-  const [typeFilter, setTypeFilter] = useState<string[]>([
-    'ADVICE_SOLICITATION',
-    'CONSENSUS',
-    'MAJORITY',
-    'NUANCED_VOTE',
-  ]);
-
-  // Appeler onFilterChange à chaque changement
-  useEffect(() => {
-    onFilterChange({ statusFilter, scopeFilter, typeFilter });
-  }, [statusFilter, scopeFilter, typeFilter, onFilterChange]);
+export default function DecisionFilters({ userTeams, filters, onFilterChange }: DecisionFiltersProps) {
+  const { statusFilter, scopeFilter, typeFilter } = filters;
 
   const handleStatusChange = (event: SelectChangeEvent<typeof statusFilter>) => {
     const value = event.target.value;
-    setStatusFilter(typeof value === 'string' ? value.split(',') : value);
+    const newStatusFilter = typeof value === 'string' ? value.split(',') : value;
+    onFilterChange({ ...filters, statusFilter: newStatusFilter });
   };
 
   const handleScopeChange = (event: SelectChangeEvent) => {
-    setScopeFilter(event.target.value);
+    onFilterChange({ ...filters, scopeFilter: event.target.value });
   };
 
   const handleTypeChange = (event: SelectChangeEvent<typeof typeFilter>) => {
     const value = event.target.value;
-    setTypeFilter(typeof value === 'string' ? value.split(',') : value);
+    const newTypeFilter = typeof value === 'string' ? value.split(',') : value;
+    onFilterChange({ ...filters, typeFilter: newTypeFilter });
   };
 
   return (
@@ -149,6 +135,7 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
               const labels: Record<string, string> = {
                 ADVICE_SOLICITATION: 'Sollicitation d\'avis',
                 CONSENSUS: 'Consensus',
+                CONSENT: 'Consentement',
                 MAJORITY: 'Majorité',
                 NUANCED_VOTE: 'Vote nuancé',
               };
@@ -163,6 +150,10 @@ export default function DecisionFilters({ userTeams, onFilterChange }: DecisionF
             <MenuItem value="CONSENSUS" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('CONSENSUS') > -1} />
               <ListItemText primary="Consensus" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+            </MenuItem>
+            <MenuItem value="CONSENT" sx={{ fontSize: '0.875rem' }}>
+              <Checkbox checked={typeFilter.indexOf('CONSENT') > -1} />
+              <ListItemText primary="Consentement" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
             <MenuItem value="MAJORITY" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('MAJORITY') > -1} />
