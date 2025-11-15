@@ -223,7 +223,34 @@ export default function DashboardContent({
 
               // Pour toutes les autres décisions : afficher une card compacte
               const userParticipant = decision.participants?.find((p: any) => p.userId === userId);
-              const hasVoted = userParticipant?.hasVoted || false;
+
+              // Déterminer hasVoted selon le type de décision
+              let hasVoted = false;
+              if (decision.decisionType === 'CONSENT') {
+                // Pour les décisions CONSENT, déterminer hasVoted selon le stade actuel
+                const currentStage = decision.consentCurrentStage;
+
+                if (currentStage === 'CLARIFICATIONS') {
+                  // Stade questions : a-t-il posé au moins une question ?
+                  hasVoted = decision.clarificationQuestions?.length > 0;
+                } else if (currentStage === 'CLARIFAVIS') {
+                  // Stade clarifavis : a-t-il posé une question OU donné son avis ?
+                  hasVoted = (decision.clarificationQuestions?.length > 0) || (decision.opinionResponses?.length > 0);
+                } else if (currentStage === 'AVIS') {
+                  // Stade avis : a-t-il donné son avis ?
+                  hasVoted = decision.opinionResponses?.length > 0;
+                } else if (currentStage === 'OBJECTIONS') {
+                  // Stade objections : a-t-il enregistré sa position ?
+                  hasVoted = decision.consentObjections?.length > 0;
+                } else {
+                  // Pour les autres stades (AMENDEMENTS, TERMINEE)
+                  hasVoted = userParticipant?.hasVoted || false;
+                }
+              } else {
+                // Pour les autres types de décisions, utiliser hasVoted standard
+                hasVoted = userParticipant?.hasVoted || false;
+              }
+
               const isPublicLink = decision._meta.category === 'publicLink';
               const isClosed = decision._meta.category === 'closed';
 

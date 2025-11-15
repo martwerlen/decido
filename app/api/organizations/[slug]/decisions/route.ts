@@ -150,6 +150,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         creatorId: true,
+        consentCurrentStage: true,
         // Relations
         creator: {
           select: {
@@ -170,6 +171,30 @@ export async function GET(
             userId: true,
             hasVoted: true,
             teamId: true,
+          },
+        },
+        clarificationQuestions: {
+          where: {
+            questionerId: session.user.id,
+          },
+          select: {
+            id: true,
+          },
+        },
+        opinionResponses: {
+          where: {
+            userId: session.user.id,
+          },
+          select: {
+            id: true,
+          },
+        },
+        consentObjections: {
+          where: {
+            userId: session.user.id,
+          },
+          select: {
+            id: true,
           },
         },
         _count: {
