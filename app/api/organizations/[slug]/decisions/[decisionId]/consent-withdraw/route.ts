@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logConsentProposalWithdrawn } from '@/lib/decision-logger'
 
 /**
  * PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-withdraw
@@ -60,6 +61,13 @@ export async function PATCH(
         updatedAt: new Date(),
       },
     })
+
+    // Logger l'événement
+    await logConsentProposalWithdrawn(
+      decisionId,
+      session.user.id,
+      session.user.name || session.user.email || 'Créateur'
+    )
 
     // Pas de notification nécessaire, la décision est terminée
 

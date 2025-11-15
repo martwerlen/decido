@@ -259,7 +259,18 @@ export type DecisionLogEventType =
   // Sollicitation d'avis
   | 'OPINION_SUBMITTED'       // Avis déposé
   | 'OPINION_UPDATED'         // Avis modifié
-  | 'FINAL_DECISION_MADE';    // Décision finale prise
+  | 'FINAL_DECISION_MADE'     // Décision finale prise
+
+  // Décision par consentement
+  | 'CONSENT_QUESTION_POSTED'     // Question de clarification posée
+  | 'CONSENT_QUESTION_ANSWERED'   // Question de clarification répondue
+  | 'CONSENT_OPINION_SUBMITTED'   // Avis donné
+  | 'CONSENT_PROPOSAL_AMENDED'    // Proposition amendée
+  | 'CONSENT_PROPOSAL_KEPT'       // Proposition gardée telle quelle
+  | 'CONSENT_PROPOSAL_WITHDRAWN'  // Proposition retirée
+  | 'CONSENT_POSITION_RECORDED'   // Position enregistrée (objections)
+  | 'CONSENT_POSITION_UPDATED'    // Position modifiée (objections)
+  | 'CONSENT_DECISION_FINALIZED'; // Décision finalisée avec résultat
 
 export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'CREATED',
@@ -281,6 +292,15 @@ export const DECISION_LOG_EVENT_TYPES: DecisionLogEventType[] = [
   'OPINION_SUBMITTED',
   'OPINION_UPDATED',
   'FINAL_DECISION_MADE',
+  'CONSENT_QUESTION_POSTED',
+  'CONSENT_QUESTION_ANSWERED',
+  'CONSENT_OPINION_SUBMITTED',
+  'CONSENT_PROPOSAL_AMENDED',
+  'CONSENT_PROPOSAL_KEPT',
+  'CONSENT_PROPOSAL_WITHDRAWN',
+  'CONSENT_POSITION_RECORDED',
+  'CONSENT_POSITION_UPDATED',
+  'CONSENT_DECISION_FINALIZED',
 ];
 
 export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = {
@@ -303,6 +323,15 @@ export const DecisionLogEventTypeLabels: Record<DecisionLogEventType, string> = 
   OPINION_SUBMITTED: 'Avis déposé',
   OPINION_UPDATED: 'Avis modifié',
   FINAL_DECISION_MADE: 'Décision finale prise',
+  CONSENT_QUESTION_POSTED: 'Question de clarification posée',
+  CONSENT_QUESTION_ANSWERED: 'Question répondue',
+  CONSENT_OPINION_SUBMITTED: 'Avis donné',
+  CONSENT_PROPOSAL_AMENDED: 'Proposition amendée',
+  CONSENT_PROPOSAL_KEPT: 'Proposition gardée telle quelle',
+  CONSENT_PROPOSAL_WITHDRAWN: 'Proposition retirée',
+  CONSENT_POSITION_RECORDED: 'Position enregistrée',
+  CONSENT_POSITION_UPDATED: 'Position modifiée',
+  CONSENT_DECISION_FINALIZED: 'Décision finalisée',
 };
 
 export function isValidDecisionLogEventType(type: string): type is DecisionLogEventType {

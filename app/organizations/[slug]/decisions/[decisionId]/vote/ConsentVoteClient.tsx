@@ -604,10 +604,10 @@ export default function ConsentVoteClient({
     <Box sx={{ minHeight: '100vh', display: 'flex', backgroundColor: 'background.default' }}>
       {/* History Panel */}
       <HistoryPanel
-        isOpen={historyOpen}
+        open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        decisionId={decision.id}
         organizationSlug={slug}
+        decisionId={decision.id}
       />
 
       {/* Main content */}

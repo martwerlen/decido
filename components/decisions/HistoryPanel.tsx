@@ -26,6 +26,10 @@ import CommentIcon from '@mui/icons-material/Comment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import FeedbackIcon from '@mui/icons-material/Feedback';
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import GavelIcon from '@mui/icons-material/Gavel';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -71,6 +75,22 @@ function getEventIcon(eventType: string) {
     case 'PARTICIPANT_ADDED':
     case 'PARTICIPANT_REMOVED':
       return <PersonAddIcon />;
+    // CONSENT events
+    case 'CONSENT_QUESTION_POSTED':
+    case 'CONSENT_QUESTION_ANSWERED':
+      return <QuestionAnswerIcon />;
+    case 'CONSENT_OPINION_SUBMITTED':
+      return <FeedbackIcon />;
+    case 'CONSENT_PROPOSAL_AMENDED':
+    case 'CONSENT_PROPOSAL_KEPT':
+      return <EditIcon />;
+    case 'CONSENT_PROPOSAL_WITHDRAWN':
+      return <CancelIcon />;
+    case 'CONSENT_POSITION_RECORDED':
+    case 'CONSENT_POSITION_UPDATED':
+      return <GavelIcon />;
+    case 'CONSENT_DECISION_FINALIZED':
+      return <ThumbUpIcon />;
     default:
       return <CreateIcon />;
   }
@@ -104,6 +124,22 @@ function getEventColor(eventType: string): 'primary' | 'secondary' | 'success' |
     case 'PARTICIPANT_ADDED':
     case 'PARTICIPANT_REMOVED':
       return 'grey';
+    // CONSENT events
+    case 'CONSENT_QUESTION_POSTED':
+    case 'CONSENT_QUESTION_ANSWERED':
+      return 'info';
+    case 'CONSENT_OPINION_SUBMITTED':
+      return 'info';
+    case 'CONSENT_PROPOSAL_AMENDED':
+    case 'CONSENT_PROPOSAL_KEPT':
+      return 'info';
+    case 'CONSENT_PROPOSAL_WITHDRAWN':
+      return 'error';
+    case 'CONSENT_POSITION_RECORDED':
+    case 'CONSENT_POSITION_UPDATED':
+      return 'success';
+    case 'CONSENT_DECISION_FINALIZED':
+      return 'success';
     default:
       return 'grey';
   }

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logConsentQuestionPosted } from '@/lib/decision-logger'
 
 /**
  * GET /api/organizations/[slug]/decisions/[decisionId]/clarifications
@@ -138,6 +139,13 @@ export async function POST(
         },
       },
     })
+
+    // Logger l'événement
+    await logConsentQuestionPosted(
+      decisionId,
+      session.user.id,
+      session.user.name || session.user.email || 'Utilisateur inconnu'
+    )
 
     return NextResponse.json({ question }, { status: 201 })
   } catch (error) {
