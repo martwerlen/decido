@@ -52,6 +52,8 @@ export async function GET(
           title: true,
           status: true,
           votingMode: true,
+          decisionType: true,
+          consentCurrentStage: true,
           creatorId: true,
           participants: {
             where: {
@@ -59,6 +61,30 @@ export async function GET(
             },
             select: {
               hasVoted: true,
+            },
+          },
+          clarificationQuestions: {
+            where: {
+              questionerId: session.user.id,
+            },
+            select: {
+              id: true,
+            },
+          },
+          opinionResponses: {
+            where: {
+              userId: session.user.id,
+            },
+            select: {
+              id: true,
+            },
+          },
+          consentObjections: {
+            where: {
+              userId: session.user.id,
+            },
+            select: {
+              id: true,
             },
           },
         },
@@ -71,15 +97,45 @@ export async function GET(
     ]);
 
     // Enrichir avec les infos de participation
-    const enrichedOngoing = ongoingDecisions.map((decision: typeof ongoingDecisions[number]) => ({
-      id: decision.id,
-      title: decision.title,
-      status: decision.status,
-      votingMode: decision.votingMode,
-      isCreator: decision.creatorId === session.user.id,
-      isParticipant: decision.participants.length > 0,
-      hasVoted: decision.participants.length > 0 ? decision.participants[0].hasVoted : false,
-    }));
+    const enrichedOngoing = ongoingDecisions.map((decision: typeof ongoingDecisions[number]) => {
+      const isParticipant = decision.participants.length > 0;
+      let hasVoted = false;
+
+      if (decision.decisionType === 'CONSENT') {
+        // Pour les décisions CONSENT, déterminer hasVoted selon le stade actuel
+        const currentStage = decision.consentCurrentStage;
+
+        if (currentStage === 'CLARIFICATIONS') {
+          // Stade questions : a-t-il posé au moins une question ?
+          hasVoted = decision.clarificationQuestions.length > 0;
+        } else if (currentStage === 'CLARIFAVIS') {
+          // Stade clarifavis (questions ET avis combinés) : a-t-il posé une question OU donné son avis ?
+          hasVoted = decision.clarificationQuestions.length > 0 || decision.opinionResponses.length > 0;
+        } else if (currentStage === 'AVIS') {
+          // Stade avis : a-t-il donné son avis ?
+          hasVoted = decision.opinionResponses.length > 0;
+        } else if (currentStage === 'OBJECTIONS') {
+          // Stade objections : a-t-il enregistré sa position ?
+          hasVoted = decision.consentObjections.length > 0;
+        } else {
+          // Pour les autres stades (AMENDEMENTS, TERMINEE), utiliser la logique par défaut
+          hasVoted = isParticipant ? decision.participants[0].hasVoted : false;
+        }
+      } else {
+        // Pour les autres types de décisions, utiliser hasVoted standard
+        hasVoted = isParticipant ? decision.participants[0].hasVoted : false;
+      }
+
+      return {
+        id: decision.id,
+        title: decision.title,
+        status: decision.status,
+        votingMode: decision.votingMode,
+        isCreator: decision.creatorId === session.user.id,
+        isParticipant,
+        hasVoted,
+      };
+    });
 
     // 2. Décisions terminées (CLOSED, IMPLEMENTED, ARCHIVED, WITHDRAWN) - Limiter à 5 plus récentes
     const completedWhere = {

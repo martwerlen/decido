@@ -725,6 +725,10 @@ export default function ConsentVoteClient({
           onAmendProposal={handleAmendProposal}
           onKeepProposal={handleKeepProposal}
           onWithdrawProposal={handleWithdrawProposal}
+          consentAmendmentAction={decision.consentAmendmentAction}
+          initialProposal={decision.initialProposal}
+          proposalText={decision.proposal}
+          creatorName={decision.creator.name}
           comments={decision.comments}
           newComment={newComment}
           setNewComment={setNewComment}

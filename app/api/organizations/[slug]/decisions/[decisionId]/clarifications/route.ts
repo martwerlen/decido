@@ -91,13 +91,8 @@ export async function POST(
     }
 
     // Vérifier que l'utilisateur est participant
-    if (decision.participants.length === 0) {
+    if (decision.participants.length === 0 && decision.creatorId !== session.user.id) {
       return NextResponse.json({ error: 'Vous n\'êtes pas participant à cette décision' }, { status: 403 })
-    }
-
-    // Vérifier que l'utilisateur n'est pas le créateur (le créateur ne peut pas poser de questions)
-    if (decision.creatorId === session.user.id) {
-      return NextResponse.json({ error: 'Le créateur ne peut pas poser de questions de clarification' }, { status: 403 })
     }
 
     // Si questionId est fourni, on modifie une question existante

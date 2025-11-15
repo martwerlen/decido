@@ -107,6 +107,10 @@ interface Props {
   onAmendProposal: () => void;
   onKeepProposal: () => void;
   onWithdrawProposal: () => void;
+  consentAmendmentAction: string | null;
+  initialProposal: string | null;
+  proposalText: string | null;
+  creatorName: string | null;
 
   // Comments
   comments: Comment[];
@@ -158,6 +162,10 @@ export default function ConsentAccordionStages({
   onAmendProposal,
   onKeepProposal,
   onWithdrawProposal,
+  consentAmendmentAction,
+  initialProposal,
+  proposalText,
+  creatorName,
   comments,
   newComment,
   setNewComment,
@@ -524,6 +532,35 @@ export default function ConsentAccordionStages({
               Cette étape ouvrira le {new Date(timings.amendements.startDate).toLocaleDateString('fr-FR')} à {new Date(timings.amendements.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
             </Alert>
           )}
+          {status3 === 'PASSÉ' && consentAmendmentAction && timings?.amendements && (
+            <Box>
+              {consentAmendmentAction === 'KEPT' && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {new Date(timings.amendements.endDate).toLocaleDateString('fr-FR')} {new Date(timings.amendements.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - {creatorName} a gardé sa proposition initiale que voici :
+                  </Typography>
+                  <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>{initialProposal}</Typography>
+                  </Box>
+                </Box>
+              )}
+              {consentAmendmentAction === 'AMENDED' && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {new Date(timings.amendements.endDate).toLocaleDateString('fr-FR')} {new Date(timings.amendements.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - {creatorName} a amendé sa proposition initiale comme suit :
+                  </Typography>
+                  <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>{proposalText}</Typography>
+                  </Box>
+                </Box>
+              )}
+              {consentAmendmentAction === 'WITHDRAWN' && (
+                <Alert severity="warning">
+                  {new Date(timings.amendements.endDate).toLocaleDateString('fr-FR')} {new Date(timings.amendements.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - {creatorName} a retiré sa proposition.
+                </Alert>
+              )}
+            </Box>
+          )}
           {status3 === 'ACTIF' && !isCreator && date3 && (
             <Alert severity="warning">
               Jusqu'au {new Date(date3).toLocaleDateString('fr-FR')} à {new Date(date3).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, le proposeur peut conserver sa proposition telle quelle, la faire évoluer ou la retirer. Vous pourrez contribuer après cette étape.
@@ -664,42 +701,47 @@ export default function ConsentAccordionStages({
                 </Box>
               )}
 
-              {userObjection && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  Vous avez enregistré votre position : {userObjection.status}
-                </Alert>
-              )}
-
               {!isParticipant && (
                 <Alert severity="info" sx={{ mb: 3 }}>
                   Vous n'êtes pas participant à cette décision. Vous pouvez consulter les positions des participants ci-dessous.
                 </Alert>
               )}
 
-              {/* Liste des objections */}
+              {/* Liste des positions */}
               {objections.length > 0 && (
-                <Box sx={{ mt: 3 }}>
+                <Box sx={{ mt: userObjection ? 3 : 0 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
                     Positions des participants
                   </Typography>
-                  {objections.map(obj => (
-                    <Box key={obj.id} sx={{ mb: 2, p: 2, backgroundColor: 'background.secondary', borderRadius: 1 }}>
-                      <Typography variant="body2" fontWeight="medium">
-                        {obj.user?.name || 'Anonyme'}
-                      </Typography>
-                      <Chip
-                        label={obj.status}
-                        size="small"
-                        color={obj.status === 'NO_OBJECTION' ? 'success' : obj.status === 'OBJECTION' ? 'error' : 'default'}
-                        sx={{ mt: 1 }}
-                      />
-                      {obj.objectionText && (
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          {obj.objectionText}
-                        </Typography>
-                      )}
-                    </Box>
-                  ))}
+                  {objections.map(obj => {
+                    const userName = obj.user?.name || 'Anonyme';
+                    return (
+                      <Box key={obj.id} sx={{ mb: 1.5 }}>
+                        {obj.status === 'NO_POSITION' && (
+                          <Typography variant="body2">
+                            <strong>{userName}</strong> ne se prononce pas
+                          </Typography>
+                        )}
+                        {obj.status === 'NO_OBJECTION' && (
+                          <Typography variant="body2">
+                            <strong>{userName}</strong> - pas d'objection
+                          </Typography>
+                        )}
+                        {obj.status === 'OBJECTION' && (
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                              <strong>{userName}</strong> a émis l'objection suivante :
+                            </Typography>
+                            <Box sx={{ pl: 2, borderLeft: 3, borderColor: 'error.main' }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {obj.objectionText}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  })}
                 </Box>
               )}
 
