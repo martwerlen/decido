@@ -104,6 +104,17 @@ export default function LoginPage() {
               disabled={isLoading}
             />
 
+            <Box sx={{ textAlign: 'right', mt: 1 }}>
+              <MuiLink
+                component={Link}
+                href="/auth/forgot-password"
+                variant="body2"
+                sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              >
+                Mot de passe oublié ?
+              </MuiLink>
+            </Box>
+
             <Button
               type="submit"
               fullWidth

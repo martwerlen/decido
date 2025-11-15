@@ -261,3 +261,142 @@ Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   console.log(`   Connexion: ${loginUrl}\n`);
   return { success: true, mode: 'console' };
 }
+
+interface SendPasswordResetEmailParams {
+  to: string;
+  userName: string;
+  resetToken: string;
+}
+
+export async function sendPasswordResetEmail({
+  to,
+  userName,
+  resetToken,
+}: SendPasswordResetEmailParams) {
+  const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
+
+  // Date et heure de la demande
+  const requestDate = new Date().toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  const requestTime = new Date().toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Réinitialisation de votre mot de passe Decidoo</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h1 style="color: #2563eb; margin: 0 0 20px 0; font-size: 24px;">
+            Réinitialisation de votre mot de passe
+          </h1>
+          <p style="margin: 0 0 15px 0; font-size: 16px;">
+            Bonjour ${userName},
+          </p>
+          <p style="margin: 0 0 15px 0; font-size: 16px;">
+            Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte Decidoo.
+          </p>
+          <div style="background-color: #e8f4fd; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #555;">
+              <strong>Date de la demande :</strong> ${requestDate} à ${requestTime}
+            </p>
+            <p style="margin: 0; font-size: 14px; color: #555;">
+              <strong>Validité du lien :</strong> 1 heure
+            </p>
+          </div>
+          <p style="margin: 0 0 25px 0; font-size: 16px;">
+            Pour définir un nouveau mot de passe, cliquez sur le bouton ci-dessous :
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}"
+               style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; display: inline-block;">
+              Réinitialiser mon mot de passe
+            </a>
+          </div>
+          <p style="margin: 25px 0 0 0; font-size: 14px; color: #666;">
+            Ou copiez ce lien dans votre navigateur :
+          </p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #2563eb; word-break: break-all;">
+            ${resetUrl}
+          </p>
+        </div>
+        <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+          <p style="margin: 0 0 10px 0; font-size: 14px; color: #856404; font-weight: 600;">
+            ⚠️ Informations de sécurité importantes
+          </p>
+          <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #856404;">
+            <li style="margin-bottom: 5px;">Ce lien expire dans 1 heure pour votre sécurité.</li>
+            <li style="margin-bottom: 5px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email et votre mot de passe restera inchangé.</li>
+            <li style="margin-bottom: 5px;">Pour des raisons de sécurité, vous ne pouvez demander qu'un maximum de 2 réinitialisations par heure.</li>
+            <li>Ne partagez jamais ce lien avec qui que ce soit.</li>
+          </ul>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: #999; padding: 20px 0;">
+          <p style="margin: 0 0 5px 0;">
+            Cet email a été envoyé automatiquement par Decidoo.
+          </p>
+          <p style="margin: 0;">
+            Si vous avez des questions, contactez votre administrateur.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textContent = `
+Bonjour ${userName},
+
+Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte Decidoo.
+
+Date de la demande : ${requestDate} à ${requestTime}
+Validité du lien : 1 heure
+
+Pour définir un nouveau mot de passe, veuillez cliquer sur le lien suivant :
+${resetUrl}
+
+⚠️ INFORMATIONS DE SÉCURITÉ IMPORTANTES
+
+- Ce lien expire dans 1 heure pour votre sécurité.
+- Si vous n'avez pas demandé cette réinitialisation, ignorez cet email et votre mot de passe restera inchangé.
+- Pour des raisons de sécurité, vous ne pouvez demander qu'un maximum de 2 réinitialisations par heure.
+- Ne partagez jamais ce lien avec qui que ce soit.
+
+Cet email a été envoyé automatiquement par Decidoo.
+Si vous avez des questions, contactez votre administrateur.
+  `.trim();
+
+  const emailData = {
+    from: fromEmail,
+    to: [to],
+    subject: `Réinitialisation de votre mot de passe Decidoo`,
+    html: htmlContent,
+    text: textContent,
+  };
+
+  // Si RESEND_API_KEY est défini, utiliser Resend
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const data = await resend.emails.send(emailData);
+      console.log(`✅ Email de réinitialisation envoyé à ${to}`);
+      return { success: true, data };
+    } catch (error) {
+      console.error(`❌ Erreur réinitialisation pour ${to}:`, error);
+    }
+  }
+
+  // Mode console
+  console.log(`📧 [CONSOLE] Réinitialisation mot de passe à ${to}`);
+  console.log(`   Lien: ${resetUrl}\n`);
+  return { success: true, mode: 'console' };
+}
