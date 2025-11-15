@@ -26,6 +26,7 @@ export interface DecisionFiltersType {
 
 interface DecisionFiltersProps {
   userTeams: Team[];
+  filters: DecisionFiltersType;
   onFilterChange: (filters: DecisionFiltersType) => void;
 }
 
@@ -40,39 +41,23 @@ const MenuProps = {
   },
 };
 
-export default function DecisionFilters({ userTeams, onFilterChange }: DecisionFiltersProps) {
-  // Filtre 1: Statut (multi-sélection) - Par défaut: "En cours"
-  const [statusFilter, setStatusFilter] = useState<string[]>(['OPEN']);
-
-  // Filtre 2: Périmètre (sélection simple) - Par défaut: "Toute l'organisation"
-  const [scopeFilter, setScopeFilter] = useState<string>('ALL');
-
-  // Filtre 3: Type (multi-sélection) - Par défaut: tous cochés
-  const [typeFilter, setTypeFilter] = useState<string[]>([
-    'ADVICE_SOLICITATION',
-    'CONSENSUS',
-    'CONSENT',
-    'MAJORITY',
-    'NUANCED_VOTE',
-  ]);
-
-  // Appeler onFilterChange à chaque changement
-  useEffect(() => {
-    onFilterChange({ statusFilter, scopeFilter, typeFilter });
-  }, [statusFilter, scopeFilter, typeFilter, onFilterChange]);
+export default function DecisionFilters({ userTeams, filters, onFilterChange }: DecisionFiltersProps) {
+  const { statusFilter, scopeFilter, typeFilter } = filters;
 
   const handleStatusChange = (event: SelectChangeEvent<typeof statusFilter>) => {
     const value = event.target.value;
-    setStatusFilter(typeof value === 'string' ? value.split(',') : value);
+    const newStatusFilter = typeof value === 'string' ? value.split(',') : value;
+    onFilterChange({ ...filters, statusFilter: newStatusFilter });
   };
 
   const handleScopeChange = (event: SelectChangeEvent) => {
-    setScopeFilter(event.target.value);
+    onFilterChange({ ...filters, scopeFilter: event.target.value });
   };
 
   const handleTypeChange = (event: SelectChangeEvent<typeof typeFilter>) => {
     const value = event.target.value;
-    setTypeFilter(typeof value === 'string' ? value.split(',') : value);
+    const newTypeFilter = typeof value === 'string' ? value.split(',') : value;
+    onFilterChange({ ...filters, typeFilter: newTypeFilter });
   };
 
   return (
