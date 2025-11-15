@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { ConsensusVoteValueLabels, DecisionStatusLabels } from '@/types/enums';
+import { ConsensusVoteValueLabels, DecisionStatusLabels, ConsentObjectionStatusLabels } from '@/types/enums';
 
 // GET /api/organizations/[slug]/decisions/[decisionId]/history - Récupère l'historique d'une décision
 export async function GET(
@@ -187,6 +187,82 @@ export async function GET(
 
         case 'FINAL_DECISION_MADE':
           message = `${actorName} a validé la décision finale`;
+          break;
+
+        // CONSENT events
+        case 'CONSENT_QUESTION_POSTED':
+          message = `${actorName} a posé une question`;
+          break;
+
+        case 'CONSENT_QUESTION_ANSWERED':
+          message = `${actorName} a répondu`;
+          break;
+
+        case 'CONSENT_OPINION_SUBMITTED':
+          message = `${actorName} a donné son avis`;
+          break;
+
+        case 'CONSENT_PROPOSAL_AMENDED':
+          message = `${actorName} a amendé la proposition`;
+          break;
+
+        case 'CONSENT_PROPOSAL_KEPT':
+          message = `${actorName} a gardé la proposition telle quelle`;
+          break;
+
+        case 'CONSENT_PROPOSAL_WITHDRAWN':
+          message = `${actorName} a retiré la proposition`;
+          break;
+
+        case 'CONSENT_POSITION_RECORDED':
+          if (log.metadata) {
+            try {
+              const metadata = JSON.parse(log.metadata);
+              const positionLabel = ConsentObjectionStatusLabels[metadata.position as keyof typeof ConsentObjectionStatusLabels] || metadata.position;
+              if (metadata.position === 'OBJECTION' && metadata.objectionText) {
+                message = `${actorName} a émis une objection : "${metadata.objectionText}"`;
+              } else {
+                message = `${actorName} - ${positionLabel}`;
+              }
+            } catch {
+              message = `${actorName} a enregistré sa position`;
+            }
+          } else {
+            message = `${actorName} a enregistré sa position`;
+          }
+          break;
+
+        case 'CONSENT_POSITION_UPDATED':
+          if (log.oldValue && log.newValue && log.metadata) {
+            try {
+              const oldPositionLabel = ConsentObjectionStatusLabels[log.oldValue as keyof typeof ConsentObjectionStatusLabels] || log.oldValue;
+              const newPositionLabel = ConsentObjectionStatusLabels[log.newValue as keyof typeof ConsentObjectionStatusLabels] || log.newValue;
+              const metadata = JSON.parse(log.metadata);
+              if (log.newValue === 'OBJECTION' && metadata.objectionText) {
+                message = `${actorName} a changé sa position de "${oldPositionLabel}" à objection : "${metadata.objectionText}"`;
+              } else {
+                message = `${actorName} a changé sa position de "${oldPositionLabel}" à "${newPositionLabel}"`;
+              }
+            } catch {
+              message = `${actorName} a modifié sa position`;
+            }
+          } else {
+            message = `${actorName} a modifié sa position`;
+          }
+          break;
+
+        case 'CONSENT_DECISION_FINALIZED':
+          if (log.metadata) {
+            try {
+              const metadata = JSON.parse(log.metadata);
+              const { noObjection = 0, noPosition = 0, objection = 0 } = metadata;
+              message = `Décision finalisée : ${noObjection} consentement${noObjection > 1 ? 's' : ''}, ${noPosition} abstention${noPosition > 1 ? 's' : ''}, ${objection} objection${objection > 1 ? 's' : ''}`;
+            } catch {
+              message = 'Décision finalisée';
+            }
+          } else {
+            message = 'Décision finalisée';
+          }
           break;
 
         default:

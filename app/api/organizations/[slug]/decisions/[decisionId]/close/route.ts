@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { logDecisionClosed } from '@/lib/decision-logger';
+import { logDecisionClosed, logConsentDecisionFinalized } from '@/lib/decision-logger';
 import { calculateFinalDecisionResult } from '@/lib/decision-logic';
 
 /**
@@ -67,6 +67,11 @@ export async function PATCH(
             },
           },
         },
+        consentObjections: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
@@ -94,11 +99,22 @@ export async function PATCH(
         status: 'CLOSED',
         result: finalResult,
         decidedAt: new Date(),
+        consentCurrentStage: decision.decisionType === 'CONSENT' ? 'TERMINEE' : decision.consentCurrentStage,
       },
     });
 
     // Logger la clôture manuelle
     await logDecisionClosed(decisionId, session.user.id, 'manual');
+
+    // Pour CONSENT: logger aussi la finalisation avec décompte
+    if (decision.decisionType === 'CONSENT' && decision.consentObjections) {
+      const counts = {
+        noObjection: decision.consentObjections.filter((obj) => obj.status === 'NO_OBJECTION').length,
+        noPosition: decision.consentObjections.filter((obj) => obj.status === 'NO_POSITION').length,
+        objection: decision.consentObjections.filter((obj) => obj.status === 'OBJECTION').length,
+      };
+      await logConsentDecisionFinalized(decisionId, finalResult, counts);
+    }
 
     return NextResponse.json({
       decision: updatedDecision,

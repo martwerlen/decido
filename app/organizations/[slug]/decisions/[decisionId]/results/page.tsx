@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calculateNuancedVoteResults, calculateFinalDecisionResult } from '@/lib/decision-logic';
-import { logDecisionClosed } from '@/lib/decision-logger';
+import { logDecisionClosed, logConsentDecisionFinalized } from '@/lib/decision-logger';
 import ResultsPageClient from './ResultsPageClient';
 
 export default async function ResultsPage({
@@ -213,6 +213,7 @@ export default async function ResultsPage({
         status: 'CLOSED',
         result: finalResult,
         decidedAt: now,
+        consentCurrentStage: decision.decisionType === 'CONSENT' ? 'TERMINEE' : decision.consentCurrentStage,
       },
     });
     decision.status = 'CLOSED';
@@ -222,6 +223,16 @@ export default async function ResultsPage({
     // Logger la fermeture automatique avec la raison
     const reason = isDeadlinePassed ? 'deadline_reached' : 'all_voted';
     await logDecisionClosed(decision.id, session.user.id, reason);
+
+    // Pour CONSENT: logger aussi la finalisation avec décompte
+    if (decision.decisionType === 'CONSENT' && decision.consentObjections) {
+      const counts = {
+        noObjection: decision.consentObjections.filter((obj) => obj.status === 'NO_OBJECTION').length,
+        noPosition: decision.consentObjections.filter((obj) => obj.status === 'NO_POSITION').length,
+        objection: decision.consentObjections.filter((obj) => obj.status === 'OBJECTION').length,
+      };
+      await logConsentDecisionFinalized(decision.id, finalResult, counts);
+    }
   }
 
   // Vérifier si l'utilisateur peut voir les résultats

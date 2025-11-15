@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { sendConsentStageNotification } from '@/lib/consent-notifications'
 import { calculateConsentStageTimings } from '@/lib/consent-logic'
 import { ConsentStepMode } from '@/types/enums'
+import { logConsentProposalKept } from '@/lib/decision-logger'
 
 /**
  * PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-keep
@@ -68,6 +69,13 @@ export async function PATCH(
         updatedAt: new Date(),
       },
     })
+
+    // Logger l'événement
+    await logConsentProposalKept(
+      decisionId,
+      session.user.id,
+      session.user.name || session.user.email || 'Créateur'
+    )
 
     // Envoyer les notifications à tous les participants
     if (decision.startDate && decision.endDate && decision.consentStepMode) {

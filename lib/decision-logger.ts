@@ -323,3 +323,167 @@ export async function logCommentAdded(
     actorEmail,
   });
 }
+
+/**
+ * Log une question de clarification posée (CONSENT)
+ */
+export async function logConsentQuestionPosted(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_QUESTION_POSTED',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log une réponse à une question de clarification (CONSENT)
+ */
+export async function logConsentQuestionAnswered(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_QUESTION_ANSWERED',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log un avis donné (CONSENT)
+ */
+export async function logConsentOpinionSubmitted(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_OPINION_SUBMITTED',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log l'amendement d'une proposition (CONSENT)
+ */
+export async function logConsentProposalAmended(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_PROPOSAL_AMENDED',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log le maintien d'une proposition (CONSENT)
+ */
+export async function logConsentProposalKept(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_PROPOSAL_KEPT',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log le retrait d'une proposition (CONSENT)
+ */
+export async function logConsentProposalWithdrawn(
+  decisionId: string,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_PROPOSAL_WITHDRAWN',
+    actorId,
+    actorName,
+  });
+}
+
+/**
+ * Log l'enregistrement d'une position (CONSENT - objections)
+ */
+export async function logConsentPositionRecorded(
+  decisionId: string,
+  actorId: string,
+  actorName: string,
+  position: string,
+  objectionText?: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_POSITION_RECORDED',
+    actorId,
+    actorName,
+    metadata: {
+      position,
+      objectionText: objectionText || null,
+    },
+  });
+}
+
+/**
+ * Log la modification d'une position (CONSENT - objections)
+ */
+export async function logConsentPositionUpdated(
+  decisionId: string,
+  actorId: string,
+  actorName: string,
+  oldPosition: string,
+  newPosition: string,
+  objectionText?: string
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_POSITION_UPDATED',
+    actorId,
+    actorName,
+    oldValue: oldPosition,
+    newValue: newPosition,
+    metadata: {
+      objectionText: objectionText || null,
+    },
+  });
+}
+
+/**
+ * Log la finalisation d'une décision CONSENT avec décompte
+ */
+export async function logConsentDecisionFinalized(
+  decisionId: string,
+  result: string,
+  counts: {
+    noObjection: number;
+    noPosition: number;
+    objection: number;
+  }
+): Promise<void> {
+  await logDecisionEvent({
+    decisionId,
+    eventType: 'CONSENT_DECISION_FINALIZED',
+    metadata: {
+      result,
+      ...counts,
+    },
+  });
+}

@@ -6,6 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import {
+  logConsentPositionRecorded,
+  logConsentPositionUpdated,
+  logConsentDecisionFinalized,
+} from '@/lib/decision-logger'
+import { ConsentObjectionStatusLabels } from '@/types/enums'
 
 /**
  * GET /api/organizations/[slug]/decisions/[decisionId]/consent-objections
@@ -120,8 +126,12 @@ export async function POST(
     )
 
     let objection
+    const userName = session.user.name || session.user.email || 'Participant'
 
     if (existingObjection) {
+      // Sauvegarder le statut précédent pour le log
+      const oldStatus = existingObjection.status
+
       // Mettre à jour l'objection existante
       objection = await prisma.consentObjection.update({
         where: { id: existingObjection.id },
@@ -137,6 +147,16 @@ export async function POST(
           },
         },
       })
+
+      // Logger la modification de position
+      await logConsentPositionUpdated(
+        decisionId,
+        session.user.id,
+        userName,
+        oldStatus,
+        status,
+        status === 'OBJECTION' ? objectionText : undefined
+      )
     } else {
       // Créer une nouvelle objection
       objection = await prisma.consentObjection.create({
@@ -153,6 +173,15 @@ export async function POST(
           },
         },
       })
+
+      // Logger l'enregistrement de la position
+      await logConsentPositionRecorded(
+        decisionId,
+        session.user.id,
+        userName,
+        status,
+        status === 'OBJECTION' ? objectionText : undefined
+      )
     }
 
     // Marquer le participant comme ayant voté
@@ -183,6 +212,13 @@ export async function POST(
       const hasRealObjection = allObjections.some((obj) => obj.status === 'OBJECTION')
 
       if (!hasRealObjection) {
+        // Calculer le décompte
+        const counts = {
+          noObjection: allObjections.filter((obj) => obj.status === 'NO_OBJECTION').length,
+          noPosition: allObjections.filter((obj) => obj.status === 'NO_POSITION').length,
+          objection: 0,
+        }
+
         // Clôturer automatiquement la décision
         await prisma.decision.update({
           where: { id: decisionId },
@@ -193,6 +229,9 @@ export async function POST(
             decidedAt: new Date(),
           },
         })
+
+        // Logger la finalisation de la décision
+        await logConsentDecisionFinalized(decisionId, 'APPROVED', counts)
       }
     }
 

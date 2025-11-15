@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logConsentQuestionAnswered } from '@/lib/decision-logger'
 
 /**
  * PATCH /api/organizations/[slug]/decisions/[decisionId]/clarifications/[id]/answer
@@ -56,6 +57,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Question non associée à cette décision' }, { status: 400 })
     }
 
+    // Vérifier si c'est une première réponse ou une modification
+    const isFirstAnswer = !question.answeredAt
+
     // Mettre à jour la réponse
     const updatedQuestion = await prisma.clarificationQuestion.update({
       where: { id },
@@ -77,6 +81,15 @@ export async function PATCH(
         },
       },
     })
+
+    // Logger l'événement (seulement pour la première réponse)
+    if (isFirstAnswer) {
+      await logConsentQuestionAnswered(
+        decisionId,
+        session.user.id,
+        session.user.name || session.user.email || 'Utilisateur inconnu'
+      )
+    }
 
     return NextResponse.json({ question: updatedQuestion })
   } catch (error) {

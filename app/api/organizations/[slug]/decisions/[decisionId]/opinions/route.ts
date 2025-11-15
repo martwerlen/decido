@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canGiveOpinion } from '@/lib/consent-logic';
 import { ConsentStage, ConsentStepMode } from '@/types/enums';
+import { logConsentOpinionSubmitted } from '@/lib/decision-logger';
 
 // GET /api/organizations/[slug]/decisions/[decisionId]/opinions - Récupère tous les avis
 export async function GET(
@@ -223,17 +224,7 @@ export async function POST(
       });
       isUpdate = true;
 
-      // Logger la modification de l'avis
-      const userName = session.user.name || session.user.email || 'Utilisateur';
-      await prisma.decisionLog.create({
-        data: {
-          decisionId,
-          eventType: 'OPINION_UPDATED',
-          actorId: session.user.id,
-          actorName: userName,
-          actorEmail: session.user.email || undefined,
-        },
-      });
+      // Pas de log pour la modification d'avis (uniquement pour la première soumission)
     } else {
       // Créer un nouvel avis
       opinion = await prisma.opinionResponse.create({
@@ -268,15 +259,20 @@ export async function POST(
 
       // Logger le dépôt de l'avis
       const userName = session.user.name || session.user.email || 'Utilisateur';
-      await prisma.decisionLog.create({
-        data: {
-          decisionId,
-          eventType: 'OPINION_SUBMITTED',
-          actorId: session.user.id,
-          actorName: userName,
-          actorEmail: session.user.email || undefined,
-        },
-      });
+      if (decision.decisionType === 'CONSENT') {
+        await logConsentOpinionSubmitted(decisionId, session.user.id, userName);
+      } else {
+        // Pour ADVICE_SOLICITATION
+        await prisma.decisionLog.create({
+          data: {
+            decisionId,
+            eventType: 'OPINION_SUBMITTED',
+            actorId: session.user.id,
+            actorName: userName,
+            actorEmail: session.user.email || undefined,
+          },
+        });
+      }
     }
 
     return Response.json(
