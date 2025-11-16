@@ -338,7 +338,10 @@ export default function NewDecisionPage({
     try {
       if (!draftId) {
         // Créer un nouveau brouillon
-        const body: any = { ...formData };
+        const body: any = {
+          ...formData,
+          launch: false, // Toujours sauvegarder en brouillon, ne pas lancer
+        };
         if (formData.decisionType === 'NUANCED_VOTE') {
           body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
         } else if (formData.decisionType === 'MAJORITY') {
