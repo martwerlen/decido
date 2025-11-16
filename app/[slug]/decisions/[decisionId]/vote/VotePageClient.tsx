@@ -257,7 +257,7 @@ export default function VotePageClient({
         setSuccess('Consensus atteint ! La décision est approuvée.');
         refreshSidebar();
         setTimeout(() => {
-          router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
+          router.push(`/${slug}/decisions/${decision.id}/results`);
         }, 2000);
       } else {
         setSuccess('Votre vote a été enregistré !');

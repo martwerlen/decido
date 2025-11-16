@@ -641,14 +641,14 @@ export default function NewDecisionPage({
 
       // Rediriger selon le mode de vote
       if (formData.votingMode === 'PUBLIC_LINK') {
-        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/share`);
-        router.push(`/organizations/${slug}/decisions/${decision.id}/share`);
+        console.log('Redirecting to:', `/${slug}/decisions/${decision.id}/share`);
+        router.push(`/${slug}/decisions/${decision.id}/share`);
       } else {
         // Mode INVITED : vérifier si le créateur est participant
         // On redirige vers /vote s'il est participant, sinon vers /admin
         // Note : le backend ajoute automatiquement le créateur comme participant
-        console.log('Redirecting to:', `/organizations/${slug}/decisions/${decision.id}/vote`);
-        router.push(`/organizations/${slug}/decisions/${decision.id}/vote`);
+        console.log('Redirecting to:', `/${slug}/decisions/${decision.id}/vote`);
+        router.push(`/${slug}/decisions/${decision.id}/vote`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
