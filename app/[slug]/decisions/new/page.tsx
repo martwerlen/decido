@@ -610,6 +610,11 @@ export default function NewDecisionPage({
         launch: true, // Toujours lancer la décision depuis /new
       };
 
+      // Si on lance un brouillon existant, passer son ID
+      if (draftId) {
+        body.draftId = draftId;
+      }
+
       if (formData.decisionType === 'NUANCED_VOTE') {
         body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
       } else if (formData.decisionType === 'MAJORITY') {

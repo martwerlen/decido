@@ -270,6 +270,7 @@ export async function POST(
       endDate,
       votingMode = 'INVITED',
       launch = false, // Nouveau paramètre : lance immédiatement la décision
+      draftId, // ID du brouillon existant si on lance un brouillon
       teamIds = [],
       userIds = [],
       externalParticipants = []
@@ -449,11 +450,21 @@ export async function POST(
       }
 
       // Vérifier l'unicité du slug dans l'organisation
+      // (en excluant le brouillon actuel si on lance un brouillon existant)
+      const whereClause: any = {
+        organizationId: organization.id,
+        publicSlug: body.publicSlug,
+      };
+
+      // Exclure le brouillon actuel si on lance un brouillon existant
+      if (draftId) {
+        whereClause.id = {
+          not: draftId
+        };
+      }
+
       const existingSlug = await prisma.decision.findFirst({
-        where: {
-          organizationId: organization.id,
-          publicSlug: body.publicSlug,
-        },
+        where: whereClause,
       });
 
       if (existingSlug) {
