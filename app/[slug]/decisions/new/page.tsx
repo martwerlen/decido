@@ -131,8 +131,8 @@ export default function NewDecisionPage({
   };
 
   // Vérifier la disponibilité du slug
-  const checkSlugAvailability = async (slug: string) => {
-    if (!slug || slug.length < 3) {
+  const checkSlugAvailability = async (publicSlugToCheck: string) => {
+    if (!publicSlugToCheck || publicSlugToCheck.length < 3) {
       setSlugAvailable(null);
       return;
     }
@@ -140,7 +140,7 @@ export default function NewDecisionPage({
     setCheckingSlug(true);
     try {
       // Construire l'URL avec le paramètre excludeDecisionId si on édite un brouillon
-      const params = new URLSearchParams({ slug: formData.publicSlug });
+      const params = new URLSearchParams({ slug: publicSlugToCheck });
       if (draftId) {
         params.append('excludeDecisionId', draftId);
       }

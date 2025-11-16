@@ -117,10 +117,10 @@ export async function GET(
       if (!where.AND) where.AND = [];
       where.AND.push({
         OR: [
-          { title: { contains: searchLower, mode: 'insensitive' } },
-          { description: { contains: searchLower, mode: 'insensitive' } },
-          { proposal: { contains: searchLower, mode: 'insensitive' } },
-          { initialProposal: { contains: searchLower, mode: 'insensitive' } },
+          { title: { contains: searchLower } },
+          { description: { contains: searchLower } },
+          { proposal: { contains: searchLower } },
+          { initialProposal: { contains: searchLower } },
         ],
       });
     }
