@@ -139,8 +139,14 @@ export default function NewDecisionPage({
 
     setCheckingSlug(true);
     try {
+      // Construire l'URL avec le paramètre excludeDecisionId si on édite un brouillon
+      const params = new URLSearchParams({ slug: formData.publicSlug });
+      if (draftId) {
+        params.append('excludeDecisionId', draftId);
+      }
+
       const response = await fetch(
-        `/api/${slug}/decisions/check-public-slug?slug=${encodeURIComponent(formData.publicSlug)}`
+        `/api/${slug}/decisions/check-public-slug?${params.toString()}`
       );
       const data = await response.json();
       setSlugAvailable(data.available);

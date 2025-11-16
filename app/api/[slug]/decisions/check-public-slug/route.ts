@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
 /**
- * GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx
+ * GET /api/[slug]/decisions/check-public-slug?slug=xxx&excludeDecisionId=yyy
  * Vérifie si un publicSlug est disponible pour une organisation
+ * excludeDecisionId: ID de décision à exclure (pour édition de brouillon)
  */
 export async function GET(
   request: NextRequest,
@@ -19,6 +20,7 @@ export async function GET(
     const { slug: orgSlug } = await params;
     const { searchParams } = new URL(request.url);
     const publicSlug = searchParams.get('slug');
+    const excludeDecisionId = searchParams.get('excludeDecisionId'); // Nouveau paramètre
 
     if (!publicSlug) {
       return NextResponse.json({ error: 'Slug manquant' }, { status: 400 });
@@ -52,11 +54,21 @@ export async function GET(
     }
 
     // Vérifier si le slug est déjà utilisé dans cette organisation
+    // (en excluant la décision en cours d'édition si spécifiée)
+    const whereClause: any = {
+      organizationId: org.id,
+      publicSlug: publicSlug
+    };
+
+    // Exclure la décision actuelle si on édite un brouillon
+    if (excludeDecisionId) {
+      whereClause.id = {
+        not: excludeDecisionId
+      };
+    }
+
     const existing = await prisma.decision.findFirst({
-      where: {
-        organizationId: org.id,
-        publicSlug: publicSlug
-      }
+      where: whereClause
     });
 
     return NextResponse.json({ available: !existing });
