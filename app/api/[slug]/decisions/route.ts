@@ -549,47 +549,98 @@ export async function POST(
       };
     }
 
-    // Créer la décision avec le créateur comme participant par défaut
-    const decision = await prisma.decision.create({
-      data: decisionData,
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+    // Créer ou mettre à jour la décision
+    let decision;
+
+    if (draftId) {
+      // Vérifier que le brouillon existe et appartient à l'utilisateur
+      const existingDraft = await prisma.decision.findUnique({
+        where: { id: draftId },
+        select: {
+          id: true,
+          status: true,
+          creatorId: true,
+          organizationId: true,
+          publicToken: true,
         },
-        team: true,
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+      });
+
+      if (!existingDraft) {
+        return Response.json(
+          { error: 'Brouillon non trouvé' },
+          { status: 404 }
+        );
+      }
+
+      if (existingDraft.creatorId !== session.user.id) {
+        return Response.json(
+          { error: 'Vous ne pouvez pas modifier ce brouillon' },
+          { status: 403 }
+        );
+      }
+
+      if (existingDraft.organizationId !== organization.id) {
+        return Response.json(
+          { error: 'Ce brouillon n\'appartient pas à cette organisation' },
+          { status: 400 }
+        );
+      }
+
+      if (existingDraft.status !== 'DRAFT') {
+        return Response.json(
+          { error: 'Cette décision a déjà été lancée' },
+          { status: 400 }
+        );
+      }
+
+      // Lancer un brouillon existant : mettre à jour status, startDate, et publicToken
+      const updateData: any = {
+        status: 'OPEN',
+        startDate: new Date(),
+      };
+
+      // Générer publicToken si PUBLIC_LINK et pas déjà présent
+      if (votingMode === 'PUBLIC_LINK' && !existingDraft.publicToken) {
+        updateData.publicToken = crypto.randomBytes(32).toString('hex');
+      }
+
+      decision = await prisma.decision.update({
+        where: { id: draftId },
+        data: updateData,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          team: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
+          proposals: decisionType === 'MAJORITY' ? {
+            orderBy: {
+              order: 'asc',
+            },
+          } : false,
+          nuancedProposals: decisionType === 'NUANCED_VOTE' ? {
+            orderBy: {
+              order: 'asc',
+            },
+          } : false,
         },
-        proposals: decisionType === 'MAJORITY' ? {
-          orderBy: {
-            order: 'asc',
-          },
-        } : false,
-        nuancedProposals: decisionType === 'NUANCED_VOTE' ? {
-          orderBy: {
-            order: 'asc',
-          },
-        } : false,
-      },
-    });
+      });
 
-    // Logger la création de la décision
-    await logDecisionCreated(decision.id, session.user.id);
-
-    // Si launch=true, logger le lancement
-    if (launch) {
+      // Logger le lancement du brouillon
       await prisma.decisionLog.create({
         data: {
           decisionId: decision.id,
@@ -599,6 +650,58 @@ export async function POST(
           newValue: 'OPEN',
         },
       });
+    } else {
+      // Créer une nouvelle décision
+      decision = await prisma.decision.create({
+        data: decisionData,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          team: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          proposals: decisionType === 'MAJORITY' ? {
+            orderBy: {
+              order: 'asc',
+            },
+          } : false,
+          nuancedProposals: decisionType === 'NUANCED_VOTE' ? {
+            orderBy: {
+              order: 'asc',
+            },
+          } : false,
+        },
+      });
+
+      // Logger la création de la décision
+      await logDecisionCreated(decision.id, session.user.id);
+
+      // Si launch=true, logger le lancement
+      if (launch) {
+        await prisma.decisionLog.create({
+          data: {
+            decisionId: decision.id,
+            eventType: 'LAUNCHED',
+            actorId: session.user.id,
+            oldValue: 'DRAFT',
+            newValue: 'OPEN',
+          },
+        });
+      }
     }
 
     // Si launch=true et mode INVITED, créer les participants et envoyer les emails
