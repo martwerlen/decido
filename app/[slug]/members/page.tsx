@@ -167,7 +167,7 @@ export default function OrganizationMembersPage() {
     setFormLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}/members`, {
+      const response = await fetch(`/api/${organizationSlug}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,7 +216,7 @@ export default function OrganizationMembersPage() {
     setEditLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}/members`, {
+      const response = await fetch(`/api/${organizationSlug}/members`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

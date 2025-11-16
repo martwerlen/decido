@@ -140,7 +140,7 @@ export default function NewDecisionPage({
     setCheckingSlug(true);
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/check-public-slug?slug=${encodeURIComponent(formData.publicSlug)}`
+        `/api/${slug}/decisions/check-public-slug?slug=${encodeURIComponent(formData.publicSlug)}`
       );
       const data = await response.json();
       setSlugAvailable(data.available);
@@ -284,14 +284,14 @@ export default function NewDecisionPage({
     const fetchData = async () => {
       try {
         // Fetch teams
-        const teamsRes = await fetch(`/api/organizations/${slug}/teams`);
+        const teamsRes = await fetch(`/api/${slug}/teams`);
         if (teamsRes.ok) {
           const teamsData = await teamsRes.json();
           setTeams(teamsData || []); // API retourne directement le tableau
         }
 
         // Fetch members
-        const membersRes = await fetch(`/api/organizations/${slug}/members`);
+        const membersRes = await fetch(`/api/${slug}/members`);
         if (membersRes.ok) {
           const membersData = await membersRes.json();
           setMembers(membersData.members || []);
@@ -345,7 +345,7 @@ export default function NewDecisionPage({
           body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
         }
 
-        const response = await fetch(`/api/organizations/${slug}/decisions`, {
+        const response = await fetch(`/api/${slug}/decisions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -364,7 +364,7 @@ export default function NewDecisionPage({
         // Mettre à jour le brouillon existant
         const body: any = { ...formData };
 
-        const response = await fetch(`/api/organizations/${slug}/decisions/${draftId}`, {
+        const response = await fetch(`/api/${slug}/decisions/${draftId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -391,7 +391,7 @@ export default function NewDecisionPage({
     const draftId = searchParams.get('draft');
     if (draftId) {
       setLoadingDraft(true);
-      fetch(`/api/organizations/${slug}/decisions/${draftId}`)
+      fetch(`/api/${slug}/decisions/${draftId}`)
         .then(res => res.json())
         .then(data => {
           if (data.decision) {
@@ -614,7 +614,7 @@ export default function NewDecisionPage({
         body.externalParticipants = externalParticipants;
       }
 
-      const response = await fetch(`/api/organizations/${slug}/decisions`, {
+      const response = await fetch(`/api/${slug}/decisions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
