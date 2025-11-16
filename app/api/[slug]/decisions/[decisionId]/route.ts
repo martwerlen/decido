@@ -373,6 +373,46 @@ export async function PATCH(
     if (body.nuancedScale !== undefined) updateData.nuancedScale = body.nuancedScale;
     if (body.nuancedWinnerCount !== undefined) updateData.nuancedWinnerCount = body.nuancedWinnerCount;
 
+    // Gérer les propositions pour MAJORITY (remplacer les existantes)
+    if (body.proposals !== undefined && decision.decisionType === 'MAJORITY') {
+      // Supprimer les anciennes propositions
+      await prisma.proposal.deleteMany({
+        where: { decisionId },
+      });
+
+      // Créer les nouvelles propositions
+      if (body.proposals && body.proposals.length > 0) {
+        await prisma.proposal.createMany({
+          data: body.proposals.map((proposal: any, index: number) => ({
+            decisionId,
+            title: proposal.title,
+            description: proposal.description || null,
+            order: index,
+          })),
+        });
+      }
+    }
+
+    // Gérer les propositions pour NUANCED_VOTE (remplacer les existantes)
+    if (body.nuancedProposals !== undefined && decision.decisionType === 'NUANCED_VOTE') {
+      // Supprimer les anciennes propositions nuancées
+      await prisma.nuancedProposal.deleteMany({
+        where: { decisionId },
+      });
+
+      // Créer les nouvelles propositions nuancées
+      if (body.nuancedProposals && body.nuancedProposals.length > 0) {
+        await prisma.nuancedProposal.createMany({
+          data: body.nuancedProposals.map((proposal: any, index: number) => ({
+            decisionId,
+            title: proposal.title,
+            description: proposal.description || null,
+            order: index,
+          })),
+        });
+      }
+    }
+
     // Mettre à jour la décision
     const updated = await prisma.decision.update({
       where: { id: decisionId },
@@ -386,7 +426,16 @@ export async function PATCH(
           },
         },
         team: true,
-        proposals: true,
+        proposals: {
+          orderBy: {
+            order: 'asc',
+          },
+        },
+        nuancedProposals: {
+          orderBy: {
+            order: 'asc',
+          },
+        },
       },
     });
 

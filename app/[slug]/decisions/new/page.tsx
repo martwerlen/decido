@@ -373,6 +373,13 @@ export default function NewDecisionPage({
         // Mettre à jour le brouillon existant
         const body: any = { ...formData };
 
+        // Ajouter les propositions selon le type de décision
+        if (formData.decisionType === 'NUANCED_VOTE') {
+          body.nuancedProposals = nuancedProposals.filter(p => p.title.trim() !== '');
+        } else if (formData.decisionType === 'MAJORITY') {
+          body.proposals = majorityProposals.filter(p => p.title.trim() !== '');
+        }
+
         const response = await fetch(`/api/${slug}/decisions/${draftId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
