@@ -97,7 +97,7 @@ export default function NewOrganizationPage() {
       }
 
       // Rediriger vers la page de gestion des membres en utilisant le slug
-      router.push(`/organizations/${data.slug}/members`);
+      router.push(`/${data.slug}/members`);
     } catch (err: any) {
       setError(err.message);
     } finally {

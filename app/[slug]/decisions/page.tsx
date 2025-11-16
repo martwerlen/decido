@@ -80,7 +80,7 @@ export default async function DecisionsPage({
           <p className="text-gray-600 mt-2">Décisions</p>
         </div>
         <Link
-          href={`/organizations/${slug}/decisions/new`}
+          href={`/${slug}/decisions/new`}
           className="text-white px-4 py-2 rounded-lg"
           style={{ backgroundColor: 'var(--color-primary)' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
@@ -94,7 +94,7 @@ export default async function DecisionsPage({
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-600 mb-4">Aucune décision pour le moment</p>
           <Link
-            href={`/organizations/${slug}/decisions/new`}
+            href={`/${slug}/decisions/new`}
             className="text-blue-600 hover:underline"
           >
             Créer la première décision
@@ -110,7 +110,7 @@ export default async function DecisionsPage({
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <Link
-                    href={`/organizations/${slug}/decisions/${decision.id}/vote`}
+                    href={`/${slug}/decisions/${decision.id}/vote`}
                     className="text-xl font-semibold hover:text-blue-600"
                   >
                     {decision.title}
@@ -150,14 +150,14 @@ export default async function DecisionsPage({
                 <div className="flex gap-2">
                   {decision.creatorId === session.user.id && (
                     <Link
-                      href={`/organizations/${slug}/decisions/${decision.id}/admin`}
+                      href={`/${slug}/decisions/${decision.id}/admin`}
                       className="text-blue-600 hover:underline text-sm"
                     >
                       Administrer
                     </Link>
                   )}
                   <Link
-                    href={`/organizations/${slug}/decisions/${decision.id}/results`}
+                    href={`/${slug}/decisions/${decision.id}/results`}
                     className="text-gray-600 hover:underline text-sm"
                   >
                     Résultats

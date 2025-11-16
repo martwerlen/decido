@@ -114,7 +114,7 @@ export default function OrganizationTeamsPage() {
 
   const fetchTeams = useCallback(async () => {
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}/teams`);
+      const response = await fetch(`/api/${organizationSlug}/teams`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -155,7 +155,7 @@ export default function OrganizationTeamsPage() {
     setTeamFormLoading(true);
 
     try {
-      const url = `/api/organizations/${organizationSlug}/teams`;
+      const url = `/api/${organizationSlug}/teams`;
       const method = editingTeam ? 'PATCH' : 'POST';
       const body = editingTeam
         ? { ...teamFormData, teamId: editingTeam.id }
@@ -200,7 +200,7 @@ export default function OrganizationTeamsPage() {
 
     try {
       const response = await fetch(
-        `/api/organizations/${organizationSlug}/teams?teamId=${deletingTeam.id}`,
+        `/api/${organizationSlug}/teams?teamId=${deletingTeam.id}`,
         {
           method: 'DELETE',
         }
@@ -229,7 +229,7 @@ export default function OrganizationTeamsPage() {
 
     try {
       // Récupérer tous les membres de l'organisation
-      const response = await fetch(`/api/organizations/${organizationSlug}/members`);
+      const response = await fetch(`/api/${organizationSlug}/members`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -260,7 +260,7 @@ export default function OrganizationTeamsPage() {
       // Ajouter chaque membre sélectionné
       for (const organizationMemberId of selectedMembers) {
         const response = await fetch(
-          `/api/organizations/${organizationSlug}/teams/members`,
+          `/api/${organizationSlug}/teams/members`,
           {
             method: 'POST',
             headers: {
@@ -294,7 +294,7 @@ export default function OrganizationTeamsPage() {
   const handleRemoveMember = async (teamId: string, teamMemberId: string) => {
     try {
       const response = await fetch(
-        `/api/organizations/${organizationSlug}/teams/members?teamMemberId=${teamMemberId}`,
+        `/api/${organizationSlug}/teams/members?teamMemberId=${teamMemberId}`,
         {
           method: 'DELETE',
         }
@@ -347,7 +347,7 @@ export default function OrganizationTeamsPage() {
               variant="outlined"
               color="primary"
               startIcon={<PeopleIcon />}
-              onClick={() => router.push(`/organizations/${organizationSlug}/members`)}
+              onClick={() => router.push(`/${organizationSlug}/members`)}
             >
               Gérer les membres
             </Button>

@@ -167,7 +167,7 @@ export default function HistoryPanel({
 
     try {
       const response = await fetch(
-        `/api/organizations/${organizationSlug}/decisions/${decisionId}/history`
+        `/api/${organizationSlug}/decisions/${decisionId}/history`
       );
 
       if (!response.ok) {

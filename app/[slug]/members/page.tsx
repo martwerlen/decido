@@ -119,7 +119,7 @@ export default function OrganizationMembersPage() {
 
   const fetchMembers = useCallback(async () => {
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}/members`);
+      const response = await fetch(`/api/${organizationSlug}/members`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -141,7 +141,7 @@ export default function OrganizationMembersPage() {
   const fetchTeams = async () => {
     setTeamsLoading(true);
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}/teams`);
+      const response = await fetch(`/api/${organizationSlug}/teams`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -262,9 +262,9 @@ export default function OrganizationMembersPage() {
     try {
       let url = '';
       if (deletingItem.type === 'member') {
-        url = `/api/organizations/${organizationSlug}/members?memberId=${deletingItem.id}`;
+        url = `/api/${organizationSlug}/members?memberId=${deletingItem.id}`;
       } else if (deletingItem.type === 'invitation') {
-        url = `/api/organizations/${organizationSlug}/invitations?invitationId=${deletingItem.id}`;
+        url = `/api/${organizationSlug}/invitations?invitationId=${deletingItem.id}`;
       }
 
       const response = await fetch(url, {

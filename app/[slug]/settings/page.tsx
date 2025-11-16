@@ -39,7 +39,7 @@ export default function OrganizationSettingsPage() {
 
   const fetchOrganization = useCallback(async () => {
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}`);
+      const response = await fetch(`/api/${organizationSlug}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -69,7 +69,7 @@ export default function OrganizationSettingsPage() {
     setFormLoading(true);
 
     try {
-      const response = await fetch(`/api/organizations/${organizationSlug}`, {
+      const response = await fetch(`/api/${organizationSlug}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export default function OrganizationSettingsPage() {
 
       // Si le slug a changé, rediriger vers la nouvelle URL
       if (result.slug !== organizationSlug) {
-        router.push(`/organizations/${result.slug}/settings`);
+        router.push(`/${result.slug}/settings`);
       }
 
       setTimeout(() => setFormSuccess(''), 3000);

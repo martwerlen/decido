@@ -45,17 +45,17 @@ export default async function SharePage({
   });
 
   if (!decision) {
-    redirect(`/organizations/${slug}`);
+    redirect(`/${slug}`);
   }
 
   // Vérifier que l'utilisateur est le créateur
   if (decision.creatorId !== session.user.id) {
-    redirect(`/organizations/${slug}/decisions/${decisionId}/vote`);
+    redirect(`/${slug}/decisions/${decisionId}/vote`);
   }
 
   // Vérifier que c'est bien une décision PUBLIC_LINK
   if (decision.votingMode !== 'PUBLIC_LINK' || !decision.publicSlug) {
-    redirect(`/organizations/${slug}/decisions/${decisionId}/admin`);
+    redirect(`/${slug}/decisions/${decisionId}/admin`);
   }
 
   return (

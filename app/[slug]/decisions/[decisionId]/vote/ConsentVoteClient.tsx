@@ -234,7 +234,7 @@ export default function ConsentVoteClient({
     const fetchOpinions = async () => {
       try {
         const response = await fetch(
-          `/api/organizations/${slug}/decisions/${decision.id}/opinions`
+          `/api/${slug}/decisions/${decision.id}/opinions`
         );
         if (response.ok) {
           const data = await response.json();
@@ -270,7 +270,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/clarifications`,
+        `/api/${slug}/decisions/${decision.id}/clarifications`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -307,7 +307,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/clarifications/${questionId}/answer`,
+        `/api/${slug}/decisions/${decision.id}/clarifications/${questionId}/answer`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -345,7 +345,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/opinions`,
+        `/api/${slug}/decisions/${decision.id}/opinions`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -362,7 +362,7 @@ export default function ConsentVoteClient({
       setUserOpinion(data.opinion);
 
       // Rafraîchir la liste des avis
-      const opResponse = await fetch(`/api/organizations/${slug}/decisions/${decision.id}/opinions`);
+      const opResponse = await fetch(`/api/${slug}/decisions/${decision.id}/opinions`);
       if (opResponse.ok) {
         const opData = await opResponse.json();
         setOpinions(opData.opinions);
@@ -389,7 +389,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/consent-amend`,
+        `/api/${slug}/decisions/${decision.id}/consent-amend`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -419,7 +419,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/consent-keep`,
+        `/api/${slug}/decisions/${decision.id}/consent-keep`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -452,7 +452,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/consent-withdraw`,
+        `/api/${slug}/decisions/${decision.id}/consent-withdraw`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -465,7 +465,7 @@ export default function ConsentVoteClient({
       }
 
       setSuccess('Proposition retirée. La décision est clôturée.');
-      setTimeout(() => router.push(`/organizations/${slug}/decisions/${decision.id}/results`), 1500);
+      setTimeout(() => router.push(`/${slug}/decisions/${decision.id}/results`), 1500);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -486,7 +486,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/consent-objections`,
+        `/api/${slug}/decisions/${decision.id}/consent-objections`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -508,7 +508,7 @@ export default function ConsentVoteClient({
       setIsEditingObjection(false); // Fermer le mode édition
 
       // Rafraîchir la liste des objections
-      const objResponse = await fetch(`/api/organizations/${slug}/decisions/${decision.id}/consent-objections`);
+      const objResponse = await fetch(`/api/${slug}/decisions/${decision.id}/consent-objections`);
       if (objResponse.ok) {
         const objData = await objResponse.json();
         setObjections(objData.objections);
@@ -535,7 +535,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/comments`,
+        `/api/${slug}/decisions/${decision.id}/comments`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -573,7 +573,7 @@ export default function ConsentVoteClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/comments/${commentId}`,
+        `/api/${slug}/decisions/${decision.id}/comments/${commentId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -641,7 +641,7 @@ export default function ConsentVoteClient({
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <HistoryButton onClick={() => setHistoryOpen(true)} />
-            <Link href={`/organizations/${slug}/decisions/${decision.id}/results`}>
+            <Link href={`/${slug}/decisions/${decision.id}/results`}>
               <Button variant="outlined">Voir les résultats</Button>
             </Link>
           </Box>

@@ -37,7 +37,7 @@ export async function sendConsentStageNotification({
   stageEndDate,
 }: SendConsentNotificationParams) {
   const creatorName = creator.name || 'Un membre'
-  const decisionUrl = `${process.env.NEXTAUTH_URL}/organizations/${decision.organizationSlug}/decisions/${decision.id}/vote`
+  const decisionUrl = `${process.env.NEXTAUTH_URL}/${decision.organizationSlug}/decisions/${decision.id}/vote`
 
   const formattedDate = stageEndDate.toLocaleDateString('fr-FR', {
     day: '2-digit',

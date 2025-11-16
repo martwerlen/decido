@@ -25,7 +25,7 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/organizations/${orgSlug}/decisions/${draft.id}`, {
+      const response = await fetch(`/api/${orgSlug}/decisions/${draft.id}`, {
         method: 'DELETE',
       });
 
@@ -106,7 +106,7 @@ export default function DraftCard({ draft, orgSlug }: DraftCardProps) {
         <div className="flex gap-2 flex-col sm:flex-row">
           <Button
             component={Link}
-            href={`/organizations/${orgSlug}/decisions/new?draft=${draft.id}`}
+            href={`/${orgSlug}/decisions/new?draft=${draft.id}`}
             variant="outlined"
             color="primary"
             size="small"

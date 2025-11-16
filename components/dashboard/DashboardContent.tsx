@@ -102,7 +102,7 @@ export default function DashboardContent({
     setIsReloading(true);
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions?${buildQueryParams(0)}`
+        `/api/${slug}/decisions?${buildQueryParams(0)}`
       );
       const data = await response.json();
       if (data.decisions) {
@@ -127,7 +127,7 @@ export default function DashboardContent({
     setIsLoadingMore(true);
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions?${buildQueryParams(decisions.length)}`
+        `/api/${slug}/decisions?${buildQueryParams(decisions.length)}`
       );
       const data = await response.json();
       if (data.decisions) {
@@ -173,7 +173,7 @@ export default function DashboardContent({
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => router.push(`/organizations/${slug}/decisions/new`)}
+            onClick={() => router.push(`/${slug}/decisions/new`)}
             sx={{
               whiteSpace: 'nowrap',
               px: 3,
@@ -241,11 +241,11 @@ export default function DashboardContent({
               // Déterminer l'URL de destination
               let targetUrl = '';
               if (isPublicLink) {
-                targetUrl = `/organizations/${slug}/decisions/${decision.id}/share`;
+                targetUrl = `/${slug}/decisions/${decision.id}/share`;
               } else if (isClosed) {
-                targetUrl = `/organizations/${slug}/decisions/${decision.id}/results`;
+                targetUrl = `/${slug}/decisions/${decision.id}/results`;
               } else {
-                targetUrl = `/organizations/${slug}/decisions/${decision.id}/vote`;
+                targetUrl = `/${slug}/decisions/${decision.id}/vote`;
               }
 
               return (

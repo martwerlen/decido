@@ -206,7 +206,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/vote`,
+        `/api/${slug}/decisions/${decision.id}/vote`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -238,7 +238,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/vote`,
+        `/api/${slug}/decisions/${decision.id}/vote`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -291,7 +291,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/vote`,
+        `/api/${slug}/decisions/${decision.id}/vote`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -328,7 +328,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/opinions`,
+        `/api/${slug}/decisions/${decision.id}/opinions`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -375,7 +375,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/comments`,
+        `/api/${slug}/decisions/${decision.id}/comments`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -413,7 +413,7 @@ export default function VotePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/comments/${commentId}`,
+        `/api/${slug}/decisions/${decision.id}/comments/${commentId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -523,7 +523,7 @@ export default function VotePageClient({
           <p className="text-yellow-800">
             Cette décision n'est plus ouverte au vote.{' '}
             <Link
-              href={`/organizations/${slug}/decisions/${decision.id}/results`}
+              href={`/${slug}/decisions/${decision.id}/results`}
               className="underline"
             >
               Voir les résultats
@@ -1030,14 +1030,14 @@ export default function VotePageClient({
       <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
         <Button
           component={Link}
-          href={`/organizations/${slug}/decisions`}
+          href={`/${slug}/decisions`}
           variant="outlined"
         >
           Retour
         </Button>
         {isCreator && (
           <Link
-            href={`/organizations/${slug}/decisions/${decision.id}/admin`}
+            href={`/${slug}/decisions/${decision.id}/admin`}
             className="px-6 py-2 text-white rounded-lg"
             style={{ backgroundColor: 'var(--color-primary)' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
@@ -1049,7 +1049,7 @@ export default function VotePageClient({
         {/* Masquer les résultats pour ADVICE_SOLICITATION en cours */}
         {(decision.decisionType !== 'ADVICE_SOLICITATION' || !isOpen) && (
           <Link
-            href={`/organizations/${slug}/decisions/${decision.id}/results`}
+            href={`/${slug}/decisions/${decision.id}/results`}
             className="px-6 py-2 border rounded-lg hover:bg-gray-50"
           >
             Voir les résultats

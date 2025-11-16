@@ -1179,7 +1179,7 @@ export default function ResultsPageClient({
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <Button
           component={Link}
-          href={`/organizations/${slug}`}
+          href={`/${slug}`}
           variant="outlined"
           sx={{ px: 3, py: 1 }}
         >
@@ -1189,7 +1189,7 @@ export default function ResultsPageClient({
         {decision.status === 'OPEN' && votingMode !== 'PUBLIC_LINK' && (
           <Button
             component={Link}
-            href={`/organizations/${slug}/decisions/${decision.id}/vote`}
+            href={`/${slug}/decisions/${decision.id}/vote`}
             variant="contained"
             color="primary"
             sx={{ px: 3, py: 1 }}
@@ -1200,7 +1200,7 @@ export default function ResultsPageClient({
         {isCreator && votingMode === 'PUBLIC_LINK' && decision.status === 'OPEN' && (
           <Button
             component={Link}
-            href={`/organizations/${slug}/decisions/${decision.id}/share`}
+            href={`/${slug}/decisions/${decision.id}/share`}
             variant="outlined"
             sx={{ px: 3, py: 1 }}
           >
@@ -1210,7 +1210,7 @@ export default function ResultsPageClient({
         {isCreator && votingMode !== 'PUBLIC_LINK' && (
           <Button
             component={Link}
-            href={`/organizations/${slug}/decisions/${decision.id}/admin`}
+            href={`/${slug}/decisions/${decision.id}/admin`}
             variant="outlined"
             sx={{ px: 3, py: 1 }}
           >

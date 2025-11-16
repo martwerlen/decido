@@ -29,7 +29,7 @@ export function useOrganizationMemory(organizationSlug: string | null | undefine
  */
 export function getRedirectAfterSignIn(session: any): string {
   if (session?.user?.lastOrganizationSlug) {
-    return `/organizations/${session.user.lastOrganizationSlug}`
+    return `/${session.user.lastOrganizationSlug}`
   }
   return "/"
 }

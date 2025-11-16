@@ -84,7 +84,7 @@ export default function DecisionAdminClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}`,
+        `/api/${slug}/decisions/${decision.id}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -115,7 +115,7 @@ export default function DecisionAdminClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/conclusion`,
+        `/api/${slug}/decisions/${decision.id}/conclusion`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -146,7 +146,7 @@ export default function DecisionAdminClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/withdraw`,
+        `/api/${slug}/decisions/${decision.id}/withdraw`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -162,7 +162,7 @@ export default function DecisionAdminClient({
       setDecision({ ...decision, status: updated.status, result: updated.result });
       setSuccess('Décision retirée avec succès');
       setTimeout(() => {
-        router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
+        router.push(`/${slug}/decisions/${decision.id}/results`);
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -183,7 +183,7 @@ export default function DecisionAdminClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${slug}/decisions/${decision.id}/validate`,
+        `/api/${slug}/decisions/${decision.id}/validate`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -200,7 +200,7 @@ export default function DecisionAdminClient({
       setDecision({ ...decision, status: updated.status, result: updated.result, conclusion: updated.conclusion });
       setSuccess('Décision finale validée avec succès');
       setTimeout(() => {
-        router.push(`/organizations/${slug}/decisions/${decision.id}/results`);
+        router.push(`/${slug}/decisions/${decision.id}/results`);
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -366,7 +366,7 @@ export default function DecisionAdminClient({
 
             <Button
               variant="outlined"
-              onClick={() => router.push(`/organizations/${slug}/decisions/${decision.id}/vote`)}
+              onClick={() => router.push(`/${slug}/decisions/${decision.id}/vote`)}
             >
               Voir la décision en cours
             </Button>
@@ -533,7 +533,7 @@ export default function DecisionAdminClient({
       {/* Actions */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
         <Button
-          onClick={() => router.push(`/organizations/${slug}`)}
+          onClick={() => router.push(`/${slug}`)}
           variant="outlined"
         >
           Retour
@@ -543,7 +543,7 @@ export default function DecisionAdminClient({
           <>
             {/* Bouton "Voir la décision en cours" / "Voir le vote" */}
             <Button
-              onClick={() => router.push(`/organizations/${slug}/decisions/${decision.id}/vote`)}
+              onClick={() => router.push(`/${slug}/decisions/${decision.id}/vote`)}
               variant="outlined"
               color="primary"
             >

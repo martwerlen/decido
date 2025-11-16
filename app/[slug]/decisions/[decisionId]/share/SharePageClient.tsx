@@ -41,7 +41,7 @@ export default function SharePageClient({
     const interval = setInterval(async () => {
       try {
         const response = await fetch(
-          `/api/organizations/${organizationSlug}/decisions/${decision.id}/stats`
+          `/api/${organizationSlug}/decisions/${decision.id}/stats`
         );
         if (response.ok) {
           const data = await response.json();
@@ -97,7 +97,7 @@ export default function SharePageClient({
 
     try {
       const response = await fetch(
-        `/api/organizations/${organizationSlug}/decisions/${decision.id}/close`,
+        `/api/${organizationSlug}/decisions/${decision.id}/close`,
         {
           method: 'PATCH',
         }
@@ -106,7 +106,7 @@ export default function SharePageClient({
       if (response.ok) {
         // Actualiser la sidebar pour refléter la fermeture de la décision
         refreshSidebar();
-        router.push(`/organizations/${organizationSlug}/decisions/${decision.id}/results`);
+        router.push(`/${organizationSlug}/decisions/${decision.id}/results`);
       } else {
         const data = await response.json();
         alert(data.error || 'Erreur lors de la fermeture');
@@ -121,7 +121,7 @@ export default function SharePageClient({
 
   // Voir les résultats
   const viewResults = () => {
-    router.push(`/organizations/${organizationSlug}/decisions/${decision.id}/results`);
+    router.push(`/${organizationSlug}/decisions/${decision.id}/results`);
   };
 
   return (
@@ -236,7 +236,7 @@ export default function SharePageClient({
 
       <div className="mt-6 text-center">
         <button
-          onClick={() => router.push(`/organizations/${organizationSlug}`)}
+          onClick={() => router.push(`/${organizationSlug}`)}
           className="text-blue-600 hover:underline"
         >
           ← Retour à l'organisation

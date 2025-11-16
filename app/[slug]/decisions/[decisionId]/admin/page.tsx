@@ -21,7 +21,7 @@ export default async function DecisionAdminPage({
   });
 
   if (!organization) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   // Récupérer la décision
@@ -78,17 +78,17 @@ export default async function DecisionAdminPage({
   });
 
   if (!decision) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   // Vérifier que l'utilisateur est le créateur
   if (decision.creatorId !== session.user.id) {
-    redirect(`/organizations/${slug}/decisions/${decisionId}/vote`);
+    redirect(`/${slug}/decisions/${decisionId}/vote`);
   }
 
   // Si décision PUBLIC_LINK, rediriger vers la page de partage (pas de gestion de participants)
   if (decision.votingMode === 'PUBLIC_LINK') {
-    redirect(`/organizations/${slug}/decisions/${decisionId}/share`);
+    redirect(`/${slug}/decisions/${decisionId}/share`);
   }
 
   // Pour les décisions CONSENT, récupérer les questions et objections

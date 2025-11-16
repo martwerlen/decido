@@ -23,7 +23,7 @@ export default async function ResultsPage({
   });
 
   if (!organization) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   // Récupérer la décision
@@ -183,7 +183,7 @@ export default async function ResultsPage({
   });
 
   if (!decision) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   const isCreator = decision.creatorId === session.user.id;
@@ -262,7 +262,7 @@ export default async function ResultsPage({
           </p>
           <div className="mt-4">
             <a
-              href={`/organizations/${slug}/decisions/${decisionId}/vote`}
+              href={`/${slug}/decisions/${decisionId}/vote`}
               className="text-blue-600 hover:underline"
             >
               Retour à la page de vote

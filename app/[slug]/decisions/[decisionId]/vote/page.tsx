@@ -21,7 +21,7 @@ export default async function VotePage({
   });
 
   if (!organization) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   // Récupérer la décision avec toutes les données nécessaires (optimisé)
@@ -138,7 +138,7 @@ export default async function VotePage({
   });
 
   if (!decision) {
-    redirect(`/organizations/${slug}/decisions`);
+    redirect(`/${slug}/decisions`);
   }
 
   // Récupérer les équipes de l'organisation avec leurs membres
@@ -174,7 +174,7 @@ export default async function VotePage({
       });
 
       if (!participant && decision.creatorId !== session.user.id) {
-        redirect(`/organizations/${slug}/decisions/${decisionId}/results`);
+        redirect(`/${slug}/decisions/${decisionId}/results`);
       }
     }
   }

@@ -6,7 +6,7 @@ import { logDecisionCreated } from '@/lib/decision-logger';
 import { sendEmail } from '@/lib/email';
 import crypto from 'crypto';
 
-// GET /api/organizations/[slug]/decisions - Liste les décisions d'une organisation avec pagination et filtres
+// GET /api/[slug]/decisions - Liste les décisions d'une organisation avec pagination et filtres
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -224,7 +224,7 @@ export async function GET(
   }
 }
 
-// POST /api/organizations/[slug]/decisions - Crée une nouvelle décision
+// POST /api/[slug]/decisions - Crée une nouvelle décision
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
