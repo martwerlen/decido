@@ -562,6 +562,7 @@ export async function POST(
           creatorId: true,
           organizationId: true,
           publicToken: true,
+          decisionType: true,
         },
       });
 
@@ -593,8 +594,19 @@ export async function POST(
         );
       }
 
-      // Lancer un brouillon existant : mettre à jour status, startDate, et publicToken
+      // Mettre à jour TOUS les champs du brouillon avant de le lancer
       const updateData: any = {
+        title,
+        description: description || '',
+        decisionType: decisionType || 'MAJORITY',
+        teamId: teamId || null,
+        endDate: endDate ? new Date(endDate) : null,
+        initialProposal: body.initialProposal || null,
+        proposal: (decisionType === 'CONSENSUS' || decisionType === 'ADVICE_SOLICITATION' || decisionType === 'CONSENT') && body.initialProposal
+          ? body.initialProposal
+          : null,
+        votingMode,
+        publicSlug: votingMode === 'PUBLIC_LINK' ? body.publicSlug : null,
         status: 'OPEN',
         startDate: new Date(),
       };
@@ -602,6 +614,58 @@ export async function POST(
       // Générer publicToken si PUBLIC_LINK et pas déjà présent
       if (votingMode === 'PUBLIC_LINK' && !existingDraft.publicToken) {
         updateData.publicToken = crypto.randomBytes(32).toString('hex');
+      }
+
+      // Pour CONSENT, mettre à jour les champs spécifiques
+      if (decisionType === 'CONSENT') {
+        updateData.consentStepMode = body.consentStepMode || 'DISTINCT';
+        if (body.consentStepMode === 'MERGED') {
+          updateData.consentCurrentStage = 'CLARIFAVIS';
+        } else {
+          updateData.consentCurrentStage = 'CLARIFICATIONS';
+        }
+      }
+
+      // Pour NUANCED_VOTE, mettre à jour les champs spécifiques
+      if (decisionType === 'NUANCED_VOTE') {
+        updateData.nuancedScale = body.nuancedScale || '5_LEVELS';
+        updateData.nuancedWinnerCount = body.nuancedWinnerCount || 1;
+      }
+
+      // Mettre à jour les propositions pour MAJORITY
+      if (decisionType === 'MAJORITY' && body.proposals) {
+        await prisma.proposal.deleteMany({
+          where: { decisionId: draftId },
+        });
+
+        if (body.proposals.length > 0) {
+          await prisma.proposal.createMany({
+            data: body.proposals.map((proposal: any, index: number) => ({
+              decisionId: draftId,
+              title: proposal.title,
+              description: proposal.description || null,
+              order: index,
+            })),
+          });
+        }
+      }
+
+      // Mettre à jour les propositions pour NUANCED_VOTE
+      if (decisionType === 'NUANCED_VOTE' && body.nuancedProposals) {
+        await prisma.nuancedProposal.deleteMany({
+          where: { decisionId: draftId },
+        });
+
+        if (body.nuancedProposals.length > 0) {
+          await prisma.nuancedProposal.createMany({
+            data: body.nuancedProposals.map((proposal: any, index: number) => ({
+              decisionId: draftId,
+              title: proposal.title,
+              description: proposal.description || null,
+              order: index,
+            })),
+          });
+        }
       }
 
       decision = await prisma.decision.update({
