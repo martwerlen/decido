@@ -275,8 +275,8 @@ export async function POST(
       externalParticipants = []
     } = body;
 
-    // Déterminer si c'est un brouillon (INVITED sans launch = brouillon, PUBLIC_LINK = lancé immédiatement)
-    const isDraft = votingMode === 'INVITED' && !launch;
+    // Déterminer si c'est un brouillon basé uniquement sur le flag launch
+    const isDraft = !launch;
 
     // Le titre est toujours requis
     if (!title) {
@@ -469,9 +469,9 @@ export async function POST(
       title,
       description: description || '',
       decisionType: decisionType || 'MAJORITY',
-      // En mode PUBLIC_LINK ou launch=true, lancer immédiatement (pas besoin de configuration)
-      status: votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch) ? 'OPEN' : 'DRAFT',
-      startDate: votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch) ? new Date() : null,
+      // Status basé sur le flag launch
+      status: launch ? 'OPEN' : 'DRAFT',
+      startDate: launch ? new Date() : null,
       organizationId: organization.id,
       creatorId: session.user.id,
       teamId: teamId || null,
@@ -577,8 +577,8 @@ export async function POST(
     // Logger la création de la décision
     await logDecisionCreated(decision.id, session.user.id);
 
-    // Si PUBLIC_LINK ou launch=true, logger le lancement automatique
-    if (votingMode === 'PUBLIC_LINK' || (votingMode === 'INVITED' && launch)) {
+    // Si launch=true, logger le lancement
+    if (launch) {
       await prisma.decisionLog.create({
         data: {
           decisionId: decision.id,
