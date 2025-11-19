@@ -41,7 +41,7 @@ export default function SignInForm() {
 
         // Rediriger vers la dernière organisation ou le dashboard
         if (session?.user?.lastOrganizationSlug) {
-          router.push(`/organizations/${session.user.lastOrganizationSlug}`)
+          router.push(`/${session.user.lastOrganizationSlug}`)
         } else {
           router.push("/")
         }

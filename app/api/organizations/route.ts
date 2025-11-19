@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { validateOrganizationSlug } from '@/lib/slug';
 
 const createOrganizationSchema = z.object({
   name: z.string().min(1, 'Le nom de l\'organisation est requis'),
@@ -39,6 +40,16 @@ export async function POST(req: Request) {
 
     const { name, description, slug } = validationResult.data;
     console.log('[API Organizations POST] Nom:', name, 'Description:', description, 'Slug:', slug);
+
+    // Valider le slug (format et slugs réservés)
+    const slugValidation = validateOrganizationSlug(slug);
+    if (!slugValidation.valid) {
+      console.log('[API Organizations POST] Slug invalide:', slugValidation.error);
+      return NextResponse.json(
+        { error: slugValidation.error },
+        { status: 400 }
+      );
+    }
 
     // Vérifier que le slug n'est pas déjà utilisé
     const existingOrg = await prisma.organization.findUnique({

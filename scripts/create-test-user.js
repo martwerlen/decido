@@ -30,7 +30,7 @@ async function createTestUser() {
         console.log('🏢 Organisations:');
         orgs.forEach(org => {
           console.log(`   - ${org.name} (ID: ${org.id})`);
-          console.log(`     URL: http://localhost:3000/organizations/${org.id}/members`);
+          console.log(`     URL: http://localhost:3000/${org.id}/members`);
         });
       }
 
@@ -68,7 +68,7 @@ async function createTestUser() {
 
     console.log('🏢 Organisation créée:');
     console.log('   - Organisation Test (ID: ' + orgId + ')');
-    console.log('   - URL: http://localhost:3000/organizations/' + orgId + '/members\n');
+    console.log('   - URL: http://localhost:3000/' + orgId + '/members\n');
 
     console.log('🎉 Tout est prêt! Vous pouvez maintenant vous connecter.\n');
 

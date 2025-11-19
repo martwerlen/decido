@@ -19,7 +19,7 @@ interface Team {
 }
 
 export interface DecisionFiltersType {
-  statusFilter: string[]; // 'DRAFT', 'OPEN', 'CLOSED'
+  statusFilter: string; // 'ALL', 'DRAFT', 'OPEN', 'CLOSED'
   scopeFilter: string; // 'ALL', 'MY_TEAMS', 'ME', or team ID
   typeFilter: string[]; // 'ADVICE_SOLICITATION', 'CONSENSUS', 'CONSENT', 'MAJORITY', 'NUANCED_VOTE'
 }
@@ -44,10 +44,8 @@ const MenuProps = {
 export default function DecisionFilters({ userTeams, filters, onFilterChange }: DecisionFiltersProps) {
   const { statusFilter, scopeFilter, typeFilter } = filters;
 
-  const handleStatusChange = (event: SelectChangeEvent<typeof statusFilter>) => {
-    const value = event.target.value;
-    const newStatusFilter = typeof value === 'string' ? value.split(',') : value;
-    onFilterChange({ ...filters, statusFilter: newStatusFilter });
+  const handleStatusChange = (event: SelectChangeEvent) => {
+    onFilterChange({ ...filters, statusFilter: event.target.value });
   };
 
   const handleScopeChange = (event: SelectChangeEvent) => {
@@ -72,32 +70,14 @@ export default function DecisionFilters({ userTeams, filters, onFilterChange }: 
           <Select
             labelId="status-filter-label"
             id="status-filter"
-            multiple
             value={statusFilter}
             onChange={handleStatusChange}
-            input={<OutlinedInput label="Statut" />}
-            renderValue={(selected) => {
-              const labels: Record<string, string> = {
-                DRAFT: 'Brouillon',
-                OPEN: 'En cours',
-                CLOSED: 'Terminé',
-              };
-              return selected.map((s) => labels[s]).join(', ');
-            }}
-            MenuProps={MenuProps}
+            label="Statut"
           >
-            <MenuItem value="DRAFT" sx={{ fontSize: '0.875rem' }}>
-              <Checkbox checked={statusFilter.indexOf('DRAFT') > -1} />
-              <ListItemText primary="Brouillon" primaryTypographyProps={{ fontSize: '0.875rem' }} />
-            </MenuItem>
-            <MenuItem value="OPEN" sx={{ fontSize: '0.875rem' }}>
-              <Checkbox checked={statusFilter.indexOf('OPEN') > -1} />
-              <ListItemText primary="En cours" primaryTypographyProps={{ fontSize: '0.875rem' }} />
-            </MenuItem>
-            <MenuItem value="CLOSED" sx={{ fontSize: '0.875rem' }}>
-              <Checkbox checked={statusFilter.indexOf('CLOSED') > -1} />
-              <ListItemText primary="Terminé" primaryTypographyProps={{ fontSize: '0.875rem' }} />
-            </MenuItem>
+            <MenuItem value="ALL" sx={{ fontSize: '0.875rem' }}>Tous</MenuItem>
+            <MenuItem value="DRAFT" sx={{ fontSize: '0.875rem' }}>Brouillon</MenuItem>
+            <MenuItem value="OPEN" sx={{ fontSize: '0.875rem' }}>En cours</MenuItem>
+            <MenuItem value="CLOSED" sx={{ fontSize: '0.875rem' }}>Terminé</MenuItem>
           </Select>
         </FormControl>
 
