@@ -1,0 +1,86 @@
+services:
+  # Application Next.js principale
+  - type: web
+    name: decidoo-app
+    env: node
+    region: frankfurt  # Europe (Paris non disponible, Frankfurt est le plus proche)
+    plan: free  # Changez à "starter" pour 7$/mois si besoin de plus de ressources
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+      - key: NEXTAUTH_URL
+        sync: false  # À définir manuellement avec votre URL Render
+      - key: NEXTAUTH_SECRET
+        generateValue: true  # Render génère automatiquement un secret
+      - key: RESEND_API_KEY
+        sync: false  # À définir manuellement
+      - key: FROM_EMAIL
+        value: noreply@decidoo.fr
+      - key: CRON_SECRET
+        generateValue: true  # Secret pour sécuriser les endpoints cron
+    healthCheckPath: /api/health
+
+  # Cron Job 1 : Fermer les décisions expirées
+  - type: cron
+    name: decidoo-cron-close-expired
+    env: node
+    region: frankfurt
+    schedule: "0 * * * *"  # Toutes les heures
+    buildCommand: npm install
+    startCommand: node scripts/cron-close-expired.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+      - key: CRON_SECRET
+        sync: false  # Doit être identique au secret de l'app web
+      - key: APP_URL
+        sync: false  # URL de votre app (ex: https://decidoo-app.onrender.com)
+
+  # Cron Job 2 : Envoyer des rappels
+  - type: cron
+    name: decidoo-cron-reminders
+    env: node
+    region: frankfurt
+    schedule: "0 9 * * *"  # Tous les jours à 9h (UTC)
+    buildCommand: npm install
+    startCommand: node scripts/cron-send-reminders.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        value: noreply@decidoo.fr
+      - key: APP_URL
+        sync: false
+
+  # Cron Job 3 : Nettoyer les tokens expirés
+  - type: cron
+    name: decidoo-cron-cleanup
+    env: node
+    region: frankfurt
+    schedule: "0 2 * * *"  # Tous les jours à 2h du matin (UTC)
+    buildCommand: npm install
+    startCommand: node scripts/cron-cleanup-tokens.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+
+databases:
+  - name: decidoo-db
+    databaseName: decidoo
+    user: decidoo
+    region: frankfurt
+    plan: free  # 90 jours d'inactivité = suppression, passez à "starter" ($7/mois) pour éviter ça
