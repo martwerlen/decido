@@ -366,7 +366,7 @@ export default function DashboardContent({
                       </Box>
                     </div>
 
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1 }}>
                       <Button
                         component={Link}
                         href={targetUrl}
