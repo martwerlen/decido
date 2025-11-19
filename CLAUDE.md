@@ -388,7 +388,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 
 The application uses **three different vote storage models** depending on decision type:
 
-1. **`Vote` table** - Used for most decision types (CONSENSUS, CONSENT, WEIGHTED_VOTE, etc.)
+1. **`Vote` table** - Used for most decision types (CONSENSUS, CONSENT, ADVISORY, etc.)
    - Stores a single `value` field (VoteValue enum)
    - Links to either `userId` (authenticated) or `externalParticipantId` (guest voting)
    - One vote per user per decision
@@ -461,7 +461,7 @@ const alt = generateAlternativeSlug("mon-organisation", 1)  // → "mon-organisa
 Type-safe enums are defined in `types/enums.ts` with corresponding validation helpers:
 - `MemberRole`: 'OWNER' | 'ADMIN' | 'MEMBER'
 - `InvitationStatus`: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
-- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'NUANCED_VOTE' | 'ADVISORY' | 'ADVICE_SOLICITATION'
+- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'NUANCED_VOTE' | 'ADVISORY' | 'ADVICE_SOLICITATION'
 - `DecisionStatus`: 'DRAFT' | 'OPEN' | 'CLOSED' | 'IMPLEMENTED' | 'ARCHIVED'
 - `DecisionResult`: 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN'
 - `VoteValue`: 'STRONG_SUPPORT' | 'SUPPORT' | 'WEAK_SUPPORT' | 'ABSTAIN' | 'WEAK_OPPOSE' | 'OPPOSE' | 'STRONG_OPPOSE' | 'BLOCK'
@@ -507,8 +507,6 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 **MAJORITY**: Simple majority → APPROVED if (support votes > oppose votes)
 
 **SUPERMAJORITY**: Requires 2/3 of votes to be supportive → APPROVED if (support votes ≥ 2/3 total)
-
-**WEIGHTED_VOTE**: Calculates weighted score using vote weights (-3 to +3) → APPROVED if score > 0
 
 **NUANCED_VOTE** (Jugement Majoritaire): Each participant evaluates all proposals with a mention from a predefined scale
 - Three scales available: 3, 5, or 7 levels
@@ -1015,6 +1013,77 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Supports plain text with preserved line breaks (Markdown rendering can be added later)
 - Managed via dedicated endpoint: `PATCH /api/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
+
+### Automatic Deadline Checking System
+
+**Overview:**
+The application includes an automated system to close decisions when their deadline (`endDate`) is reached. This system runs via a cron job that calls an API endpoint periodically.
+
+**API Endpoint:**
+- **Route**: `GET /api/cron/check-deadlines`
+- **Security**: Requires `Authorization: Bearer <CRON_SECRET>` header
+- **Function**: Finds all `OPEN` decisions with `endDate < now` and closes them automatically
+
+**Configuration:**
+See `CRON_SETUP.md` for detailed setup instructions for different environments (Linux cron, Vercel, node-cron, etc.)
+
+**Closure Logic by Decision Type:**
+
+1. **CONSENSUS**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if all votes are `AGREE`, otherwise `REJECTED`
+   - Result → `REJECTED` if no votes
+
+2. **CONSENT**:
+   - Status → `CLOSED`
+   - Stage → `TERMINEE`
+   - Result → `APPROVED` if no objections (all `NO_OBJECTION` or `NO_POSITION`)
+   - Result → `BLOCKED` if at least one `OBJECTION`
+   - Result → `REJECTED` if no participants submitted positions
+
+3. **MAJORITY, SUPERMAJORITY, NUANCED_VOTE**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if at least one vote exists
+   - Result → `REJECTED` if no votes
+
+4. **ADVISORY**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if at least one vote exists
+   - Result → `REJECTED` if no votes
+
+5. **ADVICE_SOLICITATION**:
+   - **No automatic closure** - Decision remains `OPEN`
+   - Creator controls when to close/validate manually
+
+**Closure Metadata:**
+When a decision is automatically closed, metadata is stored in `Decision.metadata`:
+```json
+{
+  "reason": "deadline_reached",
+  "closedAt": "2025-01-19T10:30:00.000Z",
+  "allVoted": false
+}
+```
+
+**Display on Results Page:**
+A message is displayed at the top of the results page if:
+- `metadata.reason === 'deadline_reached'` AND
+- `metadata.allVoted === false` OR
+- (For CONSENSUS) there are disagreements
+
+Message format: `"JJ/MM/AAAA - HH:MM - Le vote a été fermé car la date limite a été atteinte avant que tout le monde ne vote."`
+
+**Event Logging:**
+All automatic closures are logged in `DecisionLog` with:
+- `eventType`: `'CLOSED'`
+- `metadata`: `{ reason: 'deadline_reached', automaticClosure: true, result, allVoted }`
+
+**Setup Requirements:**
+1. Set `CRON_SECRET` environment variable
+2. Configure cron job to call endpoint every 15 minutes (recommended)
+3. Ensure cron passes the secret in `Authorization` header
+
+For complete setup instructions, see `CRON_SETUP.md`.
 
 ### Decision Creation Flow (Consolidated on `/new`)
 

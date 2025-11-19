@@ -99,6 +99,11 @@ interface Props {
   slug: string;
   isCreator: boolean;
   votingMode: string;
+  metadata?: {
+    reason?: string;
+    closedAt?: string;
+    allVoted?: boolean;
+  } | null;
 }
 
 export default function ResultsPageClient({
@@ -114,12 +119,51 @@ export default function ResultsPageClient({
   slug,
   isCreator,
   votingMode,
+  metadata,
 }: Props) {
   const totalVotes = proposalResults.reduce((sum, r) => sum + r.voteCount, 0);
   const totalConsensusVotes = agreeCount + disagreeCount;
 
   // Historique
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Déterminer si on doit afficher le message de fermeture automatique
+  const showAutomaticClosureMessage = () => {
+    if (!metadata || metadata.reason !== 'deadline_reached') {
+      return false;
+    }
+
+    // Pour ADVICE_SOLICITATION, ne jamais afficher (la décision ne se ferme pas automatiquement)
+    if (decision.decisionType === 'ADVICE_SOLICITATION') {
+      return false;
+    }
+
+    // Pour CONSENSUS : afficher si pas tous ont voté OU s'il y a des désaccords
+    if (decision.decisionType === 'CONSENSUS') {
+      const hasDisagreement = disagreeCount > 0;
+      return !metadata.allVoted || hasDisagreement;
+    }
+
+    // Pour les autres types : afficher seulement si pas tous ont voté
+    return !metadata.allVoted;
+  };
+
+  const getAutomaticClosureMessage = () => {
+    if (!metadata?.closedAt) return '';
+
+    const closedDate = new Date(metadata.closedAt);
+    const formattedDate = closedDate.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const formattedTime = closedDate.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return `${formattedDate} - ${formattedTime} - Le vote a été fermé car la date limite a été atteinte avant que tout le monde ne vote.`;
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -172,6 +216,13 @@ export default function ResultsPageClient({
           </Typography>
         )}
       </Box>
+
+      {/* Message de fermeture automatique */}
+      {showAutomaticClosureMessage() && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          {getAutomaticClosureMessage()}
+        </Alert>
+      )}
 
       {/* Résultats vote à la majorité */}
       {decision.decisionType === 'MAJORITY' && (() => {

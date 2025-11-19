@@ -23,7 +23,6 @@ const { VoteValue, DecisionResult, DecisionType } = {
     CONSENT: 'CONSENT',
     MAJORITY: 'MAJORITY',
     SUPERMAJORITY: 'SUPERMAJORITY',
-    WEIGHTED_VOTE: 'WEIGHTED_VOTE',
     ADVISORY: 'ADVISORY'
   }
 }
@@ -76,14 +75,6 @@ function calculateDecisionResult(decisionType, votes) {
 
       return supportVotes > opposeVotes ? DecisionResult.APPROVED : DecisionResult.REJECTED
 
-    case DecisionType.WEIGHTED_VOTE:
-      const weightedScore = votes.reduce((sum, vote) => {
-        const voteWeight = getVoteWeight(vote.value)
-        return sum + (voteWeight * vote.weight)
-      }, 0)
-
-      return weightedScore > 0 ? DecisionResult.APPROVED : DecisionResult.REJECTED
-
     default:
       return DecisionResult.WITHDRAWN
   }
@@ -134,15 +125,5 @@ const majorityVotes = [
 const result4 = calculateDecisionResult(DecisionType.MAJORITY, majorityVotes)
 console.log(`   2 pour, 1 contre → ${result4}`)
 console.log(`   ✓ Attendu: APPROVED, Reçu: ${result4}\n`)
-
-// Test 5: Vote pondéré
-console.log('📊 Test 5: WEIGHTED_VOTE')
-const weightedVotes = [
-  { value: VoteValue.STRONG_SUPPORT, weight: 1 },  // +3
-  { value: VoteValue.OPPOSE, weight: 1 }           // -2
-]
-const result5 = calculateDecisionResult(DecisionType.WEIGHTED_VOTE, weightedVotes)
-console.log(`   Score: +3 - 2 = +1 → ${result5}`)
-console.log(`   ✓ Attendu: APPROVED, Reçu: ${result5}\n`)
 
 console.log('✅ Tous les tests terminés!')
