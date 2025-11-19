@@ -24,8 +24,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
-        firstName: true,
-        lastName: true,
+        name: true,
         email: true,
       },
     });
@@ -33,6 +32,8 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+
+    const userName = user.name || "Utilisateur inconnu";
 
     // Get organization details if provided
     let organizationName = "N/A";
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; font-weight: 600; color: #666; width: 120px;">Nom :</td>
-                  <td style="padding: 8px 0;">${user.firstName} ${user.lastName}</td>
+                  <td style="padding: 8px 0;">${userName}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; font-weight: 600; color: #666;">Email :</td>
@@ -131,7 +132,7 @@ NOUVEAU FEEDBACK / BUG REPORT - DECIDOO
 
 INFORMATIONS UTILISATEUR
 ------------------------
-Nom : ${user.firstName} ${user.lastName}
+Nom : ${userName}
 Email : ${user.email}
 Organisation : ${organizationName}
 Heure d'envoi : ${sentAt}
@@ -151,7 +152,7 @@ Cet email a été envoyé automatiquement depuis Decidoo
     // Send email
     await sendEmail({
       to: "martin.werlen@gmail.com",
-      subject: `[Decidoo] Feedback/Bug - ${user.firstName} ${user.lastName}`,
+      subject: `[Decidoo] Feedback/Bug - ${userName}`,
       html: htmlContent,
       text: textContent,
     });
