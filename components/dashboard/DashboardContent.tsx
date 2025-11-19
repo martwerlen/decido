@@ -39,10 +39,10 @@ export default function DashboardContent({
   // Initialiser les filtres en fonction des query params de l'URL
   const getInitialStatusFilter = () => {
     const statusParam = searchParams.get('status');
-    if (statusParam === 'DRAFT') return ['DRAFT'];
-    if (statusParam === 'CLOSED') return ['CLOSED'];
-    if (statusParam === 'OPEN') return ['OPEN'];
-    return ['OPEN']; // Par défaut : En cours uniquement
+    if (statusParam === 'DRAFT') return 'DRAFT';
+    if (statusParam === 'CLOSED') return 'CLOSED';
+    if (statusParam === 'OPEN') return 'OPEN';
+    return 'OPEN'; // Par défaut : En cours uniquement
   };
 
   const [filters, setFilters] = useState<DecisionFiltersType>({
@@ -82,8 +82,8 @@ export default function DashboardContent({
     const params = new URLSearchParams();
     params.set('skip', skip.toString());
     params.set('take', '20');
-    if (filters.statusFilter.length > 0) {
-      params.set('status', filters.statusFilter.join(','));
+    if (filters.statusFilter && filters.statusFilter !== 'ALL') {
+      params.set('status', filters.statusFilter);
     }
     if (filters.scopeFilter !== 'ALL') {
       params.set('scope', filters.scopeFilter);
@@ -366,16 +366,32 @@ export default function DashboardContent({
                       </Box>
                     </div>
 
-                    <Button
-                      component={Link}
-                      href={targetUrl}
-                      variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
-                      color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
-                      size="small"
-                      sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
-                    >
-                      {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
-                    </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Button
+                        component={Link}
+                        href={targetUrl}
+                        variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
+                        color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
+                        size="small"
+                        sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
+                      >
+                        {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
+                      </Button>
+
+                      {/* Bouton Admin pour le créateur sur les décisions en cours */}
+                      {decision.creatorId === userId && !isClosed && (
+                        <Button
+                          component={Link}
+                          href={`/${slug}/decisions/${decision.id}/admin`}
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                          sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
+                        >
+                          Admin
+                        </Button>
+                      )}
+                    </Box>
                   </div>
                 </Box>
               );
