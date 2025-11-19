@@ -27,10 +27,11 @@ Ce guide vous accompagne pas à pas pour déployer Decidoo sur Render avec Postg
 └─────────────────────────────────────────┘
               ↓ appels API
 ┌─────────────────────────────────────────┐
-│  Render Cron Jobs (3 services)          │
+│  Render Cron Jobs (4 services)          │
 │  - Fermer décisions expirées (1h)       │
 │  - Envoyer rappels (9h/jour)            │
 │  - Nettoyer tokens (2h/jour)            │
+│  - Vérifier stades CONSENT (15min)      │
 └─────────────────────────────────────────┘
 ```
 
@@ -305,6 +306,32 @@ Maintenant que l'app fonctionne, ajoutons les cron jobs automatiques.
 
 4. **Créer le cron job**
 
+### 7.4 Cron Job 4 : Vérifier les stades CONSENT
+
+1. **Cliquer sur "New +" → "Cron Job"**
+
+2. **Configurer** :
+   - **Name** : `decidoo-cron-consent-stages`
+   - **Region** : **Frankfurt**
+   - **Build Command** : `npm install`
+   - **Start Command** : `node scripts/cron-check-consent-stages.js`
+   - **Schedule** : `*/15 * * * *` (toutes les 15 minutes)
+   - **Plan** : **Free**
+
+3. **Variables d'environnement** :
+
+| Nom | Valeur |
+|-----|--------|
+| `APP_URL` | `https://decidoo-app.onrender.com` (URL de votre app) |
+| `CRON_SECRET` | (copier depuis votre Web Service) |
+
+4. **Créer le cron job**
+
+**Note importante** : Ce cron job est **essentiel** pour les décisions par consentement. Il gère :
+- Les transitions automatiques entre stades (Questions → Avis → Amendements → Objections)
+- Les notifications email aux participants lors des changements de stade
+- La fermeture automatique si tous les participants consentent
+
 ---
 
 ## 🧪 Étape 8 : Tester l'installation
@@ -378,7 +405,7 @@ Render envoie des emails automatiquement si :
 | **Web Service** | Free | 0€ (750h/mois) |
 | **PostgreSQL** | Free | 0€ (90 jours inactivité = suppression) |
 | **PostgreSQL** | Starter | 7$/mois (~6,50€) |
-| **Cron Jobs (x3)** | Free | 0€ (750h/mois partagées) |
+| **Cron Jobs (x4)** | Free | 0€ (750h/mois partagées) |
 | **Resend** | Free | 0€ (100 emails/jour) |
 
 **Total pour tester** : 0€/mois (version gratuite complète)
@@ -420,7 +447,7 @@ Render envoie des emails automatiquement si :
 Votre application Decidoo est maintenant déployée sur Render avec :
 - ✅ Application Next.js en production
 - ✅ Base de données PostgreSQL
-- ✅ 3 cron jobs automatiques
+- ✅ 4 cron jobs automatiques
 - ✅ HTTPS activé par défaut
 - ✅ Emails fonctionnels (si Resend configuré)
 

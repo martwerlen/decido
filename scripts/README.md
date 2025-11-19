@@ -105,6 +105,55 @@ La décision "[Titre]" se termine dans [X]h et vous n'avez pas encore voté.
 
 ---
 
+### 4. `cron-check-consent-stages.js`
+
+**Fréquence** : Toutes les 15 minutes (`*/15 * * * *`)
+
+**Fonction** : Gère les transitions automatiques des décisions par consentement (CONSENT).
+
+**Fonctionnement** :
+- Appelle l'API `/api/cron/check-consent-stages`
+- Vérifie toutes les décisions CONSENT ouvertes
+- Détecte les changements de stade basés sur les timings
+- Envoie des notifications email lors des transitions
+- Ferme automatiquement si tous les participants consentent ou deadline atteinte
+
+**Stades gérés** :
+1. **CLARIFICATIONS** : Questions de clarification
+2. **AVIS** (ou **CLARIFAVIS** en mode fusionné) : Partage d'avis
+3. **AMENDEMENTS** : Créateur amende/garde/retire la proposition
+4. **OBJECTIONS** : Participants expriment leur position finale
+5. **TERMINEE** : Décision finalisée
+
+**Variables requises** :
+- `APP_URL` : URL de l'application (ex: `https://decidoo-app.onrender.com`)
+- `CRON_SECRET` : Secret partagé pour l'authentification
+
+**Logs** :
+```
+⏰ [2025-11-19T10:15:00.000Z] Début du cron: vérification des stades CONSENT
+✅ Succès: 2 décision(s) traitée(s)
+📊 Détails:
+   - Total décisions CONSENT ouvertes: 5
+   - Transitions de stade détectées: 2
+   - Notifications envoyées: 2
+   - Décisions fermées automatiquement: 1
+🎯 Actions effectuées - Vérifiez les logs de l'application pour les détails
+```
+
+**Pourquoi 15 minutes ?**
+
+Cette fréquence offre le meilleur compromis entre :
+- ✅ Réactivité acceptable pour les notifications
+- ✅ Charge serveur raisonnable
+- ✅ Coût minimal (750h/mois gratuites sur Render = 3000 exécutions/mois)
+
+Vous pouvez ajuster si nécessaire :
+- **5-10 minutes** : Plus réactif mais consomme plus de ressources
+- **30-60 minutes** : Moins de charge mais notifications plus lentes
+
+---
+
 ## 🧪 Tester les scripts localement
 
 ### Prérequis
@@ -151,6 +200,19 @@ export DATABASE_URL="file:./prisma/dev.db"
 # Lancer le script
 node scripts/cron-cleanup-tokens.js
 ```
+
+### Tester cron-check-consent-stages.js
+
+```bash
+# Définir les variables
+export APP_URL="http://localhost:3000"
+export CRON_SECRET="votre-secret-local"
+
+# Lancer le script
+node scripts/cron-check-consent-stages.js
+```
+
+**Note** : Pour tester efficacement ce cron, créez d'abord une décision CONSENT en local avec une durée courte (ex: 1h) pour voir les transitions de stade.
 
 ---
 

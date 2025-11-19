@@ -78,6 +78,20 @@ services:
           name: decidoo-db
           property: connectionString
 
+  # Cron Job 4 : Vérifier les stades CONSENT
+  - type: cron
+    name: decidoo-cron-consent-stages
+    env: node
+    region: frankfurt
+    schedule: "*/15 * * * *"  # Toutes les 15 minutes
+    buildCommand: npm install
+    startCommand: node scripts/cron-check-consent-stages.js
+    envVars:
+      - key: CRON_SECRET
+        sync: false  # Doit être identique au secret de l'app web
+      - key: APP_URL
+        sync: false  # URL de votre app (ex: https://decidoo-app.onrender.com)
+
 databases:
   - name: decidoo-db
     databaseName: decidoo
