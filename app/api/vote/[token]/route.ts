@@ -396,7 +396,7 @@ export async function POST(
             : 'Commentaire enregistré avec succès',
         });
       } else {
-        // Pour les autres types (CONSENT, WEIGHTED_VOTE, etc.), le vote est obligatoire
+        // Pour les autres types (CONSENT, etc.), le vote est obligatoire
         if (!value) {
           return Response.json(
             { error: 'La valeur du vote est requise' },

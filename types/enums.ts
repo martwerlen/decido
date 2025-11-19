@@ -34,7 +34,6 @@ export type DecisionType =
   | 'CONSENT'               // Pas d'objection majeure
   | 'MAJORITY'              // Vote majoritaire simple
   | 'SUPERMAJORITY'         // Vote qualifié (2/3, 3/4...)
-  | 'WEIGHTED_VOTE'         // Vote nuancé avec échelle
   | 'NUANCED_VOTE'          // Jugement majoritaire
   | 'ADVISORY'              // Consultatif
   | 'ADVICE_SOLICITATION';  // Sollicitation d'avis
@@ -44,7 +43,6 @@ export const DECISION_TYPES: DecisionType[] = [
   'CONSENT',
   'MAJORITY',
   'SUPERMAJORITY',
-  'WEIGHTED_VOTE',
   'NUANCED_VOTE',
   'ADVISORY',
   'ADVICE_SOLICITATION',
@@ -55,7 +53,6 @@ export const DecisionTypeLabels: Record<DecisionType, string> = {
   CONSENT: 'Décision par consentement',
   MAJORITY: 'Majorité simple',
   SUPERMAJORITY: 'Super-majorité (2/3)',
-  WEIGHTED_VOTE: 'Vote nuancé',
   NUANCED_VOTE: 'Vote nuancé',
   ADVISORY: 'Consultatif',
   ADVICE_SOLICITATION: 'Décision par sollicitation d\'avis',
@@ -66,7 +63,6 @@ export const DecisionTypeDescriptions: Record<DecisionType, string> = {
   CONSENT: 'Faites évoluer la proposition grâce au retour du groupe et allez de l\'avant tant que personne n\'a d\'objection majeure',
   MAJORITY: 'Plus de la moitié des votes sont favorables',
   SUPERMAJORITY: 'Au moins 2/3 des votes sont favorables',
-  WEIGHTED_VOTE: 'Vote avec échelle de préférence (-3 à +3)',
   NUANCED_VOTE: 'Chaque participant évalue toutes les propositions avec une mention',
   ADVISORY: 'Vote consultatif sans décision contraignante',
   ADVICE_SOLICITATION: 'Sollicitez l\'avis de personnes compétentes avant de décider en autonomie',

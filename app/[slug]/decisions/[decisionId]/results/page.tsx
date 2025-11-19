@@ -207,21 +207,35 @@ export default async function ResultsPage({
     const finalResult = calculateFinalDecisionResult(decision);
     const now = new Date();
 
+    // Déterminer la raison de fermeture et si tous ont voté
+    const reason = isDeadlinePassed ? 'deadline_reached' : 'all_voted';
+    const allVoted = decision.votingMode === 'INVITED'
+      ? decision.participants.every((p) => p.hasVoted)
+      : false; // Pour PUBLIC_LINK, on ne peut pas savoir combien de personnes "devraient" voter
+
+    // Métadonnées de fermeture
+    const closureMetadata = {
+      reason,
+      closedAt: now.toISOString(),
+      allVoted,
+    };
+
     await prisma.decision.update({
       where: { id: decision.id },
       data: {
         status: 'CLOSED',
         result: finalResult,
         decidedAt: now,
+        metadata: closureMetadata,
         consentCurrentStage: decision.decisionType === 'CONSENT' ? 'TERMINEE' : decision.consentCurrentStage,
       },
     });
     decision.status = 'CLOSED';
     decision.result = finalResult;
     decision.decidedAt = now;
+    (decision as any).metadata = closureMetadata;
 
     // Logger la fermeture automatique avec la raison
-    const reason = isDeadlinePassed ? 'deadline_reached' : 'all_voted';
     await logDecisionClosed(decision.id, session.user.id, reason);
 
     // Pour CONSENT: logger aussi la finalisation avec décompte
@@ -332,6 +346,7 @@ export default async function ResultsPage({
       slug={slug}
       isCreator={isCreator}
       votingMode={decision.votingMode}
+      metadata={(decision as any).metadata || null}
     />
   );
 }
