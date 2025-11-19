@@ -282,16 +282,16 @@ export default function ExternalVoteClient({ token }: { token: string }) {
 
       const data = await response.json();
 
-      // Pour CONSENSUS, juste marquer comme voté et cacher le formulaire de vote
-      if (decision.decisionType === 'CONSENSUS') {
-        setVoteSubmitted(true);
-        setSubmitting(false);
-      } else {
-        // Pour MAJORITY, afficher le message de confirmation global
-        setSubmissionMessage(data.message || 'Enregistré avec succès');
-        setSubmitted(true);
-        setSubmitting(false);
-      }
+      // Pour tous les types de décision, afficher un message de confirmation
+      // mais garder le formulaire visible pour permettre la modification
+      setSubmissionMessage(data.message || 'Vote enregistré avec succès');
+      setExistingVote({ id: data.vote?.id || '', value: voteValue, comment });
+      setSubmitting(false);
+
+      // Afficher un message temporaire de succès (réinitialiser après 3 secondes)
+      setTimeout(() => {
+        setSubmissionMessage('');
+      }, 3000);
     } catch (err) {
       setError('Erreur lors de l\'enregistrement du vote');
       setSubmitting(false);
@@ -340,36 +340,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
     );
   }
 
-  // Confirmation après vote
-  if (submitted) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          p: 3,
-        }}
-      >
-        <Card sx={{ maxWidth: 500 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CheckCircle color="success" sx={{ mr: 1, fontSize: 40 }} />
-              <Typography variant="h5">Merci !</Typography>
-            </Box>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              {submissionMessage}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Vous pouvez fermer cette page ou utiliser le même lien pour modifier votre participation avant la date limite.
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  }
+  // Pas de bloc de confirmation séparé - on garde le formulaire visible pour permettre la modification
 
   if (!decision) return null;
 
@@ -554,56 +525,49 @@ export default function ExternalVoteClient({ token }: { token: string }) {
             </Card>
 
             {/* Section vote */}
-            {!voteSubmitted ? (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Votre position
-                  </Typography>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Votre position
+                </Typography>
 
-                  {existingVote && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      Vous avez déjà voté. Vous pouvez modifier votre vote ci-dessous.
-                    </Alert>
-                  )}
+                {submissionMessage && (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    {submissionMessage}
+                  </Alert>
+                )}
 
-                  <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
-                    <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
-                      {getVoteOptions().map((option) => (
-                        <FormControlLabel
-                          key={option.value}
-                          value={option.value}
-                          control={<Radio />}
-                          label={option.label}
-                          sx={{ mb: 1 }}
-                        />
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
+                {existingVote && !submissionMessage && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Vous avez déjà voté. Vous pouvez modifier votre vote ci-dessous.
+                  </Alert>
+                )}
 
-                  <Button
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    onClick={handleSubmitVote}
-                    disabled={submitting || !voteValue}
-                  >
-                    {submitting ? <CircularProgress size={24} /> : 'Valider mon vote'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
-                    <CheckCircle color="success" sx={{ mr: 1, fontSize: 32 }} />
-                    <Typography variant="h6" color="success.main">
-                      Merci pour votre vote
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
+                <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                  <RadioGroup value={voteValue} onChange={(e) => setVoteValue(e.target.value)}>
+                    {getVoteOptions().map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<Radio />}
+                        label={option.label}
+                        sx={{ mb: 1 }}
+                      />
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={handleSubmitVote}
+                  disabled={submitting || !voteValue}
+                >
+                  {submitting ? <CircularProgress size={24} /> : existingVote ? 'Modifier mon vote' : 'Valider mon vote'}
+                </Button>
+              </CardContent>
+            </Card>
           </>
         ) : decision.decisionType === 'ADVICE_SOLICITATION' ? (
           /* Sollicitation d'avis */
