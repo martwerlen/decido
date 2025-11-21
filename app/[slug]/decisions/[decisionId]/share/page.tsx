@@ -58,9 +58,20 @@ export default async function SharePage({
     redirect(`/${slug}/decisions/${decisionId}/admin`);
   }
 
+  // After the check above, publicSlug is guaranteed to be non-null
+  const publicSlug = decision.publicSlug as string;
+
   return (
     <SharePageClient
-      decision={decision}
+      decision={{
+        id: decision.id,
+        title: decision.title,
+        description: decision.description,
+        decisionType: decision.decisionType,
+        status: decision.status,
+        publicSlug,
+        endDate: decision.endDate?.toISOString() || null,
+      }}
       organizationSlug={slug}
       voteCount={decision._count.anonymousVoteLogs}
     />
