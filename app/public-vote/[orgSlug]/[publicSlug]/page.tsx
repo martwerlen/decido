@@ -10,7 +10,7 @@ export default async function PublicVotePage({
 }) {
   const { orgSlug, publicSlug } = await params;
 
-  // Récupérer l'organisation
+  // Récupérer l&apos;organisation
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
   });
@@ -51,7 +51,7 @@ export default async function PublicVotePage({
                 Vote non encore ouvert
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Cette décision n'est pas encore ouverte au vote. Veuillez réessayer plus tard.
+                Cette décision n&apos;est pas encore ouverte au vote. Veuillez réessayer plus tard.
               </Typography>
             </CardContent>
           </Card>
@@ -70,7 +70,7 @@ export default async function PublicVotePage({
                 Vote terminé
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Cette décision est maintenant fermée et n'accepte plus de votes.
+                Cette décision est maintenant fermée et n&apos;accepte plus de votes.
               </Typography>
             </CardContent>
           </Card>

@@ -65,7 +65,7 @@ export default function PublicVotePageClient({
   const [majorityVote, setMajorityVote] = useState<string | null>(null);
   const [nuancedVotes, setNuancedVotes] = useState<Record<string, string>>({});
 
-  // Vérifier si l'utilisateur a déjà voté (via localStorage)
+  // Vérifier si l&apos;utilisateur a déjà voté (via localStorage)
   useEffect(() => {
     const voteKey = `vote_${decision.id}`;
     const existingVote = localStorage.getItem(voteKey);
@@ -120,7 +120,7 @@ export default function PublicVotePageClient({
         payload.votes = nuancedVotes;
       }
 
-      // Envoyer le vote à l'API
+      // Envoyer le vote à l&apos;API
       const response = await fetch(`/api/public-vote/${orgSlug}/${publicSlug}`, {
         method: 'POST',
         headers: {
@@ -306,10 +306,10 @@ export default function PublicVotePageClient({
                           label={
                             <Box>
                               <Typography variant="body1" fontWeight="500">
-                                Pas d'accord
+                                Pas d&apos;accord
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Je n'approuve pas cette proposition
+                                Je n&apos;approuve pas cette proposition
                               </Typography>
                             </Box>
                           }

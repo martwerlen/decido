@@ -167,12 +167,12 @@ export default function ResultsPageClient({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Bouton d'historique en haut à droite */}
+      {/* Bouton d&apos;historique en haut à droite */}
       <div className="fixed top-4 right-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 
-      {/* Panneau d'historique */}
+      {/* Panneau d&apos;historique */}
       <HistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
@@ -847,7 +847,7 @@ export default function ResultsPageClient({
                 </Box>
                 <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
                   <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
-                  <Typography variant="body2" color="error.dark">Pas d'accord</Typography>
+                  <Typography variant="body2" color="error.dark">Pas d&apos;accord</Typography>
                 </Box>
               </Box>
 
@@ -858,7 +858,7 @@ export default function ResultsPageClient({
                       ✓ Consensus atteint
                     </Typography>
                     <Typography variant="body2" color="success.dark">
-                      Tous les participants sont d'accord avec la proposition
+                      Tous les participants sont d&apos;accord avec la proposition
                     </Typography>
                   </Box>
                 ) : (
@@ -867,7 +867,7 @@ export default function ResultsPageClient({
                       Consensus non atteint
                     </Typography>
                     <Typography variant="body2" color="warning.dark">
-                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d'accord
+                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d&apos;accord
                     </Typography>
                   </Box>
                 )}
@@ -891,7 +891,7 @@ export default function ResultsPageClient({
         </>
       )}
 
-      {/* Sollicitation d'avis */}
+      {/* Sollicitation d&apos;avis */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <>
           {/* Statut de la décision */}
@@ -1216,7 +1216,7 @@ export default function ResultsPageClient({
         </Box>
       )}
 
-      {/* Conclusion (pour types de décision autres qu'ADVICE_SOLICITATION) */}
+      {/* Conclusion (pour types de décision autres qu&apos;ADVICE_SOLICITATION) */}
       {decision.conclusion && decision.decisionType !== 'ADVICE_SOLICITATION' && (
         <Box sx={{ backgroundColor: 'primary.light', border: 1, borderColor: 'primary.main', borderRadius: 2, p: 3, mb: 3 }}>
           <Typography variant="h5" fontWeight="semibold" color="primary.dark" sx={{ mb: 2 }}>Conclusion</Typography>
