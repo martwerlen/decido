@@ -49,7 +49,7 @@ interface Comment {
     id: string;
     name: string | null;
     email: string;
-  };
+  } | null;
   replies: Array<{
     id: string;
     content: string;
@@ -59,7 +59,7 @@ interface Comment {
       id: string;
       name: string | null;
       email: string;
-    };
+    } | null;
   }>;
 }
 
