@@ -1,0 +1,108 @@
+services:
+  # Web Service (Next.js Application)
+  - type: web
+    name: decidoo
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: claude/find-web-hosting-01H9DPrwURLMLBCfbSD4yWxX
+    buildCommand: npm install --production=false && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        value: noreply@decidoo.fr
+      - key: CRON_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+databases:
+  # PostgreSQL Database
+  - name: decidoo-db
+    databaseName: decidoo
+    user: decidoo
+    plan: starter
+    region: frankfurt
+
+jobs:
+  # Cron Job 1: Close expired decisions (every hour)
+  - type: cron
+    name: close-expired-decisions
+    runtime: node
+    schedule: "0 * * * *"
+    buildCommand: npm install
+    startCommand: node scripts/cron-close-expired.js
+    envVars:
+      - key: APP_URL
+        fromService:
+          type: web
+          name: decidoo
+          property: url
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: decidoo
+          envVarKey: CRON_SECRET
+
+  # Cron Job 2: Send deadline reminders (daily at 9am UTC)
+  - type: cron
+    name: send-deadline-reminders
+    runtime: node
+    schedule: "0 9 * * *"
+    buildCommand: npm install
+    startCommand: node scripts/cron-send-reminders.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+      - key: RESEND_API_KEY
+        fromService:
+          type: web
+          name: decidoo
+          envVarKey: RESEND_API_KEY
+      - key: FROM_EMAIL
+        value: noreply@decidoo.fr
+      - key: APP_URL
+        fromService:
+          type: web
+          name: decidoo
+          property: url
+
+  # Cron Job 3: Cleanup expired tokens (daily at 2am UTC)
+  - type: cron
+    name: cleanup-expired-tokens
+    runtime: node
+    schedule: "0 2 * * *"
+    buildCommand: npm install
+    startCommand: node scripts/cron-cleanup-tokens.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString
+
+  # Cron Job 4: Check CONSENT decision stages (every 15 minutes)
+  - type: cron
+    name: check-consent-stages
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: npm install
+    startCommand: node scripts/cron-check-consent-stages.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: decidoo-db
+          property: connectionString

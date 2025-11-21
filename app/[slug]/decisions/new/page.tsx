@@ -22,11 +22,11 @@ type ConsentStepMode = 'MERGED' | 'DISTINCT';
 
 // Descriptions courtes pour les tooltips
 const DecisionTypeTooltips: Record<DecisionType, string> = {
-  CONSENSUS: "Échanger ensemble pour tomber tous d'accord",
-  CONSENT: "Faites évoluer la proposition grâce au retour du groupe et allez de l'avant tant que personne n'a d'objection majeure",
-  MAJORITY: "Voter chacun pour une seule proposition et la majorité l'emporte",
-  NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l'emporte",
-  ADVICE_SOLICITATION: "Solliciter l'avis de personnes compétentes avant de décider en autonomie",
+  CONSENSUS: "Échanger ensemble pour tomber tous d&apos;accord",
+  CONSENT: "Faites évoluer la proposition grâce au retour du groupe et allez de l&apos;avant tant que personne n&apos;a d&apos;objection majeure",
+  MAJORITY: "Voter chacun pour une seule proposition et la majorité l&apos;emporte",
+  NUANCED_VOTE: "Évaluer chacun toutes les propositions et la proposition avec le plus de partisans l&apos;emporte",
+  ADVICE_SOLICITATION: "Solliciter l&apos;avis de personnes compétentes avant de décider en autonomie",
 };
 
 interface NuancedProposal {
@@ -139,7 +139,7 @@ export default function NewDecisionPage({
 
     setCheckingSlug(true);
     try {
-      // Construire l'URL avec le paramètre excludeDecisionId si on édite un brouillon
+      // Construire l&apos;URL avec le paramètre excludeDecisionId si on édite un brouillon
       const params = new URLSearchParams({ slug: publicSlugToCheck });
       if (draftId) {
         params.append('excludeDecisionId', draftId);
@@ -160,7 +160,7 @@ export default function NewDecisionPage({
 
   // ===== FONCTIONS HELPERS POUR LA SÉLECTION DES PARTICIPANTS =====
 
-  // Obtenir tous les membres d'une équipe
+  // Obtenir tous les membres d&apos;une équipe
   const getTeamMembers = (teamId: string): Member[] => {
     return members.filter(member =>
       member.teamMembers.some(tm => tm.team.id === teamId)
@@ -172,7 +172,7 @@ export default function NewDecisionPage({
     return members.filter(member => member.teamMembers.length === 0);
   };
 
-  // Filtrer l'utilisateur connecté si nécessaire (ADVICE_SOLICITATION)
+  // Filtrer l&apos;utilisateur connecté si nécessaire (ADVICE_SOLICITATION)
   const getFilteredMembers = (): Member[] => {
     if (formData.decisionType === 'ADVICE_SOLICITATION' && session?.user?.id) {
       return members.filter(m => m.userId !== session.user.id);
@@ -185,7 +185,7 @@ export default function NewDecisionPage({
     const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
     return teams.filter(team => {
       const teamMembers = getTeamMembers(team.id);
-      // Garder l'équipe si elle a au moins un membre filtré
+      // Garder l&apos;équipe si elle a au moins un membre filtré
       return teamMembers.some(m => filteredMemberIds.has(m.id));
     });
   };
@@ -206,7 +206,7 @@ export default function NewDecisionPage({
     );
   };
 
-  // Obtenir l'état de la checkbox d'une équipe
+  // Obtenir l&apos;état de la checkbox d&apos;une équipe
   const getTeamCheckboxState = (teamId: string): 'checked' | 'indeterminate' | 'unchecked' => {
     const teamMembers = getTeamMembers(teamId);
     const filteredMemberIds = new Set(getFilteredMembers().map(m => m.id));
@@ -221,7 +221,7 @@ export default function NewDecisionPage({
     return 'indeterminate';
   };
 
-  // Obtenir tous les users sélectionnés (pour envoi à l'API)
+  // Obtenir tous les users sélectionnés (pour envoi à l&apos;API)
   const getEffectiveSelectedUsers = (): string[] => {
     const result = new Set<string>();
 
@@ -245,13 +245,13 @@ export default function NewDecisionPage({
     const filteredTeamMembers = teamMembers.filter(m => filteredMemberIds.has(m.id));
 
     if (state === 'unchecked' || state === 'indeterminate') {
-      // Cocher l'équipe : ajouter teamId, retirer les membres individuels de cette équipe
+      // Cocher l&apos;équipe : ajouter teamId, retirer les membres individuels de cette équipe
       setSelectedTeamIds([...selectedTeamIds, teamId]);
       setSelectedUserIds(selectedUserIds.filter(userId =>
         !filteredTeamMembers.some(m => m.userId === userId)
       ));
     } else {
-      // Décocher l'équipe : retirer teamId et tous ses membres
+      // Décocher l&apos;équipe : retirer teamId et tous ses membres
       setSelectedTeamIds(selectedTeamIds.filter(id => id !== teamId));
       setSelectedUserIds(selectedUserIds.filter(userId =>
         !filteredTeamMembers.some(m => m.userId === userId)
@@ -267,7 +267,7 @@ export default function NewDecisionPage({
     if (isUserSelected(userId)) {
       // Décocher : retirer de selectedUserIds et de toutes les équipes sélectionnées
       setSelectedUserIds(selectedUserIds.filter(id => id !== userId));
-      // Retirer l'utilisateur des équipes sélectionnées (décocher les équipes qui le contiennent)
+      // Retirer l&apos;utilisateur des équipes sélectionnées (décocher les équipes qui le contiennent)
       const userTeamIds = member.teamMembers.map(tm => tm.team.id);
       setSelectedTeamIds(selectedTeamIds.filter(teamId => !userTeamIds.includes(teamId)));
     } else {
@@ -276,7 +276,7 @@ export default function NewDecisionPage({
     }
   };
 
-  // Toggle l'expansion d'une équipe
+  // Toggle l&apos;expansion d&apos;une équipe
   const toggleTeamExpansion = (teamId: string) => {
     if (expandedTeamIds.includes(teamId)) {
       setExpandedTeamIds(expandedTeamIds.filter(id => id !== teamId));
@@ -312,7 +312,7 @@ export default function NewDecisionPage({
     fetchData();
   }, [slug]);
 
-  // Pré-sélectionner l'utilisateur connecté (sauf pour ADVICE_SOLICITATION)
+  // Pré-sélectionner l&apos;utilisateur connecté (sauf pour ADVICE_SOLICITATION)
   useEffect(() => {
     if (
       session?.user?.id &&
@@ -322,7 +322,7 @@ export default function NewDecisionPage({
       !selectedUserIds.includes(session.user.id) &&
       !draftId // Ne pas pré-sélectionner si on reprend un brouillon
     ) {
-      // Vérifier que l'utilisateur est bien dans les membres
+      // Vérifier que l&apos;utilisateur est bien dans les membres
       const currentUserMember = members.find(m => m.userId === session.user.id);
       if (currentUserMember) {
         setSelectedUserIds([session.user.id]);
@@ -499,14 +499,14 @@ export default function NewDecisionPage({
       return;
     }
 
-    // Valider le format de l'email
+    // Valider le format de l&apos;email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(externalEmail)) {
       setError('Veuillez saisir une adresse email valide');
       return;
     }
 
-    // Vérifier que l'email n'est pas déjà dans la liste
+    // Vérifier que l&apos;email n&apos;est pas déjà dans la liste
     if (externalParticipants.some(p => p.email === externalEmail)) {
       setError('Cet email est déjà dans la liste');
       return;
@@ -604,7 +604,7 @@ export default function NewDecisionPage({
         // Validation spécifique pour ADVICE_SOLICITATION
         if (formData.decisionType === 'ADVICE_SOLICITATION') {
           if (totalParticipants < minimumParticipants) {
-            setError(`Vous devez solliciter au moins ${minimumParticipants} personne(s) pour une sollicitation d'avis`);
+            setError(`Vous devez solliciter au moins ${minimumParticipants} personne(s) pour une sollicitation d&apos;avis`);
             setLoading(false);
             return;
           }
@@ -666,7 +666,7 @@ export default function NewDecisionPage({
         router.push(`/${slug}/decisions/${decision.id}/share`);
       } else {
         // Mode INVITED : vérifier si le créateur est participant
-        // On redirige vers /vote s'il est participant, sinon vers /admin
+        // On redirige vers /vote s&apos;il est participant, sinon vers /admin
         // Note : le backend ajoute automatiquement le créateur comme participant
         console.log('Redirecting to:', `/${slug}/decisions/${decision.id}/vote`);
         router.push(`/${slug}/decisions/${decision.id}/vote`);
@@ -845,7 +845,7 @@ export default function NewDecisionPage({
           {formData.votingMode === 'PUBLIC_LINK' && (
             <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-primary-lighter)', border: '1px solid var(--color-primary-light)' }}>
               <label htmlFor="publicSlug" className="block font-medium mb-2">
-                Slug pour l'URL publique *
+                Slug pour l&apos;URL publique *
               </label>
               <input
                 type="text"
@@ -872,7 +872,7 @@ export default function NewDecisionPage({
               {formData.publicSlug && (
                 <Box sx={{ mt: 1 }}>
                   <Typography variant="body2" fontWeight="medium">
-                    Aperçu de l'URL : <Typography component="span" color="primary" fontWeight="medium">/public-vote/{slug}/{formData.publicSlug}</Typography>
+                    Aperçu de l&apos;URL : <Typography component="span" color="primary" fontWeight="medium">/public-vote/{slug}/{formData.publicSlug}</Typography>
                   </Typography>
                   {checkingSlug && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Vérification...</Typography>}
                   {!checkingSlug && slugAvailable === true && (
@@ -1152,7 +1152,7 @@ export default function NewDecisionPage({
               />
             </div>
 
-            {/* Choix du mode d'étapes */}
+            {/* Choix du mode d&apos;étapes */}
             <div>
               <label className="block font-medium mb-2">
                 Déroulement des étapes *
@@ -1218,7 +1218,7 @@ export default function NewDecisionPage({
               </div>
 
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                ℹ️ La décision se découpe en 4 étapes : 1/3 du temps pour les questions de clarification, 1/3 du temps pour les avis, 1/3 du temps pour l'évolution de la proposition et la possibilité d'émettre une objection
+                ℹ️ La décision se découpe en 4 étapes : 1/3 du temps pour les questions de clarification, 1/3 du temps pour les avis, 1/3 du temps pour l&apos;évolution de la proposition et la possibilité d&apos;émettre une objection
               </Typography>
             </div>
           </div>
@@ -1237,7 +1237,7 @@ export default function NewDecisionPage({
               value={formData.initialProposal}
               onChange={(e) => setFormData({ ...formData, initialProposal: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Partagez votre intention de décision avant de solliciter l'avis de personnes compétentes..."
+              placeholder="Partagez votre intention de décision avant de solliciter l&apos;avis de personnes compétentes..."
             />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Décrivez clairement votre intention afin que les personnes sollicitées puissent vous donner un avis éclairé.
@@ -1449,7 +1449,7 @@ export default function NewDecisionPage({
 
                         return (
                           <Box key={team.id} sx={{ borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
-                            {/* Ligne de l'équipe */}
+                            {/* Ligne de l&apos;équipe */}
                             <Box sx={{ display: 'flex', alignItems: 'center', py: 1, px: 1.5, '&:hover': { backgroundColor: 'action.hover' } }}>
                               <Box
                                 component="button"
@@ -1483,7 +1483,7 @@ export default function NewDecisionPage({
                               <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>({teamMembers.length} membres)</Typography>
                             </Box>
 
-                            {/* Membres de l'équipe (si dépliée) */}
+                            {/* Membres de l&apos;équipe (si dépliée) */}
                             {isExpanded && (
                               <Box sx={{ backgroundColor: 'background.secondary' }}>
                                 {teamMembers.map((member) => (
@@ -1599,7 +1599,7 @@ export default function NewDecisionPage({
               {participantMode === 'external' && (
                 <div className="space-y-3">
                   <Typography variant="body2" color="text.secondary">
-                    Ajoutez des personnes externes par email (elles ne seront pas membres de l'organisation)
+                    Ajoutez des personnes externes par email (elles ne seront pas membres de l&apos;organisation)
                   </Typography>
 
                   {/* Champs côte à côte (responsive) */}

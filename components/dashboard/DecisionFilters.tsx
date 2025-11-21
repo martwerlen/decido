@@ -91,7 +91,7 @@ export default function DecisionFilters({ userTeams, filters, onFilterChange }: 
             onChange={handleScopeChange}
             label="Périmètre"
           >
-            <MenuItem value="ALL" sx={{ fontSize: '0.875rem' }}>Toute l'organisation</MenuItem>
+            <MenuItem value="ALL" sx={{ fontSize: '0.875rem' }}>Toute l&apos;organisation</MenuItem>
             {userTeams.map((team) => (
               <MenuItem key={team.id} value={team.id} sx={{ fontSize: '0.875rem' }}>
                 {team.name}
@@ -125,7 +125,7 @@ export default function DecisionFilters({ userTeams, filters, onFilterChange }: 
           >
             <MenuItem value="ADVICE_SOLICITATION" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('ADVICE_SOLICITATION') > -1} />
-              <ListItemText primary="Sollicitation d'avis" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+              <ListItemText primary="Sollicitation d&apos;avis" primaryTypographyProps={{ fontSize: '0.875rem' }} />
             </MenuItem>
             <MenuItem value="CONSENSUS" sx={{ fontSize: '0.875rem' }}>
               <Checkbox checked={typeFilter.indexOf('CONSENSUS') > -1} />

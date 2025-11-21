@@ -183,7 +183,7 @@ export default function ConsentAccordionStages({
   slug,
   loading,
 }: Props) {
-  // État d'ouverture des accordéons
+  // État d&apos;ouverture des accordéons
   const [expandedStage1, setExpandedStage1] = useState(
     currentStage === 'CLARIFICATIONS' || currentStage === 'CLARIFAVIS'
   );
@@ -194,7 +194,7 @@ export default function ConsentAccordionStages({
   const [expandedStage4, setExpandedStage4] = useState(currentStage === 'OBJECTIONS');
   const [expandedStage5, setExpandedStage5] = useState(currentStage === 'TERMINEE');
 
-  // Déterminer l'état de chaque étape (ACTIF, PASSÉ, FUTUR)
+  // Déterminer l&apos;état de chaque étape (ACTIF, PASSÉ, FUTUR)
   const getStageStatus = (stage: ConsentStage): 'ACTIF' | 'PASSÉ' | 'FUTUR' => {
     // Mode MERGED: CLARIFAVIS active les étapes 1 et 2 simultanément
     if (stepMode === 'MERGED' && currentStage === 'CLARIFAVIS') {
@@ -376,7 +376,7 @@ export default function ConsentAccordionStages({
 
       {!isActive && questions.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          Aucune question n'a été posée.
+          Aucune question n&apos;a été posée.
         </Typography>
       )}
     </Box>
@@ -431,13 +431,13 @@ export default function ConsentAccordionStages({
 
       {!isActive && (
         <Alert severity="info" sx={{ mt: 2 }}>
-          La phase d'avis est terminée. Vous ne pouvez plus modifier votre avis.
+          La phase d&apos;avis est terminée. Vous ne pouvez plus modifier votre avis.
         </Alert>
       )}
 
       {opinions.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          Aucun avis n'a encore été donné.
+          Aucun avis n&apos;a encore été donné.
         </Typography>
       )}
     </Box>
@@ -663,8 +663,8 @@ export default function ConsentAccordionStages({
                     </Typography>
                     <Typography variant="body2" component="div">
                       <ol style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                        <li>Elle est argumentée, précise et concrète et s'appuie sur des données connues</li>
-                        <li>Elle démontre en quoi la proposition est impossible à réaliser OU elle dit en quoi la proposition va nuire au groupe ou à sa raison d'être</li>
+                        <li>Elle est argumentée, précise et concrète et s&apos;appuie sur des données connues</li>
+                        <li>Elle démontre en quoi la proposition est impossible à réaliser OU elle dit en quoi la proposition va nuire au groupe ou à sa raison d&apos;être</li>
                       </ol>
                     </Typography>
                   </Alert>
@@ -679,7 +679,7 @@ export default function ConsentAccordionStages({
                       color="success"
                       onClick={() => setObjectionStatus('NO_OBJECTION')}
                     >
-                      Pas d'objection
+                      Pas d&apos;objection
                     </Button>
                     <Button
                       variant={objectionStatus === 'OBJECTION' ? 'contained' : 'outlined'}
@@ -745,7 +745,7 @@ export default function ConsentAccordionStages({
                       )}
                       {userObjection.status === 'NO_OBJECTION' && (
                         <Typography variant="body1">
-                          <strong>Votre position :</strong> Pas d'objection
+                          <strong>Votre position :</strong> Pas d&apos;objection
                         </Typography>
                       )}
                       {userObjection.status === 'OBJECTION' && (
@@ -781,7 +781,7 @@ export default function ConsentAccordionStages({
 
               {!isParticipant && (
                 <Alert severity="info" sx={{ mb: 3 }}>
-                  Vous n'êtes pas participant à cette décision. Vous pouvez consulter les positions des participants ci-dessous.
+                  Vous n&apos;êtes pas participant à cette décision. Vous pouvez consulter les positions des participants ci-dessous.
                 </Alert>
               )}
 
@@ -802,13 +802,13 @@ export default function ConsentAccordionStages({
                         )}
                         {obj.status === 'NO_OBJECTION' && (
                           <Typography variant="body2">
-                            <strong>{userName}</strong> - pas d'objection
+                            <strong>{userName}</strong> - pas d&apos;objection
                           </Typography>
                         )}
                         {obj.status === 'OBJECTION' && (
                           <Box>
                             <Typography variant="body2" sx={{ mb: 0.5 }}>
-                              <strong>{userName}</strong> a émis l'objection suivante :
+                              <strong>{userName}</strong> a émis l&apos;objection suivante :
                             </Typography>
                             <Box sx={{ pl: 2, borderLeft: 3, borderColor: 'error.main' }}>
                               <Typography variant="body2" color="text.secondary">
