@@ -686,7 +686,7 @@ export default function ConsentAccordionStages({
                       color="error"
                       onClick={() => setObjectionStatus('OBJECTION')}
                     >
-                      J'ai une objection
+                      J&apos;ai une objection
                     </Button>
                     <Button
                       variant={objectionStatus === 'NO_POSITION' ? 'contained' : 'outlined'}
