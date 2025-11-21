@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import {
   Box,
   TextField,
@@ -93,9 +94,9 @@ export default function ResetPasswordForm() {
     return (
       <Alert severity="error">
         Lien de réinitialisation invalide. Veuillez faire une nouvelle{" "}
-        <a href="/auth/forgot-password" style={{ color: "inherit", textDecoration: "underline" }}>
+        <Link href="/auth/forgot-password" style={{ color: "inherit", textDecoration: "underline" }}>
           demande de réinitialisation
-        </a>
+        </Link>
         .
       </Alert>
     )
