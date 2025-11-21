@@ -127,11 +127,11 @@ All major pages have been migrated from hardcoded Tailwind colors to MUI theme-a
 - `hover:bg-gray-50` → `'&:hover': { backgroundColor: 'action.hover' }`
 
 **Fully Migrated Pages (100% Dark Mode Compatible):**
-- ✅ `/organizations/[slug]/decisions/new` - Decision creation form
-- ✅ `/organizations/[slug]` - Organization dashboard and decision list
-- ✅ `/organizations/[slug]/decisions/[decisionId]/vote` - Voting interface (all decision types)
-- ✅ `/organizations/[slug]/decisions/[decisionId]/admin` - Decision administration
-- ✅ `/organizations/[slug]/decisions/[decisionId]/results` - Results display (all decision types)
+- ✅ `/[slug]/decisions/new` - Decision creation form
+- ✅ `/[slug]` - Organization dashboard and decision list
+- ✅ `/[slug]/decisions/[decisionId]/vote` - Voting interface (all decision types)
+- ✅ `/[slug]/decisions/[decisionId]/admin` - Decision administration
+- ✅ `/[slug]/decisions/[decisionId]/results` - Results display (all decision types)
 
 **Key Components Used:**
 - `Box` - Container with sx prop for theme-aware styling
@@ -171,7 +171,7 @@ All major pages have been migrated from hardcoded Tailwind colors to MUI theme-a
 - `SidebarRefreshProvider` (`components/providers/SidebarRefreshProvider.tsx`) - Counter-based refresh trigger for sidebar updates after votes
 
 **Organization Memory Pattern:**
-- `OrganizationMemoryUpdater` component (in `app/organizations/[slug]/layout.tsx`) syncs last visited organization to session JWT
+- `OrganizationMemoryUpdater` component (in `app/[slug]/layout.tsx`) syncs last visited organization to session JWT
 - Uses `useOrganizationMemory()` hook to update `lastOrganizationSlug` in session
 - Enables automatic redirect to last visited organization on login
 
@@ -193,40 +193,40 @@ app/                      # Next.js App Router
 ├── api/                  # API routes
 │   ├── organizations/   # Organization-scoped APIs
 │   │   ├── route.ts              # List user's organizations
-│   │   └── [slug]/
-│   │       ├── route.ts          # Get/update organization
-│   │       └── decisions/
-│   │           ├── route.ts                    # Create decision
-│   │           ├── sidebar/                    # Sidebar decision list
-│   │           ├── check-public-slug/          # Check slug availability
-│   │           └── [decisionId]/
-│   │               ├── route.ts                # Delete decision (drafts only)
-│   │               ├── stats/                  # Vote statistics
-│   │               ├── close/                  # Close decision
-│   │               ├── withdraw/               # Withdraw decision
-│   │               ├── history/                # Decision audit trail
-│   │               ├── conclusion/             # Add/update conclusion
-│   │               ├── opinions/               # ADVICE_SOLICITATION opinions
-│   │               └── validate/               # Validate ADVICE_SOLICITATION
+│   │   └── check-slug/           # Organization slug validation
+│   ├── [slug]/          # Organization API routes
+│   │   ├── route.ts          # Get/update organization
+│   │   └── decisions/
+│   │       ├── route.ts                    # Create decision
+│   │       ├── sidebar/                    # Sidebar decision list
+│   │       ├── check-public-slug/          # Check slug availability
+│   │       └── [decisionId]/
+│   │           ├── route.ts                # Delete decision (drafts only)
+│   │           ├── stats/                  # Vote statistics
+│   │           ├── close/                  # Close decision
+│   │           ├── withdraw/               # Withdraw decision
+│   │           ├── history/                # Decision audit trail
+│   │           ├── conclusion/             # Add/update conclusion
+│   │           ├── opinions/               # ADVICE_SOLICITATION opinions
+│   │           └── validate/               # Validate ADVICE_SOLICITATION
 │   ├── invitations/     # Invitation acceptance
 │   ├── profile/         # User profile API
 │   └── vote/             # Public voting APIs (no auth)
 │       ├── [token]/      # Token-based voting (external participants)
 │       └── [orgSlug]/[publicSlug]/  # Anonymous voting (PUBLIC_LINK mode)
 ├── auth/                 # Auth pages (signin, signup)
-├── organizations/        # Organization management pages
-│   ├── [slug]/          # Dynamic organization routes
-│   │   ├── decisions/   # Decision management
-│   │   │   ├── [decisionId]/
-│   │   │   │   ├── vote/     # Voting interface (authenticated)
-│   │   │   │   ├── results/  # Results display
-│   │   │   │   ├── admin/    # Decision administration (INVITED mode)
-│   │   │   │   └── share/    # Share page with link/QR code (PUBLIC_LINK mode)
-│   │   │   └── new/          # Create new decision
-│   │   ├── members/     # Member management
-│   │   ├── teams/       # Team management
-│   │   └── settings/    # Organization settings
-│   └── new/             # Create new organization
+├── [slug]/              # Dynamic organization routes
+│   ├── decisions/       # Decision management
+│   │   ├── [decisionId]/
+│   │   │   ├── vote/     # Voting interface (authenticated)
+│   │   │   ├── results/  # Results display
+│   │   │   ├── admin/    # Decision administration (INVITED mode)
+│   │   │   └── share/    # Share page with link/QR code (PUBLIC_LINK mode)
+│   │   └── new/          # Create new decision
+│   ├── members/         # Member management
+│   ├── teams/           # Team management
+│   └── settings/        # Organization settings
+├── create-organization/ # Create new organization
 ├── invitations/          # Invitation acceptance pages
 └── vote/                 # Public voting pages (no auth)
     ├── [token]/          # Token-based voting for external participants
@@ -269,13 +269,14 @@ prisma/
 The app uses dynamic routes extensively. Key patterns:
 
 **Authenticated routes (requires login):**
-- `/organizations/[slug]` - Organization by slug (e.g., `/organizations/acme-corp`)
-- `/organizations/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
-- `/organizations/[slug]/decisions/[decisionId]/vote` - Vote on decision (authenticated members)
-- `/organizations/[slug]/decisions/[decisionId]/results` - View results
-- `/organizations/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
-- `/organizations/[slug]/decisions/[decisionId]/share` - Share page with public link and QR code (creator only, PUBLIC_LINK mode)
-- `/organizations/[slug]/decisions/new` - Create new decision
+- `/[slug]` - Organization by slug (e.g., `/acme-corp`)
+- `/[slug]/decisions/[decisionId]` - View decision (uses `cuid` as ID)
+- `/[slug]/decisions/[decisionId]/vote` - Vote on decision (authenticated members)
+- `/[slug]/decisions/[decisionId]/results` - View results
+- `/[slug]/decisions/[decisionId]/admin` - Manage decision (creator only)
+- `/[slug]/decisions/[decisionId]/share` - Share page with public link and QR code (creator only, PUBLIC_LINK mode)
+- `/[slug]/decisions/new` - Create new decision
+- `/create-organization` - Create new organization
 
 **Public routes (no authentication required):**
 - `/vote/[token]` - External participant voting page (token-based, for INVITED mode with external participants)
@@ -283,15 +284,19 @@ The app uses dynamic routes extensively. Key patterns:
 
 **API routes:**
 
-Authenticated APIs (under `/api/organizations/[slug]/...`):
-- `POST /api/organizations/[slug]/decisions` - Create new decision
-- `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
-- `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Get vote statistics (creator only)
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Close decision manually (creator only)
-- `POST /api/organizations/[slug]/decisions/[decisionId]/opinions` - Submit/update opinion (ADVICE_SOLICITATION)
-- `GET /api/organizations/[slug]/decisions/[decisionId]/opinions` - Get all opinions (ADVICE_SOLICITATION)
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/validate` - Validate final decision (ADVICE_SOLICITATION, creator only)
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/withdraw` - Withdraw decision (ADVICE_SOLICITATION, creator only)
+Authenticated APIs (under `/api/[slug]/...`):
+- `POST /api/[slug]/decisions` - Create new decision
+- `GET /api/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
+- `GET /api/[slug]/decisions/[decisionId]/stats` - Get vote statistics (creator only)
+- `PATCH /api/[slug]/decisions/[decisionId]/close` - Close decision manually (creator only)
+- `POST /api/[slug]/decisions/[decisionId]/opinions` - Submit/update opinion (ADVICE_SOLICITATION)
+- `GET /api/[slug]/decisions/[decisionId]/opinions` - Get all opinions (ADVICE_SOLICITATION)
+- `PATCH /api/[slug]/decisions/[decisionId]/validate` - Validate final decision (ADVICE_SOLICITATION, creator only)
+- `PATCH /api/[slug]/decisions/[decisionId]/withdraw` - Withdraw decision (ADVICE_SOLICITATION, creator only)
+
+Organization-level APIs (kept for compatibility):
+- `GET /api/organizations` - List user's organizations
+- `GET /api/organizations/check-slug?slug=xxx` - Check organization slug availability
 
 Public APIs:
 - `GET /api/vote/[token]` - Fetch decision data for external participant (token-based)
@@ -323,7 +328,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - **Ordered by creation**: Decisions are ordered by `createdAt` (desc) in both categories
 
 **API Endpoint:**
-- `GET /api/organizations/[slug]/decisions/sidebar` - Returns decisions grouped by category with participation status
+- `GET /api/[slug]/decisions/sidebar` - Returns decisions grouped by category with participation status
 
 **Refresh System:**
 - The `SidebarRefreshProvider` context (in `components/providers/SidebarRefreshProvider.tsx`) provides a `refreshSidebar()` function
@@ -331,7 +336,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - The sidebar listens to the `refreshTrigger` state change to re-fetch decisions
 
 **Navigation & Permissions:**
-- Changing organization from the dropdown always redirects to `/organizations/[slug]` to ensure proper page refresh
+- Changing organization from the dropdown always redirects to `/[slug]` to ensure proper page refresh
 - The "Paramètres de l'organisation" menu option is only visible to users with OWNER or ADMIN role
 - User role is determined by checking the `OrganizationMember` relationship with the current organization
 
@@ -346,7 +351,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 
 ### Organization Dashboard & Filters
 
-**Dashboard Page** (`/organizations/[slug]`):
+**Dashboard Page** (`/[slug]`):
 - Server-side rendering with initial 20 decisions loaded
 - Client-side pagination ("Charger 20 décisions de plus" button)
 - Real-time filter updates without page reload
@@ -372,10 +377,10 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 - Located between team chip and result chip
 
 **Key files**:
-- `app/organizations/[slug]/page.tsx` - Server component loading initial data
+- `app/[slug]/page.tsx` - Server component loading initial data
 - `components/dashboard/DashboardContent.tsx` - Client component with filters and participation logic
 - `components/dashboard/DecisionFilters.tsx` - Controlled filter component
-- `app/api/organizations/[slug]/decisions/route.ts` - API with pagination and filtering
+- `app/api/[slug]/decisions/route.ts` - API with pagination and filtering
 
 ## Critical Architecture Details
 
@@ -383,7 +388,7 @@ The sidebar (`components/dashboard/Sidebar.tsx`) displays organization decisions
 
 The application uses **three different vote storage models** depending on decision type:
 
-1. **`Vote` table** - Used for most decision types (CONSENSUS, CONSENT, WEIGHTED_VOTE, etc.)
+1. **`Vote` table** - Used for most decision types (CONSENSUS, CONSENT, ADVISORY, etc.)
    - Stores a single `value` field (VoteValue enum)
    - Links to either `userId` (authenticated) or `externalParticipantId` (guest voting)
    - One vote per user per decision
@@ -456,7 +461,7 @@ const alt = generateAlternativeSlug("mon-organisation", 1)  // → "mon-organisa
 Type-safe enums are defined in `types/enums.ts` with corresponding validation helpers:
 - `MemberRole`: 'OWNER' | 'ADMIN' | 'MEMBER'
 - `InvitationStatus`: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
-- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'WEIGHTED_VOTE' | 'NUANCED_VOTE' | 'ADVISORY' | 'ADVICE_SOLICITATION'
+- `DecisionType`: 'CONSENSUS' | 'CONSENT' | 'MAJORITY' | 'SUPERMAJORITY' | 'NUANCED_VOTE' | 'ADVISORY' | 'ADVICE_SOLICITATION'
 - `DecisionStatus`: 'DRAFT' | 'OPEN' | 'CLOSED' | 'IMPLEMENTED' | 'ARCHIVED'
 - `DecisionResult`: 'APPROVED' | 'REJECTED' | 'BLOCKED' | 'WITHDRAWN'
 - `VoteValue`: 'STRONG_SUPPORT' | 'SUPPORT' | 'WEAK_SUPPORT' | 'ABSTAIN' | 'WEAK_OPPOSE' | 'OPPOSE' | 'STRONG_OPPOSE' | 'BLOCK'
@@ -502,8 +507,6 @@ The decision calculation logic in `lib/decision-logic.ts` is the heart of the ap
 **MAJORITY**: Simple majority → APPROVED if (support votes > oppose votes)
 
 **SUPERMAJORITY**: Requires 2/3 of votes to be supportive → APPROVED if (support votes ≥ 2/3 total)
-
-**WEIGHTED_VOTE**: Calculates weighted score using vote weights (-3 to +3) → APPROVED if score > 0
 
 **NUANCED_VOTE** (Jugement Majoritaire): Each participant evaluates all proposals with a mention from a predefined scale
 - Three scales available: 3, 5, or 7 levels
@@ -588,7 +591,7 @@ When a decision is automatically closed (via results page access), the `reason` 
 - `'manual'`: Creator manually closed the decision
 
 **Access to Logs:**
-- Logs are accessible via `GET /api/organizations/[slug]/decisions/[decisionId]/history`
+- Logs are accessible via `GET /api/[slug]/decisions/[decisionId]/history`
 - Only organization members can access decision history
 - Logs are displayed in reverse chronological order (most recent first)
 
@@ -625,7 +628,7 @@ CONSENT decisions follow a multi-stage sociocratic process implemented with acco
 - List of questions with creator's answers
 - "Répondre" button for creator on unanswered questions
 
-**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/clarifications`
+**API**: `POST /api/[slug]/decisions/[decisionId]/clarifications`
 
 #### Stage 2: AVIS (Partage d'avis) / CLARIFAVIS (Combined)
 
@@ -644,7 +647,7 @@ CONSENT decisions follow a multi-stage sociocratic process implemented with acco
 - Submit button "Enregistrer mon avis" (or "Modifier mon avis" if existing)
 - List of all opinions with participant names and timestamps
 
-**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/opinions`
+**API**: `POST /api/[slug]/decisions/[decisionId]/opinions`
 
 #### Stage 3: AMENDEMENTS (Amendements)
 
@@ -664,9 +667,9 @@ CONSENT decisions follow a multi-stage sociocratic process implemented with acco
 - **After stage ends**: Display shows what creator did with timestamp and proposal text
 
 **APIs**:
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-amend`
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-keep`
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/consent-withdraw`
+- `PATCH /api/[slug]/decisions/[decisionId]/consent-amend`
+- `PATCH /api/[slug]/decisions/[decisionId]/consent-keep`
+- `PATCH /api/[slug]/decisions/[decisionId]/consent-withdraw`
 
 **History tracking**:
 - KEPT: "JJ/MM/AAAA HH:MM - [Creator name] a gardé sa proposition initiale que voici : [initial proposal]"
@@ -716,7 +719,7 @@ if (allObjections.length === allParticipants) {
 }
 ```
 
-**API**: `POST /api/organizations/[slug]/decisions/[decisionId]/consent-objections`
+**API**: `POST /api/[slug]/decisions/[decisionId]/consent-objections`
 
 #### Stage 5: TERMINEE (Décision finalisée)
 
@@ -733,7 +736,7 @@ if (allObjections.length === allParticipants) {
 
 #### Stage-Specific Participation Tracking
 
-**Sidebar & Dashboard** (`/api/organizations/[slug]/decisions/sidebar`, `DashboardContent.tsx`):
+**Sidebar & Dashboard** (`/api/[slug]/decisions/sidebar`, `DashboardContent.tsx`):
 - **CLARIFICATIONS**: `hasVoted = clarificationQuestions.length > 0`
 - **CLARIFAVIS**: `hasVoted = clarificationQuestions.length > 0 || opinionResponses.length > 0`
 - **AVIS**: `hasVoted = opinionResponses.length > 0`
@@ -762,22 +765,22 @@ consentAmendmentAction: 'KEPT' | 'AMENDED' | 'WITHDRAWN' | null
 #### Key Files
 
 **Frontend (Accordion UI):**
-- `app/organizations/[slug]/decisions/[decisionId]/vote/ConsentAccordionStages.tsx` - Main accordion component
-- `app/organizations/[slug]/decisions/[decisionId]/vote/ConsentVoteClient.tsx` - Parent with state management
+- `app/[slug]/decisions/[decisionId]/vote/ConsentAccordionStages.tsx` - Main accordion component
+- `app/[slug]/decisions/[decisionId]/vote/ConsentVoteClient.tsx` - Parent with state management
 - `lib/consent-logic.ts` - Stage timing calculations
 
 **Backend (APIs):**
-- `app/api/organizations/[slug]/decisions/[decisionId]/clarifications/route.ts` - Questions
-- `app/api/organizations/[slug]/decisions/[decisionId]/opinions/route.ts` - Opinions
-- `app/api/organizations/[slug]/decisions/[decisionId]/consent-amend/route.ts` - Amend proposal
-- `app/api/organizations/[slug]/decisions/[decisionId]/consent-keep/route.ts` - Keep proposal
-- `app/api/organizations/[slug]/decisions/[decisionId]/consent-withdraw/route.ts` - Withdraw proposal
-- `app/api/organizations/[slug]/decisions/[decisionId]/consent-objections/route.ts` - Positions + auto-close
+- `app/api/[slug]/decisions/[decisionId]/clarifications/route.ts` - Questions
+- `app/api/[slug]/decisions/[decisionId]/opinions/route.ts` - Opinions
+- `app/api/[slug]/decisions/[decisionId]/consent-amend/route.ts` - Amend proposal
+- `app/api/[slug]/decisions/[decisionId]/consent-keep/route.ts` - Keep proposal
+- `app/api/[slug]/decisions/[decisionId]/consent-withdraw/route.ts` - Withdraw proposal
+- `app/api/[slug]/decisions/[decisionId]/consent-objections/route.ts` - Positions + auto-close
 
 **Participation tracking:**
-- `app/api/organizations/[slug]/decisions/sidebar/route.ts` - Sidebar with stage-specific hasVoted
+- `app/api/[slug]/decisions/sidebar/route.ts` - Sidebar with stage-specific hasVoted
 - `components/dashboard/DashboardContent.tsx` - Dashboard with stage-specific participation logic
-- `app/organizations/[slug]/page.tsx` - Server-side initial data load
+- `app/[slug]/page.tsx` - Server-side initial data load
 
 ### Authentication Flow
 
@@ -843,7 +846,7 @@ The anonymous voting system allows organizations to create public decision votes
    - A `publicToken` is automatically generated for security
    - No participants are added to the decision (unlike INVITED mode)
 
-2. **Sharing**: After creation, user is redirected to `/organizations/[slug]/decisions/[decisionId]/share`
+2. **Sharing**: After creation, user is redirected to `/[slug]/decisions/[decisionId]/share`
    - Page displays the public vote URL: `/public-vote/{organizationSlug}/{publicSlug}`
    - Provides a QR code for easy sharing (generated with qrcode.react)
    - Shows real-time statistics (number of votes received)
@@ -884,13 +887,13 @@ The anonymous voting system allows organizations to create public decision votes
 ```
 
 **API endpoints:**
-- `GET /api/organizations/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
+- `GET /api/[slug]/decisions/check-public-slug?slug=xxx` - Check slug availability
 - `GET /api/public-vote/[orgSlug]/[publicSlug]` - Fetch decision data for public voting (optional)
 - `POST /api/public-vote/[orgSlug]/[publicSlug]` - Submit anonymous vote
-- `GET /api/organizations/[slug]/decisions/[decisionId]/stats` - Real-time statistics (creator only)
-- `PATCH /api/organizations/[slug]/decisions/[decisionId]/close` - Manually close decision (creator only)
+- `GET /api/[slug]/decisions/[decisionId]/stats` - Real-time statistics (creator only)
+- `PATCH /api/[slug]/decisions/[decisionId]/close` - Manually close decision (creator only)
 
-**Share page features** (`/organizations/[slug]/decisions/[decisionId]/share`):
+**Share page features** (`/[slug]/decisions/[decisionId]/share`):
 - Display public vote URL with copy button
 - Generate and download QR code
 - Real-time vote count (refreshes every 10 seconds)
@@ -1008,15 +1011,86 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Can only be edited once the voting is finished (deadline reached OR all participants have voted)
 - Displayed at the end of the results page
 - Supports plain text with preserved line breaks (Markdown rendering can be added later)
-- Managed via dedicated endpoint: `PATCH /api/organizations/[slug]/decisions/[decisionId]/conclusion`
+- Managed via dedicated endpoint: `PATCH /api/[slug]/decisions/[decisionId]/conclusion`
 - The conclusion section is only visible in the admin page once voting is finished
+
+### Automatic Deadline Checking System
+
+**Overview:**
+The application includes an automated system to close decisions when their deadline (`endDate`) is reached. This system runs via a cron job that calls an API endpoint periodically.
+
+**API Endpoint:**
+- **Route**: `GET /api/cron/check-deadlines`
+- **Security**: Requires `Authorization: Bearer <CRON_SECRET>` header
+- **Function**: Finds all `OPEN` decisions with `endDate < now` and closes them automatically
+
+**Configuration:**
+See `CRON_SETUP.md` for detailed setup instructions for different environments (Linux cron, Vercel, node-cron, etc.)
+
+**Closure Logic by Decision Type:**
+
+1. **CONSENSUS**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if all votes are `AGREE`, otherwise `REJECTED`
+   - Result → `REJECTED` if no votes
+
+2. **CONSENT**:
+   - Status → `CLOSED`
+   - Stage → `TERMINEE`
+   - Result → `APPROVED` if no objections (all `NO_OBJECTION` or `NO_POSITION`)
+   - Result → `BLOCKED` if at least one `OBJECTION`
+   - Result → `REJECTED` if no participants submitted positions
+
+3. **MAJORITY, SUPERMAJORITY, NUANCED_VOTE**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if at least one vote exists
+   - Result → `REJECTED` if no votes
+
+4. **ADVISORY**:
+   - Status → `CLOSED`
+   - Result → `APPROVED` if at least one vote exists
+   - Result → `REJECTED` if no votes
+
+5. **ADVICE_SOLICITATION**:
+   - **No automatic closure** - Decision remains `OPEN`
+   - Creator controls when to close/validate manually
+
+**Closure Metadata:**
+When a decision is automatically closed, metadata is stored in `Decision.metadata`:
+```json
+{
+  "reason": "deadline_reached",
+  "closedAt": "2025-01-19T10:30:00.000Z",
+  "allVoted": false
+}
+```
+
+**Display on Results Page:**
+A message is displayed at the top of the results page if:
+- `metadata.reason === 'deadline_reached'` AND
+- `metadata.allVoted === false` OR
+- (For CONSENSUS) there are disagreements
+
+Message format: `"JJ/MM/AAAA - HH:MM - Le vote a été fermé car la date limite a été atteinte avant que tout le monde ne vote."`
+
+**Event Logging:**
+All automatic closures are logged in `DecisionLog` with:
+- `eventType`: `'CLOSED'`
+- `metadata`: `{ reason: 'deadline_reached', automaticClosure: true, result, allVoted }`
+
+**Setup Requirements:**
+1. Set `CRON_SECRET` environment variable
+2. Configure cron job to call endpoint every 15 minutes (recommended)
+3. Ensure cron passes the secret in `Authorization` header
+
+For complete setup instructions, see `CRON_SETUP.md`.
 
 ### Decision Creation Flow (Consolidated on `/new`)
 
 **IMPORTANT CHANGE**: The entire decision creation and configuration process now happens on the `/new` page in a single consolidated form. The decision is created AND launched with participants in one action.
 
 **New Flow:**
-1. User fills out the complete decision form on `/organizations/[slug]/decisions/new`
+1. User fills out the complete decision form on `/[slug]/decisions/new`
 2. Form includes ALL configuration in one page:
    - Basic info (title, description, decision type, voting mode)
    - Mode-specific fields:
@@ -1048,9 +1122,9 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 3. User clicks "Lancer la décision" (not "Créer et configurer" anymore)
 4. API creates decision with `status='OPEN'` + creates all participants + sends emails to external participants
 5. Redirection after launch:
-   - **PUBLIC_LINK mode** → `/organizations/[slug]/decisions/[id]/share` (QR code + link)
-   - **INVITED mode** (creator is participant) → `/organizations/[slug]/decisions/[id]/vote`
-   - **INVITED mode** (creator not participant) → `/organizations/[slug]/decisions/[id]/admin`
+   - **PUBLIC_LINK mode** → `/[slug]/decisions/[id]/share` (QR code + link)
+   - **INVITED mode** (creator is participant) → `/[slug]/decisions/[id]/vote`
+   - **INVITED mode** (creator not participant) → `/[slug]/decisions/[id]/admin`
 
 **Draft System (Manual Save Only):**
 - **No auto-save**: Removed to simplify the flow
@@ -1060,11 +1134,11 @@ When `decisionType` is 'MAJORITY', decisions use a proposal-based voting system:
 - Drafts accessible from dashboard → "Continuer" reopens `/new` with pre-filled data (except participants)
 
 **API Endpoint Changes:**
-- `GET /api/organizations/[slug]/members` now includes team memberships:
+- `GET /api/[slug]/members` now includes team memberships:
   - Returns `members` with `teamMembers` relation populated
   - Each member includes `teamMembers: Array<{ team: { id, name } }>`
   - Used by `/new` page to build hierarchical team/member selection UI
-- `POST /api/organizations/[slug]/decisions` now accepts:
+- `POST /api/[slug]/decisions` now accepts:
   - `launch: boolean` flag (default: false)
   - `teamIds: string[]` (team IDs to invite)
   - `userIds: string[]` (user IDs to invite)
@@ -1183,7 +1257,7 @@ Currently used in: PUBLIC_LINK vote submission to ensure vote + IP log are creat
 
 Example:
 ```
-app/organizations/[slug]/decisions/[decisionId]/vote/
+app/[slug]/decisions/[decisionId]/vote/
 ├── page.tsx              # Server: Fetches decision data, checks auth
 └── VotePageClient.tsx    # Client: Interactive voting form
 ```
@@ -1273,15 +1347,15 @@ When onboarding to this codebase or debugging complex issues, read these files i
 9. `lib/email.ts` - Email system with Resend fallback
 
 **API Patterns (Examples):**
-10. `app/api/organizations/[slug]/decisions/route.ts` - Decision creation and pagination (GET supports ?skip=0&take=20)
-11. `app/api/organizations/[slug]/decisions/[decisionId]/vote/route.ts` - Authenticated vote submission for all decision types
+10. `app/api/[slug]/decisions/route.ts` - Decision creation and pagination (GET supports ?skip=0&take=20)
+11. `app/api/[slug]/decisions/[decisionId]/vote/route.ts` - Authenticated vote submission for all decision types
 12. `app/api/public-vote/[orgSlug]/[publicSlug]/route.ts` - Anonymous voting with IP hashing and transactions
 13. `app/api/vote/[token]/route.ts` - External participant token-based voting (guest access)
 
 **UI Patterns (Examples):**
 14. `components/providers/` - All context providers (DarkMode, Theme, Session, SidebarRefresh)
-15. `app/organizations/[slug]/decisions/new/page.tsx` - Draft auto-save pattern
-16. `app/organizations/[slug]/decisions/[decisionId]/vote/VotePageClient.tsx` - Vote form with sidebar refresh
+15. `app/[slug]/decisions/new/page.tsx` - Draft auto-save pattern
+16. `app/[slug]/decisions/[decisionId]/vote/VotePageClient.tsx` - Vote form with sidebar refresh
 
 **Documentation:**
 17. `DECISIONLOG_ANALYSIS.md` - Audit trail coverage analysis and gaps

@@ -54,10 +54,12 @@ import {
   Menu as MenuIcon,
   ExpandMore,
   ExpandLess,
+  BugReport,
 } from "@mui/icons-material"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { useSidebarRefresh } from "@/components/providers/SidebarRefreshProvider"
+import FeedbackModal from "@/components/feedback/FeedbackModal"
 
 const drawerWidth = 280
 
@@ -165,6 +167,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   const { refreshTrigger } = useSidebarRefresh()
   const decisionsContainerRef = useRef<HTMLDivElement>(null)
   const [maxDecisions, setMaxDecisions] = useState({ ongoing: 10, completed: 10 })
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
 
   // Refs pour le debounce et éviter les appels redondants
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -219,7 +222,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
       setDecisionsLoading(true)
 
       try {
-        const response = await fetch(`/api/organizations/${organization}/decisions/sidebar`)
+        const response = await fetch(`/api/${organization}/decisions/sidebar`)
         const data = await response.json()
 
         if (response.ok) {
@@ -305,12 +308,12 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
     const selectedSlug = event.target.value
 
     if (selectedSlug === "__new__") {
-      router.push("/organizations/new")
+      router.push("/create-organization")
       return
     }
 
     setOrganization(selectedSlug)
-    router.push(`/organizations/${selectedSlug}`)
+    router.push(`/${selectedSlug}`)
   }
 
   const handleOrgMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -323,10 +326,10 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
   const handleOrgSelect = (slug: string) => {
     if (slug === "__new__") {
-      router.push("/organizations/new")
+      router.push("/create-organization")
     } else {
       setOrganization(slug)
-      router.push(`/organizations/${slug}`)
+      router.push(`/${slug}`)
     }
     handleOrgMenuClose()
   }
@@ -350,14 +353,14 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
   const handleOrganizationSettings = () => {
     if (organization) {
-      router.push(`/organizations/${organization}/settings`)
+      router.push(`/${organization}/settings`)
     }
     handleSettingsMenuClose()
   }
 
   const handleMembers = () => {
     if (organization) {
-      router.push(`/organizations/${organization}/members`)
+      router.push(`/${organization}/members`)
     }
     handleSettingsMenuClose()
   }
@@ -369,19 +372,19 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
   const handleTeams = () => {
     if (organization) {
-      router.push(`/organizations/${organization}/teams`)
+      router.push(`/${organization}/teams`)
     }
   }
 
   const handleNewDecision = () => {
     if (organization) {
-      router.push(`/organizations/${organization}/decisions/new`)
+      router.push(`/${organization}/decisions/new`)
     }
   }
 
   const handleDashboard = () => {
     if (organization) {
-      router.push(`/organizations/${organization}`)
+      router.push(`/${organization}`)
     }
   }
 
@@ -559,6 +562,25 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
               <Divider sx={{ my: 1 }} />
 
+              <Tooltip title="aidez-nous à améliorer l'application" placement="right">
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => {
+                      setFeedbackModalOpen(true)
+                      closeMobileDrawer()
+                    }}
+                    sx={{
+                      color: "success.main",
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit" }}>
+                      <BugReport />
+                    </ListItemIcon>
+                    <ListItemText primary="Bugs & Feedback" />
+                  </ListItemButton>
+                </ListItem>
+              </Tooltip>
+
               <ListItem disablePadding>
                 <ListItemButton onClick={closeMobileDrawer}>
                   <ListItemIcon>
@@ -637,6 +659,13 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             </List>
           </Box>
         </Drawer>
+
+        {/* Modale de feedback */}
+        <FeedbackModal
+          open={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          organizationSlug={organization}
+        />
       </>
     )
   }
@@ -674,7 +703,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
               backgroundColor: "action.hover",
             },
           }}
-          onClick={() => organization && router.push(`/organizations/${organization}`)}
+          onClick={() => organization && router.push(`/${organization}`)}
         >
           {open ? (
             <>
@@ -725,6 +754,11 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
             <Tooltip title="Nouvelle décision" placement="right">
               <IconButton onClick={handleNewDecision} disabled={!organization}>
                 <Add />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="aidez-nous à améliorer l'application" placement="right">
+              <IconButton onClick={() => setFeedbackModalOpen(true)} sx={{ color: "success.main" }}>
+                <BugReport />
               </IconButton>
             </Tooltip>
             <Tooltip title="Rechercher" placement="right">
@@ -870,7 +904,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                       cursor: "pointer",
                       "&:hover": { color: "primary.main" }
                     }}
-                    onClick={() => router.push(`/organizations/${organization}?status=DRAFT`)}
+                    onClick={() => router.push(`/${organization}?status=DRAFT`)}
                   >
                     <span>Brouillons</span>
                     <IconButton size="small" sx={{ p: 0 }}>
@@ -895,7 +929,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                     cursor: "pointer",
                     "&:hover": { color: "primary.main" }
                   }}
-                  onClick={() => router.push(`/organizations/${organization}?status=OPEN`)}
+                  onClick={() => router.push(`/${organization}?status=OPEN`)}
                 >
                   <span>En cours</span>
                   {decisions.ongoingTotal > maxDecisions.ongoing && (
@@ -918,8 +952,8 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                       {decisions.ongoing.slice(0, maxDecisions.ongoing).map((decision) => {
                         const { Icon, color } = getOngoingIcon(decision)
                         const targetUrl = decision.votingMode === 'PUBLIC_LINK' && decision.isCreator
-                          ? `/organizations/${organization}/decisions/${decision.id}/share`
-                          : `/organizations/${organization}/decisions/${decision.id}/vote`
+                          ? `/${organization}/decisions/${decision.id}/share`
+                          : `/${organization}/decisions/${decision.id}/vote`
 
                         return (
                           <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
@@ -967,7 +1001,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                     cursor: "pointer",
                     "&:hover": { color: "primary.main" }
                   }}
-                  onClick={() => router.push(`/organizations/${organization}?status=CLOSED`)}
+                  onClick={() => router.push(`/${organization}?status=CLOSED`)}
                 >
                   <span>Terminées</span>
                   {decisions.completedTotal > maxDecisions.completed && (
@@ -992,7 +1026,7 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
                         return (
                           <ListItem key={decision.id} disablePadding sx={{ mb: 0.25 }}>
                             <ListItemButton
-                              onClick={() => router.push(`/organizations/${organization}/decisions/${decision.id}/results`)}
+                              onClick={() => router.push(`/${organization}/decisions/${decision.id}/results`)}
                               sx={{
                                 py: 0.5,
                                 px: 1,
@@ -1023,8 +1057,21 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
 
             <Divider />
 
-            {/* Rechercher et Paramètres */}
+            {/* Bugs & Feedback, Rechercher et Paramètres */}
             <List>
+              <Tooltip title="aidez-nous à améliorer l'application" placement="right">
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => setFeedbackModalOpen(true)}
+                    sx={{ color: "success.main" }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit" }}>
+                      <BugReport />
+                    </ListItemIcon>
+                    <ListItemText primary="Bugs & Feedback" />
+                  </ListItemButton>
+                </ListItem>
+              </Tooltip>
               <ListItem disablePadding>
                 <ListItemButton>
                   <ListItemIcon>
@@ -1088,6 +1135,13 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           </MenuItem>
         </Menu>
       </Box>
+
+      {/* Modale de feedback */}
+      <FeedbackModal
+        open={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        organizationSlug={organization}
+      />
     </Drawer>
   )
 }
