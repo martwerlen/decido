@@ -424,6 +424,7 @@ export default function NewDecisionPage({
               publicSlug: decision.publicSlug || '',
               nuancedScale: decision.nuancedScale || '5_LEVELS',
               nuancedWinnerCount: decision.nuancedWinnerCount || 1,
+              consentStepMode: decision.consentStepMode || 'DISTINCT',
             });
 
             // Charger les propositions si MAJORITY
