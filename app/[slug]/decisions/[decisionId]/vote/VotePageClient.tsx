@@ -11,6 +11,7 @@ import {
   getMentionLabel,
   getMentionColor,
   NuancedScaleLabels,
+  NuancedScale,
 } from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
@@ -617,7 +618,8 @@ export default function VotePageClient({
 
           <div className="space-y-4 mb-6">
             {decision.nuancedProposals?.map((proposal) => {
-              const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+              const scale = (decision.nuancedScale || '5_LEVELS') as NuancedScale;
+              const mentions = getMentionsForScale(scale);
               const selectedMention = nuancedVotes[proposal.id];
 
               return (
@@ -629,8 +631,8 @@ export default function VotePageClient({
 
                   <div className="flex flex-wrap gap-2">
                     {mentions.map((mention) => {
-                      const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
-                      const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                      const label = getMentionLabel(scale, mention);
+                      const color = getMentionColor(scale, mention);
                       const isSelected = selectedMention === mention;
 
                       return (
