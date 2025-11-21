@@ -843,7 +843,7 @@ export default function ResultsPageClient({
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
                 <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'success.light', border: 1, borderColor: 'success.main' }}>
                   <Typography variant="h3" fontWeight="bold" color="success.dark">{agreeCount}</Typography>
-                  <Typography variant="body2" color="success.dark">D'accord</Typography>
+                  <Typography variant="body2" color="success.dark">D&apos;accord</Typography>
                 </Box>
                 <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
                   <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
@@ -867,7 +867,7 @@ export default function ResultsPageClient({
                       Consensus non atteint
                     </Typography>
                     <Typography variant="body2" color="warning.dark">
-                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d&apos;accord
+                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n&apos;est'} pas d&apos;accord
                     </Typography>
                   </Box>
                 )}
@@ -883,7 +883,7 @@ export default function ResultsPageClient({
 
               {decision.status === 'OPEN' && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
+                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent &quot;d&apos;accord&quot;.
                 </Alert>
               )}
             </Box>

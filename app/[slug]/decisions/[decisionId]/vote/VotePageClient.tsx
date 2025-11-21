@@ -826,7 +826,7 @@ export default function VotePageClient({
                   fullWidth
                   sx={{ py: 2, fontWeight: 'medium' }}
                 >
-                  ✓ D'accord
+                  ✓ D&apos;accord
                 </Button>
                 <Button
                   onClick={() => handleVoteConsensus('DISAGREE')}
@@ -848,7 +848,7 @@ export default function VotePageClient({
             {hasVoted && (
               <Typography variant="body2" sx={{ textAlign: 'center', mt: 1.5 }}>
                 Votre vote actuel : {consensusVote === 'AGREE' ? (
-                  <Typography component="span" color="success.main" fontWeight="medium">✓ D'accord</Typography>
+                  <Typography component="span" color="success.main" fontWeight="medium">✓ D&apos;accord</Typography>
                 ) : (
                   <Typography component="span" color="error.main" fontWeight="medium">✗ Pas d&apos;accord</Typography>
                 )}

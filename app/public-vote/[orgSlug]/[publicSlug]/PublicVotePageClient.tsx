@@ -279,10 +279,10 @@ export default function PublicVotePageClient({
                           label={
                             <Box>
                               <Typography variant="body1" fontWeight="500">
-                                D'accord
+                                D&apos;accord
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                J'approuve cette proposition
+                                J&apos;approuve cette proposition
                               </Typography>
                             </Box>
                           }
