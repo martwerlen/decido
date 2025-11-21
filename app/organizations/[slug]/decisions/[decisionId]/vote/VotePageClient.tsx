@@ -169,7 +169,7 @@ export default function VotePageClient({
   }
   const [nuancedVotes, setNuancedVotes] = useState<Record<string, string>>(initialNuancedVotes);
 
-  // Sollicitation d'avis
+  // Sollicitation d&apos;avis
   const [opinionContent, setOpinionContent] = useState(initialUserOpinion?.content || '');
   const [allOpinions, setAllOpinions] = useState(initialAllOpinions || []);
 
@@ -231,7 +231,7 @@ export default function VotePageClient({
     }
   };
 
-  // Vote consensus (d'accord/pas d'accord)
+  // Vote consensus (d'accord/pas d&apos;accord)
   const handleVoteConsensus = async (value: 'AGREE' | 'DISAGREE') => {
     setLoading(true);
     setError('');
@@ -458,12 +458,12 @@ export default function VotePageClient({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Bouton d'historique en haut à droite */}
+      {/* Bouton d&apos;historique en haut à droite */}
       <div className="fixed top-4 right-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 
-      {/* Panneau d'historique */}
+      {/* Panneau d&apos;historique */}
       <HistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
@@ -521,7 +521,7 @@ export default function VotePageClient({
       {!isOpen && (
         <div className="bg-yellow-50 border border-yellow-200 px-4 py-3 rounded mb-4">
           <p className="text-yellow-800">
-            Cette décision n'est plus ouverte au vote.{' '}
+            Cette décision n&apos;est plus ouverte au vote.{' '}
             <Link
               href={`/organizations/${slug}/decisions/${decision.id}/results`}
               className="underline"
@@ -812,7 +812,7 @@ export default function VotePageClient({
             )}
           </div>
 
-          {/* Vote d'accord/pas d'accord */}
+          {/* Vote d&apos;accord/pas d&apos;accord */}
           <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3 }}>
             <h2 className="text-xl font-semibold mb-4">Votre position</h2>
 
@@ -836,7 +836,7 @@ export default function VotePageClient({
                   fullWidth
                   sx={{ py: 2, fontWeight: 'medium' }}
                 >
-                  ✗ Pas d'accord
+                  ✗ Pas d&apos;accord
                 </Button>
               </Box>
             ) : (
@@ -850,7 +850,7 @@ export default function VotePageClient({
                 Votre vote actuel : {consensusVote === 'AGREE' ? (
                   <Typography component="span" color="success.main" fontWeight="medium">✓ D'accord</Typography>
                 ) : (
-                  <Typography component="span" color="error.main" fontWeight="medium">✗ Pas d'accord</Typography>
+                  <Typography component="span" color="error.main" fontWeight="medium">✗ Pas d&apos;accord</Typography>
                 )}
               </Typography>
             )}
@@ -858,7 +858,7 @@ export default function VotePageClient({
         </>
       )}
 
-      {/* Sollicitation d'avis */}
+      {/* Sollicitation d&apos;avis */}
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <>
           {/* Proposition de décision */}
@@ -918,7 +918,7 @@ export default function VotePageClient({
             </div>
           )}
 
-          {/* Formulaire d'avis (uniquement pour les participants sollicités) */}
+          {/* Formulaire d&apos;avis (uniquement pour les participants sollicités) */}
           {isSolicited && isOpen && (
             <div className="bg-white border rounded-lg p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4">
@@ -950,7 +950,7 @@ export default function VotePageClient({
           {!isSolicited && isOpen && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-gray-700">
-                ℹ️ Vous n'êtes pas sollicité pour donner votre avis sur cette décision, mais vous pouvez la consulter et ajouter des commentaires ci-dessous.
+                ℹ️ Vous n&apos;êtes pas sollicité pour donner votre avis sur cette décision, mais vous pouvez la consulter et ajouter des commentaires ci-dessous.
               </p>
             </div>
           )}

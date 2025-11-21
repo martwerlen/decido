@@ -30,7 +30,7 @@ export default function SharePageClient({
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [closing, setClosing] = useState(false);
 
-  // Construire l'URL publique
+  // Construire l&apos;URL publique
   const baseUrl = typeof window !== 'undefined'
     ? window.location.origin
     : process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -239,7 +239,7 @@ export default function SharePageClient({
           onClick={() => router.push(`/organizations/${organizationSlug}`)}
           className="text-blue-600 hover:underline"
         >
-          ← Retour à l'organisation
+          ← Retour à l&apos;organisation
         </button>
       </div>
     </div>

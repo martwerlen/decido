@@ -68,16 +68,16 @@ export default function DecisionAdminClient({
 
   const isOpen = decision.status === 'OPEN';
 
-  // Vérifier si la décision est terminée (pour permettre l'ajout d'une conclusion)
+  // Vérifier si la décision est terminée (pour permettre l&apos;ajout d&apos;une conclusion)
   const now = new Date();
   const isDeadlinePassed = decision.endDate ? new Date(decision.endDate) <= now : false;
   const allParticipantsVoted = decision.participants.every((p) => p.hasVoted);
   const isVotingFinished = isDeadlinePassed || allParticipantsVoted;
 
-  // Calculer combien d'avis ont été donnés (pour ADVICE_SOLICITATION)
+  // Calculer combien d&apos;avis ont été donnés (pour ADVICE_SOLICITATION)
   const opinionsReceived = decision.participants.filter(p => p.hasVoted).length;
 
-  // Mettre à jour la proposition amendée (CONSENSUS) ou l'intention (ADVICE_SOLICITATION)
+  // Mettre à jour la proposition amendée (CONSENSUS) ou l&apos;intention (ADVICE_SOLICITATION)
   const handleUpdateProposal = async () => {
     setLoading(true);
     setError('');
@@ -293,7 +293,7 @@ export default function DecisionAdminClient({
 
           {isOpen && opinionsReceived === 0 && (
             <Alert severity="warning" sx={{ mb: 1.5 }}>
-              ⚠️ Vous pouvez modifier votre intention uniquement tant qu'aucun avis n'a été donné.
+              ⚠️ Vous pouvez modifier votre intention uniquement tant qu&apos;aucun avis n&apos;a été donné.
             </Alert>
           )}
 
@@ -397,7 +397,7 @@ export default function DecisionAdminClient({
                       q => q.questionerId === participantId
                     ).length || 0;
 
-                    // Récupérer l'objection
+                    // Récupérer l&apos;objection
                     const objection = consentObjections?.find(
                       obj => obj.userId === participantId
                     );
@@ -579,7 +579,7 @@ export default function DecisionAdminClient({
 
       {isOpen && decision.decisionType === 'ADVICE_SOLICITATION' && (
         <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="body2" fontWeight="medium" gutterBottom>Statut de la sollicitation d'avis :</Typography>
+          <Typography variant="body2" fontWeight="medium" gutterBottom>Statut de la sollicitation d&apos;avis :</Typography>
           <ul className="text-sm space-y-1">
             <li>• {opinionsReceived} avis reçu{opinionsReceived > 1 ? 's' : ''} sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}</li>
             {opinionsReceived < decision.participants.length && (

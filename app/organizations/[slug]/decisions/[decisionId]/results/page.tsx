@@ -17,7 +17,7 @@ export default async function ResultsPage({
 
   const { slug, decisionId } = await params;
 
-  // Récupérer l'organisation par son slug
+  // Récupérer l&apos;organisation par son slug
   const organization = await prisma.organization.findUnique({
     where: { slug },
   });
@@ -235,7 +235,7 @@ export default async function ResultsPage({
     }
   }
 
-  // Vérifier si l'utilisateur peut voir les résultats
+  // Vérifier si l&apos;utilisateur peut voir les résultats
   // Pour PUBLIC_LINK : le créateur peut toujours voir les résultats (suivi en temps réel)
   // Pour CONSENSUS : accès libre à tout moment
   // Pour CONSENT : accès libre à tout moment
@@ -257,7 +257,7 @@ export default async function ResultsPage({
             Résultats non disponibles
           </h2>
           <p className="text-yellow-700">
-            Les résultats du vote à la majorité ne sont visibles qu'une fois le vote terminé
+            Les résultats du vote à la majorité ne sont visibles qu&apos;une fois le vote terminé
             (date limite atteinte ou tous les participants ont voté).
           </p>
           <div className="mt-4">
