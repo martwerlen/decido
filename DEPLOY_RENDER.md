@@ -1,468 +1,267 @@
-# 🚀 Guide de déploiement sur Render
+# Déploiement de Decidoo sur Render.com
 
-Ce guide vous accompagne pas à pas pour déployer Decidoo sur Render avec PostgreSQL et les cron jobs automatiques.
+Ce guide décrit comment déployer l'application Decidoo sur Render.com avec PostgreSQL et des tâches cron automatisées.
 
----
-
-## 📋 Prérequis
-
-- [x] Compte GitHub avec le repository Decidoo
-- [x] Compte Render (gratuit) : https://render.com
-- [ ] Compte Resend pour les emails (optionnel pour tester) : https://resend.com
-- [ ] 30 minutes de temps disponible
-
----
-
-## 🎯 Architecture finale
+## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│  Render Web Service (Next.js)          │
-│  URL: https://decidoo-app.onrender.com │
-└─────────────────────────────────────────┘
-              ↓ connexion
-┌─────────────────────────────────────────┐
-│  Render PostgreSQL Database             │
-│  decidoo-db (gratuit ou $7/mois)        │
-└─────────────────────────────────────────┘
-              ↓ appels API
-┌─────────────────────────────────────────┐
-│  Render Cron Jobs (4 services)          │
-│  - Fermer décisions expirées (1h)       │
-│  - Envoyer rappels (9h/jour)            │
-│  - Nettoyer tokens (2h/jour)            │
-│  - Vérifier stades CONSENT (15min)      │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                         Render.com                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐          ┌──────────────────┐        │
+│  │   Web Service   │──────────│   PostgreSQL     │        │
+│  │   (Next.js)     │          │    Database      │        │
+│  │                 │          │                  │        │
+│  │  Port: 10000    │          │  decidoo-db      │        │
+│  │  Health: /api/  │          │                  │        │
+│  │         health  │          │                  │        │
+│  └─────────────────┘          └──────────────────┘        │
+│         ▲                                                   │
+│         │                                                   │
+│         │ Appelle les endpoints API                        │
+│         │                                                   │
+│  ┌──────┴──────────────────────────────────────────────┐  │
+│  │             Cron Jobs (4 tâches)                    │  │
+│  ├─────────────────────────────────────────────────────┤  │
+│  │ 1. close-expired-decisions    (toutes les heures)   │  │
+│  │ 2. send-deadline-reminders    (quotidien à 9h UTC)  │  │
+│  │ 3. cleanup-expired-tokens     (quotidien à 2h UTC)  │  │
+│  │ 4. check-consent-stages       (toutes les 15 min)   │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
+## Étapes de déploiement
 
-## 📝 Étape 1 : Préparer le projet
+### 1. Créer un compte Render
 
-### 1.1 Modifier le schema.prisma pour PostgreSQL
+1. Allez sur [render.com](https://render.com)
+2. Créez un compte (gratuit pour commencer)
+3. Connectez votre compte GitHub
 
-**IMPORTANT** : Actuellement, votre schema utilise SQLite. Pour Render, vous devez utiliser PostgreSQL.
+### 2. Créer un Blueprint depuis GitHub
 
-Ouvrez `prisma/schema.prisma` et modifiez la ligne 9 :
+1. Dans le dashboard Render, cliquez sur **"New +"** → **"Blueprint"**
+2. Connectez votre repository GitHub `martwerlen/decido`
+3. Sélectionnez la branche `claude/find-web-hosting-01H9DPrwURLMLBCfbSD4yWxX`
+4. Render détectera automatiquement le fichier `render.yaml`
 
-```prisma
-// AVANT (SQLite - local uniquement)
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
+### 3. Configurer les variables d'environnement
 
-// APRÈS (PostgreSQL - production)
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
+Render générera automatiquement certaines variables, mais vous devez en configurer manuellement :
 
-**💡 Astuce** : Si vous voulez garder SQLite en local et PostgreSQL en prod, vous pouvez :
-1. Créer une branche `production` avec PostgreSQL
-2. OU utiliser des variables d'environnement conditionnelles (plus complexe)
+**À configurer manuellement :**
 
-### 1.2 Vérifier que tous les fichiers sont commités
+| Variable | Valeur | Description |
+|----------|--------|-------------|
+| `NEXTAUTH_URL` | `https://decidoo.onrender.com` | URL de votre application (sera fournie après création) |
+| `RESEND_API_KEY` | Votre clé API Resend | Pour l'envoi d'emails (optionnel en dev) |
 
-```bash
-# Ajouter les nouveaux fichiers
-git add .
+**Générées automatiquement :**
+- `DATABASE_URL` → Connectée à `decidoo-db`
+- `NEXTAUTH_SECRET` → Générée par Render (secret aléatoire)
+- `CRON_SECRET` → Générée par Render (secret aléatoire)
 
-# Vérifier les changements
-git status
+### 4. Déployer le Blueprint
 
-# Commiter
-git commit -m "feat: Add Render deployment configuration with cron jobs"
+1. Cliquez sur **"Apply"** pour créer tous les services
+2. Render créera automatiquement :
+   - 1 Web Service (`decidoo`)
+   - 1 PostgreSQL Database (`decidoo-db`)
+   - 4 Cron Jobs
+3. Le premier déploiement prendra ~5-10 minutes
 
-# Pousser sur GitHub
-git push origin claude/find-web-hosting-01H9DPrwURLMLBCfbSD4yWxX
-```
+### 5. Vérifier le déploiement
 
-**Note** : Si vous n'avez pas encore de branche `main` ou `master`, créez-la :
-```bash
-git checkout -b main
-git push origin main
-```
+Une fois le déploiement terminé :
 
----
+1. **Health check** : Visitez `https://decidoo.onrender.com/api/health`
+   - Devrait retourner `{"status":"ok","database":"connected"}`
 
-## 🗄️ Étape 2 : Créer la base de données PostgreSQL
-
-1. **Aller sur Render** : https://dashboard.render.com
-
-2. **Cliquer sur "New +" → "PostgreSQL"**
-
-3. **Configurer la base de données** :
-   - **Name** : `decidoo-db`
-   - **Database** : `decidoo` (ou laissez par défaut)
-   - **User** : `decidoo` (ou laissez par défaut)
-   - **Region** : **Frankfurt** (Europe)
-   - **Plan** :
-     - **Free** (0€, mais supprimé après 90 jours d'inactivité)
-     - OU **Starter** (7$/mois, recommandé pour la production)
-
-4. **Créer** : Cliquer sur "Create Database"
-
-5. **Attendre** : La création prend 2-3 minutes
-
-6. **Copier l'URL de connexion** :
-   - Une fois créée, aller dans l'onglet "Connect"
-   - Copier l'URL **"Internal Database URL"** (commence par `postgresql://...`)
-   - **⚠️ IMPORTANT** : Gardez cette URL confidentielle !
-
----
-
-## 🌐 Étape 3 : Créer l'application web Next.js
-
-1. **Cliquer sur "New +" → "Web Service"**
-
-2. **Connecter votre repository GitHub** :
-   - Autoriser Render à accéder à votre compte GitHub
-   - Sélectionner le repository `decidoo`
-
-3. **Configurer le service** :
-   - **Name** : `decidoo-app`
-   - **Region** : **Frankfurt**
-   - **Branch** : `main` (ou la branche que vous avez créée)
-   - **Root Directory** : (laisser vide)
-   - **Runtime** : **Node**
-   - **Build Command** :
-     ```bash
-     npm install && npx prisma generate && npm run build
-     ```
-   - **Start Command** :
-     ```bash
-     npm start
-     ```
-   - **Plan** : **Free** (0€, limité à 750h/mois - suffisant pour tester)
-
-4. **NE PAS CLIQUER sur "Create Web Service" encore !**
-
----
-
-## 🔐 Étape 4 : Configurer les variables d'environnement
-
-Toujours sur la page de création du Web Service, descendre jusqu'à **"Environment Variables"** :
-
-### Variables à ajouter :
-
-| Nom | Valeur | Comment l'obtenir |
-|-----|--------|-------------------|
-| `NODE_ENV` | `production` | Valeur fixe |
-| `DATABASE_URL` | `postgresql://...` | URL copiée à l'étape 2 (Internal Database URL) |
-| `NEXTAUTH_URL` | `https://decidoo-app.onrender.com` | Sera votre URL finale (remplacez `decidoo-app` par le nom choisi) |
-| `NEXTAUTH_SECRET` | (cliquer sur "Generate") | Laisser Render générer automatiquement |
-| `CRON_SECRET` | (cliquer sur "Generate") | Laisser Render générer automatiquement |
-| `FROM_EMAIL` | `noreply@decidoo.fr` | Email d'envoi (changez si vous avez votre domaine) |
-| `RESEND_API_KEY` | `re_xxx...` | ⚠️ Optionnel : API key de Resend (voir étape 4.1) |
-
-### 4.1 Obtenir une clé API Resend (optionnel mais recommandé)
-
-Pour envoyer des vrais emails :
-
-1. Créer un compte sur https://resend.com (gratuit, 100 emails/jour)
-2. Aller dans "API Keys"
-3. Créer une nouvelle clé
-4. Copier la clé `re_xxxxx...`
-5. L'ajouter dans `RESEND_API_KEY`
-
-**Sans Resend** : Les emails seront affichés dans les logs uniquement (mode développement).
-
----
-
-## 🚀 Étape 5 : Déployer l'application
-
-1. **Cliquer sur "Create Web Service"**
-
-2. **Attendre le déploiement** :
-   - Render va cloner votre repo
-   - Installer les dépendances
-   - Générer Prisma Client
-   - Builder Next.js
-   - Démarrer l'application
-   - **Durée** : 5-10 minutes
-
-3. **Vérifier les logs** :
-   - Regarder l'onglet "Logs" pour suivre l'avancement
-   - Si tout va bien, vous verrez : `✓ Ready in XXms`
-
-4. **Tester l'application** :
-   - Cliquer sur l'URL fournie (ex: `https://decidoo-app.onrender.com`)
-   - Vous devriez voir la page d'accueil
-
----
-
-## 🗃️ Étape 6 : Initialiser la base de données
-
-Votre base PostgreSQL est vide. Il faut créer les tables.
-
-### 6.1 Via le Shell Render (recommandé)
-
-1. **Aller dans votre Web Service** → onglet "Shell"
-
-2. **Exécuter les migrations Prisma** :
-   ```bash
-   npx prisma migrate deploy
+2. **Logs du web service** :
+   ```
+   ✓ Starting...
+   ✓ Ready on http://0.0.0.0:10000
    ```
 
-3. **Si vous n'avez pas encore de migrations** :
-   ```bash
-   # Créer une migration initiale
-   npx prisma migrate dev --name init
-   ```
+3. **Logs des cron jobs** : Vérifiez qu'ils s'exécutent aux horaires prévus
 
-### 6.2 Ou via votre machine locale
+### 6. Initialiser la base de données
+
+Après le premier déploiement, initialisez le schéma Prisma :
 
 ```bash
-# Définir l'URL de la base Render
-export DATABASE_URL="postgresql://..." # URL copiée à l'étape 2
-
-# Pousser le schema
+# Via le Shell de Render (Web Service → Shell)
 npx prisma db push
+```
 
-# Ou créer une migration
+Ou utilisez Prisma Migrate si vous avez des migrations :
+
+```bash
 npx prisma migrate deploy
 ```
 
-### 6.3 Vérifier que les tables sont créées
+### 7. Mettre à jour NEXTAUTH_URL
 
-```bash
-# Dans le shell Render
-npx prisma studio
+1. Notez l'URL finale de votre application (ex: `https://decidoo.onrender.com`)
+2. Allez dans **Web Service → Environment**
+3. Modifiez `NEXTAUTH_URL` avec l'URL complète
+4. Redémarrez le service
+
+### 8. Tester l'application
+
+1. Visitez votre application : `https://decidoo.onrender.com`
+2. Créez un compte utilisateur
+3. Créez une organisation
+4. Créez une décision de test
+5. Vérifiez que les emails sont envoyés (si `RESEND_API_KEY` configurée)
+
+### 9. Vérifier les cron jobs
+
+Consultez les logs de chaque cron job pour vérifier leur bon fonctionnement :
+
+1. **close-expired-decisions** (toutes les heures)
+   - Log attendu : `✅ Cron terminé: X/Y décision(s) fermée(s)`
+
+2. **send-deadline-reminders** (quotidien à 9h UTC)
+   - Log attendu : `✅ X reminder(s) sent`
+
+3. **cleanup-expired-tokens** (quotidien à 2h UTC)
+   - Log attendu : `✅ Cleanup completed: X invitations, Y tokens, Z logs deleted`
+
+4. **check-consent-stages** (toutes les 15 minutes)
+   - Log attendu : `✅ X décision(s) CONSENT mise(s) à jour`
+
+## Scripts Cron
+
+### 1. `scripts/cron-close-expired.js`
+
+**Fréquence** : Toutes les heures (`0 * * * *`)
+
+**Fonction** : Ferme automatiquement les décisions dont la deadline est passée
+
+**Endpoint** : `POST /api/cron/close-expired-decisions`
+
+**Sécurité** : Authentification via `Authorization: Bearer ${CRON_SECRET}`
+
+### 2. `scripts/cron-send-reminders.js`
+
+**Fréquence** : Quotidien à 9h UTC (`0 9 * * *`)
+
+**Fonction** : Envoie des emails de rappel 24h avant la deadline
+
+**Logique** :
+- Trouve toutes les décisions OPEN avec deadline dans 24h
+- Pour chaque participant qui n'a pas encore voté
+- Envoie un email de rappel
+
+### 3. `scripts/cron-cleanup-tokens.js`
+
+**Fréquence** : Quotidien à 2h UTC (`0 2 * * *`)
+
+**Fonction** : Nettoie les données expirées
+
+**Supprime** :
+- Invitations expirées (> 7 jours)
+- Tokens de vote externes expirés
+- Logs de votes anonymes de décisions fermées
+
+### 4. `scripts/cron-check-consent-stages.js`
+
+**Fréquence** : Toutes les 15 minutes (`*/15 * * * *`)
+
+**Fonction** : Gère la progression des étapes des décisions CONSENT
+
+**Logique** :
+- Trouve toutes les décisions CONSENT actives
+- Calcule l'étape actuelle selon les timings
+- Met à jour `consentCurrentStage` si changement
+- Gère les transitions : CLARIFICATIONS → AVIS → AMENDEMENTS → OBJECTIONS → TERMINEE
+
+## Coûts estimés (Render)
+
+| Service | Plan | Coût mensuel |
+|---------|------|--------------|
+| Web Service | Starter | $7/mois |
+| PostgreSQL | Starter | $7/mois |
+| Cron Jobs (4×) | Gratuit | $0 |
+| **Total** | | **$14/mois** |
+
+**Plan gratuit** : Render offre 750h gratuites/mois pour les Web Services (suffisant pour tester)
+
+## Dépannage
+
+### Erreur : "Cannot find module 'tailwindcss'"
+
+**Solution** : Le build command doit utiliser `npm install --production=false`
+
+```yaml
+buildCommand: npm install --production=false && npx prisma generate && npm run build
 ```
 
-Ou aller sur le dashboard PostgreSQL de Render → onglet "Explore" pour voir les tables.
+### Erreur : "Health check failed"
 
----
+**Causes possibles** :
+1. Base de données non initialisée → Exécutez `npx prisma db push`
+2. `DATABASE_URL` mal configurée → Vérifiez les variables d'environnement
+3. Schéma Prisma non généré → Ajoutez `npx prisma generate` au build command
 
-## ⏰ Étape 7 : Créer les cron jobs
+### Erreur : Cron job échoue avec 401 Unauthorized
 
-Maintenant que l'app fonctionne, ajoutons les cron jobs automatiques.
+**Solution** : Vérifiez que `CRON_SECRET` est bien partagée entre le Web Service et les Cron Jobs
 
-### 7.1 Cron Job 1 : Fermer les décisions expirées
+### Erreur : Emails non envoyés
 
-1. **Cliquer sur "New +" → "Cron Job"**
+**Causes possibles** :
+1. `RESEND_API_KEY` manquante ou invalide
+2. `FROM_EMAIL` non vérifiée dans Resend
+3. Consultez les logs du Web Service pour voir les erreurs Resend
 
-2. **Configurer** :
-   - **Name** : `decidoo-cron-close-expired`
-   - **Region** : **Frankfurt**
-   - **Repository** : Même repo que l'app
-   - **Branch** : `main`
-   - **Build Command** : `npm install`
-   - **Start Command** : `node scripts/cron-close-expired.js`
-   - **Schedule** : `0 * * * *` (toutes les heures)
-   - **Plan** : **Free**
+### Décisions CONSENT ne progressent pas
 
-3. **Variables d'environnement** :
+**Solution** : Vérifiez les logs du cron job `check-consent-stages`
 
-| Nom | Valeur |
-|-----|--------|
-| `APP_URL` | `https://decidoo-app.onrender.com` (URL de votre app) |
-| `CRON_SECRET` | (copier depuis votre Web Service) |
+```bash
+# Devrait s'exécuter toutes les 15 minutes
+⏰ [timestamp] Début de la vérification des étapes CONSENT
+✅ X décision(s) CONSENT mise(s) à jour
+```
 
-4. **Créer le cron job**
+## Mise à jour de l'application
 
-### 7.2 Cron Job 2 : Envoyer des rappels
+Render redéploie automatiquement l'application à chaque push sur la branche configurée.
 
-1. **Cliquer sur "New +" → "Cron Job"**
+**Pour forcer un redéploiement** :
+1. Allez dans **Web Service → Manual Deploy**
+2. Cliquez sur **"Deploy latest commit"**
 
-2. **Configurer** :
-   - **Name** : `decidoo-cron-reminders`
-   - **Region** : **Frankfurt**
-   - **Build Command** : `npm install`
-   - **Start Command** : `node scripts/cron-send-reminders.js`
-   - **Schedule** : `0 9 * * *` (tous les jours à 9h UTC = 10h FR hiver / 11h FR été)
-   - **Plan** : **Free**
+## Surveillance
 
-3. **Variables d'environnement** :
+**Health Check** : Render vérifie automatiquement `/api/health` toutes les 5 minutes
 
-| Nom | Valeur |
-|-----|--------|
-| `DATABASE_URL` | (même URL que l'app) |
-| `RESEND_API_KEY` | (même clé que l'app) |
-| `FROM_EMAIL` | `noreply@decidoo.fr` |
-| `APP_URL` | `https://decidoo-app.onrender.com` |
+**Logs** : Accessibles dans chaque service → **"Logs"**
 
-4. **Créer le cron job**
+**Metrics** : Accessibles dans chaque service → **"Metrics"** (CPU, RAM, requests)
 
-### 7.3 Cron Job 3 : Nettoyer les tokens expirés
+## Migration depuis SQLite
 
-1. **Cliquer sur "New +" → "Cron Job"**
+Le schéma Prisma a été mis à jour pour utiliser PostgreSQL au lieu de SQLite :
 
-2. **Configurer** :
-   - **Name** : `decidoo-cron-cleanup`
-   - **Region** : **Frankfurt**
-   - **Build Command** : `npm install`
-   - **Start Command** : `node scripts/cron-cleanup-tokens.js`
-   - **Schedule** : `0 2 * * *` (tous les jours à 2h du matin UTC)
-   - **Plan** : **Free**
-
-3. **Variables d'environnement** :
-
-| Nom | Valeur |
-|-----|--------|
-| `DATABASE_URL` | (même URL que l'app) |
-
-4. **Créer le cron job**
-
-### 7.4 Cron Job 4 : Vérifier les stades CONSENT
-
-1. **Cliquer sur "New +" → "Cron Job"**
-
-2. **Configurer** :
-   - **Name** : `decidoo-cron-consent-stages`
-   - **Region** : **Frankfurt**
-   - **Build Command** : `npm install`
-   - **Start Command** : `node scripts/cron-check-consent-stages.js`
-   - **Schedule** : `*/15 * * * *` (toutes les 15 minutes)
-   - **Plan** : **Free**
-
-3. **Variables d'environnement** :
-
-| Nom | Valeur |
-|-----|--------|
-| `APP_URL` | `https://decidoo-app.onrender.com` (URL de votre app) |
-| `CRON_SECRET` | (copier depuis votre Web Service) |
-
-4. **Créer le cron job**
-
-**Note importante** : Ce cron job est **essentiel** pour les décisions par consentement. Il gère :
-- Les transitions automatiques entre stades (Questions → Avis → Amendements → Objections)
-- Les notifications email aux participants lors des changements de stade
-- La fermeture automatique si tous les participants consentent
-
----
-
-## 🧪 Étape 8 : Tester l'installation
-
-### 8.1 Vérifier le health check
-
-Aller sur : `https://decidoo-app.onrender.com/api/health`
-
-Vous devriez voir :
-```json
-{
-  "status": "ok",
-  "timestamp": "2025-11-19T...",
-  "database": "connected"
+```prisma
+datasource db {
+  provider = "postgresql"  // était "sqlite"
+  url      = env("DATABASE_URL")
 }
 ```
 
-### 8.2 Créer un compte utilisateur
+**Données de développement** : Non migrées automatiquement. Vous devrez recréer des données de test en production.
 
-1. Aller sur : `https://decidoo-app.onrender.com/auth/signup`
-2. Créer un compte
-3. Se connecter
+## Support
 
-### 8.3 Créer une organisation de test
+**Render Documentation** : https://render.com/docs
 
-1. Créer une organisation
-2. Créer une décision avec une deadline dans 1h
-3. Attendre 1h et vérifier que le cron job la ferme automatiquement
+**Render Community** : https://community.render.com
 
-### 8.4 Vérifier les logs des cron jobs
-
-1. Aller dans chaque cron job sur Render
-2. Onglet "Logs"
-3. Vérifier qu'ils s'exécutent sans erreur
-
----
-
-## 📊 Étape 9 : Monitoring et maintenance
-
-### 9.1 Dashboard Render
-
-Vous pouvez monitorer :
-- **Web Service** : CPU, RAM, requêtes HTTP
-- **PostgreSQL** : Taille de la DB, connexions actives
-- **Cron Jobs** : Dernière exécution, logs, erreurs
-
-### 9.2 Logs en temps réel
-
-Pour suivre les logs de l'application :
-```bash
-# Via l'interface Render
-Dashboard → decidoo-app → Logs (onglet)
-
-# Ou via CLI (si installé)
-render logs -s decidoo-app
-```
-
-### 9.3 Alertes
-
-Render envoie des emails automatiquement si :
-- Le service crash
-- La base de données est pleine
-- Un cron job échoue
-
----
-
-## 💰 Coûts estimés
-
-| Service | Plan | Coût |
-|---------|------|------|
-| **Web Service** | Free | 0€ (750h/mois) |
-| **PostgreSQL** | Free | 0€ (90 jours inactivité = suppression) |
-| **PostgreSQL** | Starter | 7$/mois (~6,50€) |
-| **Cron Jobs (x4)** | Free | 0€ (750h/mois partagées) |
-| **Resend** | Free | 0€ (100 emails/jour) |
-
-**Total pour tester** : 0€/mois (version gratuite complète)
-**Total pour production** : ~7€/mois (PostgreSQL Starter recommandé)
-
----
-
-## 🔧 Dépannage
-
-### Problème : "Error: P1001 Can't reach database server"
-
-**Solution** : Vérifier que `DATABASE_URL` est correcte et que la base est bien créée.
-
-### Problème : "Module not found: @prisma/client"
-
-**Solution** : Ajouter `npx prisma generate` dans le Build Command.
-
-### Problème : "NEXTAUTH_URL is not defined"
-
-**Solution** : Vérifier que `NEXTAUTH_URL` est bien définie dans les variables d'environnement.
-
-### Problème : Le cron job ne s'exécute pas
-
-**Solution** :
-1. Vérifier les logs du cron job
-2. Vérifier que `CRON_SECRET` est identique entre l'app et le cron
-3. Vérifier que `APP_URL` pointe bien vers l'app
-
-### Problème : "Build failed"
-
-**Solution** : Regarder les logs détaillés et vérifier :
-- Que toutes les dépendances sont dans `package.json`
-- Que le build local fonctionne : `npm run build`
-
----
-
-## 🎉 Félicitations !
-
-Votre application Decidoo est maintenant déployée sur Render avec :
-- ✅ Application Next.js en production
-- ✅ Base de données PostgreSQL
-- ✅ 4 cron jobs automatiques
-- ✅ HTTPS activé par défaut
-- ✅ Emails fonctionnels (si Resend configuré)
-
-**Prochaines étapes** :
-1. Configurer un nom de domaine personnalisé (optionnel)
-2. Passer au plan Starter PostgreSQL pour la production
-3. Monitorer l'utilisation et optimiser si nécessaire
-
----
-
-## 📚 Ressources utiles
-
-- Documentation Render : https://render.com/docs
-- Documentation Prisma : https://www.prisma.io/docs
-- Documentation Next.js : https://nextjs.org/docs
-- Support Render : https://render.com/support
-
-Si vous avez des questions, consultez les logs ou contactez le support Render (très réactif).
+**Decidoo Issues** : https://github.com/martwerlen/decido/issues

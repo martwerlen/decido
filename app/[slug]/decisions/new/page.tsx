@@ -139,7 +139,7 @@ export default function NewDecisionPage({
 
     setCheckingSlug(true);
     try {
-      // Construire l'URL avec le paramètre excludeDecisionId si on édite un brouillon
+      // Construire l&apos;URL avec le paramètre excludeDecisionId si on édite un brouillon
       const params = new URLSearchParams({ slug: publicSlugToCheck });
       if (draftId) {
         params.append('excludeDecisionId', draftId);
