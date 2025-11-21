@@ -98,9 +98,14 @@ interface Decision {
   description: string;
   decisionType: string;
   status: string;
+  result: string | null;
   initialProposal: string | null;
   proposal: string | null;
+  startDate: Date | null;
   endDate: Date | null;
+  consentStepMode: string | null;
+  consentCurrentStage: string | null;
+  consentAmendmentAction: string | null;
   nuancedScale?: string | null;
   nuancedWinnerCount?: number | null;
   proposals: Proposal[];
