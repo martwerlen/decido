@@ -104,7 +104,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.lastOrganizationSlug = token.lastOrganizationSlug
+        session.user.lastOrganizationSlug = token.lastOrganizationSlug as string | undefined
       }
       return session
     },
