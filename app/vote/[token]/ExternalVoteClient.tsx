@@ -350,7 +350,6 @@ export default function ExternalVoteClient({ token }: { token: string }) {
       CONSENT: 'Consentement',
       MAJORITY: 'Vote à la majorité',
       SUPERMAJORITY: 'Super-majorité',
-      WEIGHTED_VOTE: 'Vote pondéré',
       ADVISORY: 'Vote consultatif',
       ADVICE_SOLICITATION: 'Sollicitation d\'avis',
     };
@@ -365,7 +364,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
       ];
     }
 
-    // Pour les autres types (CONSENT, WEIGHTED_VOTE, etc.)
+    // Pour les autres types (CONSENT, etc.)
     return [
       { value: 'STRONG_SUPPORT', label: 'Soutien fort' },
       { value: 'SUPPORT', label: 'Soutien' },
@@ -749,7 +748,7 @@ export default function ExternalVoteClient({ token }: { token: string }) {
                   </RadioGroup>
                 </FormControl>
               ) : (
-                // Vote nuancé (CONSENT, WEIGHTED_VOTE, etc.)
+                // Vote nuancé (CONSENT, etc.)
                 <>
                   <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mt: 2 }}>
                     Votre vote

@@ -4,7 +4,6 @@ enum DecisionType {
   CONSENT = 'CONSENT',
   MAJORITY = 'MAJORITY',
   SUPERMAJORITY = 'SUPERMAJORITY',
-  WEIGHTED_VOTE = 'WEIGHTED_VOTE',
   ADVISORY = 'ADVISORY',
 }
 
@@ -83,15 +82,6 @@ export function calculateDecisionResult(
       return (supportCount / voteCount) >= (2/3)
         ? DecisionResult.APPROVED
         : DecisionResult.REJECTED
-
-    case DecisionType.WEIGHTED_VOTE:
-      // Score pondéré avec poids
-      const weightedScore = votes.reduce((sum, vote) => {
-        const voteWeight = getVoteWeight(vote.value)
-        return sum + (voteWeight * vote.weight)
-      }, 0)
-
-      return weightedScore > 0 ? DecisionResult.APPROVED : DecisionResult.REJECTED
 
     case DecisionType.ADVISORY:
       // Consultatif - toujours approuvé, c'est informatif
@@ -423,7 +413,7 @@ export function calculateFinalDecisionResult(decision: {
     }
 
     default:
-      // For other types (CONSENT, SUPERMAJORITY, WEIGHTED_VOTE, ADVISORY, etc.)
+      // For other types (CONSENT, SUPERMAJORITY, ADVISORY, etc.)
       // These are not currently used in the app but we handle them gracefully
       return 'APPROVED'
   }

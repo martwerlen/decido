@@ -1,161 +1,279 @@
-# Configuration du Cron Job pour les décisions par consentement
+# Configuration du Cron Job pour la Vérification Automatique des Dates Limites
 
-Ce document explique comment configurer le cron job nécessaire pour gérer automatiquement les transitions de stade des décisions par consentement.
+Ce document explique comment configurer un système de vérification automatique des dates limites des décisions.
 
-## Pourquoi un cron job ?
+## Vue d'ensemble
 
-Les décisions par consentement comportent plusieurs stades temporels (Clarifications, Avis, Amendements, Objections) qui nécessitent des transitions automatiques et l'envoi de notifications aux participants. Un cron job vérifie périodiquement ces décisions et déclenche les actions nécessaires.
+L'application dispose d'un endpoint API `/api/cron/check-deadlines` qui :
+- Récupère toutes les décisions avec `status='OPEN'` et dont la date limite (`endDate`) est dépassée
+- Ferme automatiquement ces décisions avec le statut et résultat appropriés selon le type de décision
+- Stocke les métadonnées de fermeture (raison, date, participation)
+- Logue l'événement dans l'historique de la décision
 
-## Configuration
+## Sécurité
 
-### 1. Générer un secret pour le cron
+L'endpoint est protégé par un token d'autorisation pour éviter les appels non autorisés.
 
-Générez un secret aléatoire sécurisé et ajoutez-le à votre fichier `.env` :
+**Configuration requise :**
+
+1. Ajouter une variable d'environnement `CRON_SECRET` dans votre fichier `.env` :
 
 ```bash
-openssl rand -hex 32
+# Secret pour sécuriser l'endpoint cron
+CRON_SECRET="votre-token-secret-aleatoire-ici"
 ```
 
-Ajoutez la valeur générée dans votre `.env` :
-
+Pour générer un token sécurisé :
+```bash
+openssl rand -base64 32
 ```
-CRON_SECRET="votre-secret-genere-ici"
+
+2. Le cron job doit passer ce token dans l'en-tête `Authorization` :
+```bash
+Authorization: Bearer votre-token-secret-aleatoire-ici
 ```
 
-### 2. Configurer le cron
+## Options de Configuration
 
-Le cron job doit appeler l'endpoint `/api/cron/check-consent-stages` toutes les **15 minutes** (recommandé).
+Vous avez plusieurs options pour configurer l'appel régulier de cet endpoint :
 
-#### Option A : Cron Linux (VPS/Serveur dédié)
+### Option 1 : Cron Job Linux/Unix (Recommandé pour VPS)
 
-Éditez votre crontab :
+Si votre application est hébergée sur un serveur Linux/Unix, utilisez `crontab` :
 
+1. Ouvrez l'éditeur crontab :
 ```bash
 crontab -e
 ```
 
-Ajoutez cette ligne (remplacez les valeurs appropriées) :
-
+2. Ajoutez une ligne pour exécuter le job toutes les 15 minutes :
 ```bash
-*/15 * * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yourdomain.com/api/cron/check-consent-stages >> /var/log/decidoo-cron.log 2>&1
+# Vérifier les décisions expirées toutes les 15 minutes
+*/15 * * * * curl -X GET -H "Authorization: Bearer VOTRE_TOKEN_SECRET" https://votre-domaine.com/api/cron/check-deadlines
 ```
 
-#### Option B : cPanel / Plesk (Hébergement mutualisé)
-
-1. Connectez-vous à votre panneau de contrôle (cPanel/Plesk)
-2. Trouvez la section "Tâches Cron" ou "Cron Jobs"
-3. Créez une nouvelle tâche avec les paramètres suivants :
-   - **Intervalle** : */15 (toutes les 15 minutes)
-   - **Commande** :
-     ```bash
-     curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yourdomain.com/api/cron/check-consent-stages
-     ```
-
-#### Option C : Service externe (EasyCron, cron-job.org)
-
-Si votre hébergement ne supporte pas les cron jobs, vous pouvez utiliser un service externe gratuit :
-
-**Avec [cron-job.org](https://cron-job.org)** :
-1. Créez un compte gratuit
-2. Créez un nouveau cron job avec :
-   - **URL** : `https://yourdomain.com/api/cron/check-consent-stages`
-   - **Schedule** : Every 15 minutes
-   - **Headers** : Ajoutez `Authorization: Bearer YOUR_CRON_SECRET`
-
-**Avec [EasyCron](https://www.easycron.com)** :
-1. Créez un compte gratuit
-2. Créez un nouveau cron job avec :
-   - **URL** : `https://yourdomain.com/api/cron/check-consent-stages`
-   - **Cron Expression** : `*/15 * * * *`
-   - **Custom Headers** : `Authorization: Bearer YOUR_CRON_SECRET`
-
-## Test manuel
-
-Pour tester que votre cron fonctionne correctement, vous pouvez l'appeler manuellement :
-
+3. Ou toutes les heures :
 ```bash
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" http://localhost:3000/api/cron/check-consent-stages
+# Vérifier les décisions expirées toutes les heures
+0 * * * * curl -X GET -H "Authorization: Bearer VOTRE_TOKEN_SECRET" https://votre-domaine.com/api/cron/check-deadlines
 ```
 
-Réponse attendue :
+**Conseil :** Remplacez `VOTRE_TOKEN_SECRET` par la valeur de votre variable `CRON_SECRET`.
 
-```json
-{
-  "success": true,
-  "processedCount": 0,
-  "notificationsCount": 0,
-  "closedCount": 0,
-  "totalDecisions": 0,
-  "timestamp": "2025-11-12T21:30:00.000Z"
+### Option 2 : Systemd Timer (Linux)
+
+Pour une approche plus moderne sur les systèmes Linux avec systemd :
+
+1. Créez un fichier de service `/etc/systemd/system/decidoo-check-deadlines.service` :
+```ini
+[Unit]
+Description=Decidoo - Check Decision Deadlines
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -X GET -H "Authorization: Bearer VOTRE_TOKEN_SECRET" https://votre-domaine.com/api/cron/check-deadlines
+```
+
+2. Créez un fichier de timer `/etc/systemd/system/decidoo-check-deadlines.timer` :
+```ini
+[Unit]
+Description=Decidoo - Check Decision Deadlines Timer
+Requires=decidoo-check-deadlines.service
+
+[Timer]
+# Exécuter toutes les 15 minutes
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+3. Activez et démarrez le timer :
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable decidoo-check-deadlines.timer
+sudo systemctl start decidoo-check-deadlines.timer
+
+# Vérifier le statut
+sudo systemctl status decidoo-check-deadlines.timer
+```
+
+### Option 3 : Node.js Cron (node-cron)
+
+Si vous préférez gérer le cron directement dans votre application Node.js :
+
+1. Installez `node-cron` :
+```bash
+npm install node-cron
+```
+
+2. Créez un fichier `lib/cron-jobs.ts` :
+```typescript
+import cron from 'node-cron';
+
+export function startCronJobs() {
+  // Exécuter toutes les 15 minutes
+  cron.schedule('*/15 * * * *', async () => {
+    try {
+      console.log('[CRON] Checking decision deadlines...');
+
+      const response = await fetch(\`\${process.env.NEXTAUTH_URL}/api/cron/check-deadlines\`, {
+        method: 'GET',
+        headers: {
+          'Authorization': \`Bearer \${process.env.CRON_SECRET}\`,
+        },
+      });
+
+      const result = await response.json();
+      console.log('[CRON] Result:', result);
+    } catch (error) {
+      console.error('[CRON] Error checking deadlines:', error);
+    }
+  });
+
+  console.log('[CRON] Jobs started');
 }
 ```
 
-## Que fait le cron job ?
+3. Appelez cette fonction au démarrage de l'application (dans `server.ts` ou équivalent) :
+```typescript
+import { startCronJobs } from './lib/cron-jobs';
 
-À chaque exécution (toutes les 15 minutes), le cron job :
-
-1. **Vérifie les décisions CONSENT ouvertes** et calcule leur stade actuel
-2. **Détecte les transitions de stade** (ex: CLARIFICATIONS → AVIS)
-3. **Envoie des notifications email** aux participants concernés lors des transitions
-4. **Clôture automatiquement les décisions** dont :
-   - La deadline est atteinte
-   - Tous les participants ont consenti (clôture anticipée)
-
-## Fréquence recommandée
-
-**15 minutes** est la fréquence recommandée car elle offre un bon équilibre entre :
-- Réactivité acceptable pour les notifications
-- Charge serveur raisonnable
-- Coût minimal (si service externe payant)
-
-Vous pouvez ajuster selon vos besoins :
-- **5-10 minutes** : Plus réactif mais plus de charge
-- **30 minutes** : Moins de charge mais moins réactif
-
-## Sécurité
-
-- ⚠️ **Ne partagez JAMAIS** votre `CRON_SECRET`
-- ✅ Utilisez une valeur aléatoire longue (32+ caractères)
-- ✅ L'endpoint vérifie systématiquement le token d'autorisation
-- ✅ En cas de token invalide, l'endpoint retourne une erreur 401
-
-## Logs et monitoring
-
-Pour surveiller l'exécution du cron :
-
-```bash
-# Afficher les logs
-tail -f /var/log/decidoo-cron.log
-
-# Vérifier les dernières exécutions
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://yourdomain.com/api/cron/check-consent-stages
+// Au démarrage
+startCronJobs();
 ```
 
-Les logs du serveur Next.js affichent également les détails :
-- `📊 Decision {id}: Stage transition ...` : Changement de stade détecté
-- `✅ Decision {id}: All participants consented, closing early` : Clôture anticipée
-- `⏰ Decision {id}: Deadline reached, closing automatically` : Clôture automatique
+**⚠️ Note :** Cette approche n'est recommandée que si vous avez un seul serveur. Pour des déploiements multi-instances (comme Vercel), utilisez une solution externe.
+
+### Option 4 : Vercel Cron Jobs
+
+Si vous utilisez Vercel pour l'hébergement :
+
+1. Créez un fichier `vercel.json` à la racine du projet :
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/check-deadlines",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
+```
+
+2. Vercel appellera automatiquement cet endpoint avec un en-tête `Authorization` spécial.
+
+3. Modifiez l'endpoint `/api/cron/check-deadlines/route.ts` pour accepter également l'en-tête de Vercel :
+```typescript
+const authHeader = request.headers.get('authorization');
+const vercelCronHeader = request.headers.get('x-vercel-cron-secret');
+const token = authHeader?.replace('Bearer ', '');
+const cronSecret = process.env.CRON_SECRET;
+
+// Accepter soit le token Bearer, soit l'en-tête Vercel
+if (cronSecret && token !== cronSecret && vercelCronHeader !== cronSecret) {
+  return Response.json(
+    { error: 'Unauthorized - Invalid or missing token' },
+    { status: 401 }
+  );
+}
+```
+
+**Documentation Vercel :** https://vercel.com/docs/cron-jobs
+
+### Option 5 : Service Externe (cron-job.org, EasyCron, etc.)
+
+Vous pouvez également utiliser un service de cron externe gratuit :
+
+**cron-job.org (Gratuit) :**
+1. Créez un compte sur https://cron-job.org
+2. Créez un nouveau cron job :
+   - URL : `https://votre-domaine.com/api/cron/check-deadlines`
+   - Méthode : GET
+   - Fréquence : Toutes les 15 minutes
+   - Headers : `Authorization: Bearer VOTRE_TOKEN_SECRET`
+
+**EasyCron (Gratuit avec limitations) :**
+1. Créez un compte sur https://www.easycron.com
+2. Configurez un nouveau job avec les mêmes paramètres
+
+## Fréquence Recommandée
+
+La fréquence recommandée dépend de vos besoins :
+
+- **Haute précision** (±5 minutes) : Exécuter toutes les 5 minutes → `*/5 * * * *`
+- **Précision normale** (±15 minutes) : Exécuter toutes les 15 minutes → `*/15 * * * *` ✅ **Recommandé**
+- **Faible charge** (±30 minutes) : Exécuter toutes les 30 minutes → `*/30 * * * *`
+- **Très faible charge** (±1 heure) : Exécuter toutes les heures → `0 * * * *`
+
+## Vérification du Fonctionnement
+
+Pour tester manuellement l'endpoint :
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer VOTRE_TOKEN_SECRET" \
+  https://votre-domaine.com/api/cron/check-deadlines
+```
+
+Réponse attendue :
+```json
+{
+  "success": true,
+  "timestamp": "2025-01-19T10:30:00.000Z",
+  "total": 5,
+  "closed": 4,
+  "skipped": 1,
+  "errors": []
+}
+```
+
+Où :
+- `total` : Nombre total de décisions expirées trouvées
+- `closed` : Nombre de décisions fermées avec succès
+- `skipped` : Nombre de décisions ignorées (ex: ADVICE_SOLICITATION)
+- `errors` : Liste des erreurs rencontrées
+
+## Surveillance et Logs
+
+Pour surveiller le bon fonctionnement du cron job :
+
+1. **Logs serveur** : Les événements de fermeture sont loggés dans `DecisionLog`
+2. **Logs cron** : Consultez les logs de votre système cron (selon la méthode choisie)
+3. **Monitoring** : Configurez des alertes si le endpoint retourne des erreurs
 
 ## Dépannage
 
-### Le cron ne s'exécute pas
+**Le cron ne s'exécute pas :**
+- Vérifiez que la syntaxe cron est correcte
+- Vérifiez que le serveur/service cron est actif
+- Vérifiez les logs du système cron
 
-- Vérifiez que `CRON_SECRET` est bien défini dans `.env`
-- Vérifiez que le serveur Next.js est bien démarré
-- Testez l'endpoint manuellement avec curl
-- Vérifiez les logs du serveur pour d'éventuelles erreurs
+**Erreur 401 Unauthorized :**
+- Vérifiez que `CRON_SECRET` est correctement configuré dans `.env`
+- Vérifiez que le token dans l'en-tête `Authorization` correspond
 
-### Les notifications ne sont pas envoyées
+**Aucune décision fermée :**
+- Normal si aucune décision n'a dépassé sa date limite
+- Vérifiez manuellement s'il y a des décisions OPEN avec `endDate` < maintenant
 
-- Vérifiez que `RESEND_API_KEY` est configuré
-- Vérifiez les logs d'emails dans la console du serveur
-- Testez l'envoi d'email avec une décision de test
+**Erreurs 500 :**
+- Consultez les logs de l'application
+- Vérifiez la connexion à la base de données
+- Vérifiez que Prisma est correctement configuré
 
-### Erreur 401 Unauthorized
+## Résumé
 
-- Vérifiez que le header `Authorization: Bearer YOUR_SECRET` est correct
-- Vérifiez que `CRON_SECRET` dans `.env` correspond au token utilisé
+La méthode recommandée dépend de votre environnement :
 
-## Support
+- **Vercel** → Option 4 (Vercel Cron Jobs)
+- **VPS/Serveur dédié** → Option 1 (Cron Linux) ou Option 2 (Systemd Timer)
+- **Serveur mutualisé** → Option 5 (Service externe)
+- **Développement local** → Option 3 (node-cron)
 
-Pour toute question ou problème, consultez la documentation ou créez une issue sur le dépôt GitHub.
+Assurez-vous toujours que :
+1. ✅ `CRON_SECRET` est configuré dans `.env`
+2. ✅ Le cron passe le token dans `Authorization: Bearer XXX`
+3. ✅ La fréquence est adaptée à vos besoins (recommandé : 15 minutes)
