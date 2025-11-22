@@ -106,46 +106,68 @@ Accédez à votre application déployée et créez un compte via `/auth/signup`
    - Name: `decidoo` (ou `@` pour domaine racine)
    - Value: Le domaine fourni par Railway
 
-### 8. Configurer le cron job pour les deadlines
+### 8. Configurer les cron jobs (4 tâches automatisées)
+
+Decidoo utilise **4 cron jobs** pour automatiser la gestion des décisions :
+
+| Cron Job | Endpoint | Fréquence | Description |
+|----------|----------|-----------|-------------|
+| **check-deadlines** | `/api/cron/check-deadlines` | Toutes les 15 min | Ferme les décisions expirées et calcule les résultats |
+| **check-consent-stages** | `/api/cron/check-consent-stages` | Toutes les 15 min | Vérifie et avance les stages des décisions CONSENT |
+| **send-reminders** | `/api/cron/send-reminders` | Quotidien à 9h UTC | Envoie des rappels aux participants avant deadline |
+| **cleanup-tokens** | `/api/cron/cleanup-tokens` | Quotidien à 2h UTC | Nettoie les tokens et invitations expirés |
 
 Railway ne propose pas de cron natif gratuit. Utilisez un service externe :
 
-**Option 1 : cron-job.org (gratuit)**
+#### **Option 1 : GitHub Actions (recommandé, gratuit)**
 
-1. Créez un compte sur [cron-job.org](https://cron-job.org)
-2. Créez un nouveau cron job :
-   - **URL** : `https://votre-app.up.railway.app/api/cron/check-deadlines`
-   - **Schedule** : `*/15 * * * *` (toutes les 15 minutes)
-   - **Headers** :
-     - Name: `Authorization`
-     - Value: `Bearer VotreSecretCron` (celui défini dans `CRON_SECRET`)
+Le workflow est **déjà configuré** dans `.github/workflows/check-deadlines.yml` ! Il suffit d'ajouter les secrets :
 
-**Option 2 : GitHub Actions (gratuit)**
+1. Dans votre repository GitHub, allez dans **Settings** → **Secrets and variables** → **Actions**
+2. Cliquez sur **New repository secret** et ajoutez :
 
-Créez `.github/workflows/cron.yml` :
-
-```yaml
-name: Check Decision Deadlines
-
-on:
-  schedule:
-    - cron: '*/15 * * * *'  # Toutes les 15 minutes
-  workflow_dispatch:  # Permet déclenchement manuel
-
-jobs:
-  check-deadlines:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Call cron endpoint
-        run: |
-          curl -X GET \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://votre-app.up.railway.app/api/cron/check-deadlines
+**CRON_SECRET**
+```
+VotreSecretCron (le même que dans Railway)
 ```
 
-Puis dans GitHub, allez dans **Settings** → **Secrets** → **Actions** et ajoutez :
-- Name: `CRON_SECRET`
-- Value: Le même secret que dans Railway
+**RAILWAY_URL**
+```
+https://votre-app.up.railway.app
+```
+
+3. C'est tout ! Les 4 cron jobs s'exécuteront automatiquement selon leurs horaires
+
+**Déclenchement manuel** : Vous pouvez aussi exécuter manuellement un cron job via l'onglet **Actions** → **Decidoo Cron Jobs** → **Run workflow**
+
+#### **Option 2 : cron-job.org (alternatif, gratuit)**
+
+1. Créez un compte sur [cron-job.org](https://cron-job.org)
+2. Créez **4 nouveaux cron jobs** :
+
+**Cron Job 1 : check-deadlines**
+- **Title** : Decidoo - Check Deadlines
+- **URL** : `https://votre-app.up.railway.app/api/cron/check-deadlines`
+- **Schedule** : `*/15 * * * *` (toutes les 15 minutes)
+- **Headers** : `Authorization: Bearer VotreSecretCron`
+
+**Cron Job 2 : check-consent-stages**
+- **Title** : Decidoo - Check Consent Stages
+- **URL** : `https://votre-app.up.railway.app/api/cron/check-consent-stages`
+- **Schedule** : `*/15 * * * *` (toutes les 15 minutes)
+- **Headers** : `Authorization: Bearer VotreSecretCron`
+
+**Cron Job 3 : send-reminders**
+- **Title** : Decidoo - Send Reminders
+- **URL** : `https://votre-app.up.railway.app/api/cron/send-reminders`
+- **Schedule** : `0 9 * * *` (quotidien à 9h UTC)
+- **Headers** : `Authorization: Bearer VotreSecretCron`
+
+**Cron Job 4 : cleanup-tokens**
+- **Title** : Decidoo - Cleanup Tokens
+- **URL** : `https://votre-app.up.railway.app/api/cron/cleanup-tokens`
+- **Schedule** : `0 2 * * *` (quotidien à 2h UTC)
+- **Headers** : `Authorization: Bearer VotreSecretCron`
 
 ## 🔍 Vérifications post-déploiement
 
@@ -162,10 +184,11 @@ Puis dans GitHub, allez dans **Settings** → **Secrets** → **Actions** et ajo
 - ✅ Invitez un membre à votre organisation
 - ✅ Vérifiez que l'email est envoyé (consultez les logs Railway si problème)
 
-### 4. Test du cron job
-- ✅ Créez une décision avec deadline dans 1 minute
-- ✅ Attendez 15 minutes
-- ✅ Vérifiez que la décision est automatiquement fermée
+### 4. Test des cron jobs
+- ✅ **check-deadlines** : Créez une décision avec deadline dans le passé, attendez 15 min, vérifiez qu'elle est fermée
+- ✅ **send-reminders** : Créez une décision avec deadline dans 23h, attendez 9h UTC, vérifiez l'email de rappel
+- ✅ **cleanup-tokens** : Vérifiez les logs à 2h UTC pour voir le nettoyage
+- ✅ **check-consent-stages** : Créez une décision CONSENT, vérifiez le passage entre stages
 
 ## 📊 Monitoring et logs
 

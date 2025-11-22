@@ -57,27 +57,28 @@ Railway déploie automatiquement ! Attendez ~3-5 minutes.
 
 Vous pouvez suivre les logs en temps réel dans l'onglet **Deployments**.
 
-## Étape 5 : Configurer le cron job (optionnel, 5 min)
+## Étape 5 : Configurer les 4 cron jobs (optionnel, 5 min)
 
-### Option A : cron-job.org (recommandé)
+Decidoo utilise **4 tâches automatisées** :
+- ⏰ **check-deadlines** - Fermer les décisions expirées (15 min)
+- 🔄 **check-consent-stages** - Avancer les stages CONSENT (15 min)
+- 📧 **send-reminders** - Rappels avant deadline (quotidien 9h)
+- 🗑️ **cleanup-tokens** - Nettoyer les données expirées (quotidien 2h)
 
-1. Créez un compte sur [cron-job.org](https://cron-job.org)
-2. Nouveau cron job :
-   - **URL** : `https://votre-app.up.railway.app/api/cron/check-deadlines`
-   - **Schedule** : `*/15 * * * *`
-   - **Headers** :
-     - `Authorization: Bearer <VOTRE_CRON_SECRET>`
+### Option A : GitHub Actions (recommandé, 2 min)
 
-### Option B : GitHub Actions
+Le workflow est **déjà configuré** ! Il suffit d'ajouter 2 secrets :
 
-1. Dans votre repository GitHub :
-   **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
+1. GitHub : **Settings** → **Secrets and variables** → **Actions**
 2. Ajoutez :
    - `CRON_SECRET` = votre secret cron
    - `RAILWAY_URL` = `https://votre-app.up.railway.app`
 
-3. Le workflow `.github/workflows/check-deadlines.yml` est déjà configuré !
+✅ **C'est tout !** Les 4 cron jobs s'exécutent automatiquement.
+
+### Option B : cron-job.org (alternatif)
+
+Créez 4 cron jobs sur [cron-job.org](https://cron-job.org) (voir [guide complet](./RAILWAY_DEPLOYMENT.md#8-configurer-les-cron-jobs-4-tâches-automatisées) pour les détails)
 
 ## ✅ Vérification finale
 
