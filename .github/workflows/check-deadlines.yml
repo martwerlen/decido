@@ -1,0 +1,146 @@
+name: Decidoo Cron Jobs
+
+# Ce workflow appelle tous les endpoints cron pour automatiser la gestion des décisions
+
+on:
+  schedule:
+    # Toutes les 15 minutes - Vérifier les deadlines
+    - cron: '*/15 * * * *'
+
+    # Quotidien à 9h UTC - Envoyer des rappels
+    - cron: '0 9 * * *'
+
+    # Quotidien à 2h UTC - Nettoyer les tokens expirés
+    - cron: '0 2 * * *'
+
+  # Permet de déclencher manuellement le workflow
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Quel job exécuter?'
+        required: true
+        type: choice
+        default: 'all'
+        options:
+          - all
+          - check-deadlines
+          - check-consent-stages
+          - send-reminders
+          - cleanup-tokens
+
+jobs:
+  check-deadlines:
+    name: Fermer les décisions expirées
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '*/15 * * * *' ||
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.job == 'all' || github.event.inputs.job == 'check-deadlines')
+
+    steps:
+      - name: Fermer les décisions expirées
+        run: |
+          echo "🔄 Vérification des décisions expirées..."
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/cron/check-deadlines)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ check-deadlines failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ check-deadlines completed successfully"
+
+  check-consent-stages:
+    name: Vérifier les stages CONSENT
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '*/15 * * * *' ||
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.job == 'all' || github.event.inputs.job == 'check-consent-stages')
+
+    steps:
+      - name: Vérifier les stages de consentement
+        run: |
+          echo "🔄 Vérification des stages de consentement..."
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/cron/check-consent-stages)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ check-consent-stages failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ check-consent-stages completed successfully"
+
+  send-reminders:
+    name: Envoyer des rappels avant deadline
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '0 9 * * *' ||
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.job == 'all' || github.event.inputs.job == 'send-reminders')
+
+    steps:
+      - name: Envoyer des rappels de deadline
+        run: |
+          echo "📧 Envoi des rappels de deadline..."
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/cron/send-reminders)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ send-reminders failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ send-reminders completed successfully"
+
+  cleanup-tokens:
+    name: Nettoyer les tokens expirés
+    runs-on: ubuntu-latest
+    if: |
+      github.event.schedule == '0 2 * * *' ||
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.job == 'all' || github.event.inputs.job == 'cleanup-tokens')
+
+    steps:
+      - name: Nettoyer les tokens et données expirées
+        run: |
+          echo "🗑️ Nettoyage des tokens expirés..."
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/cron/cleanup-tokens)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ cleanup-tokens failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ cleanup-tokens completed successfully"
