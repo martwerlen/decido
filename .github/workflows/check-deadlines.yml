@@ -1,0 +1,41 @@
+name: Check Decision Deadlines
+
+# Ce workflow appelle l'endpoint cron toutes les 15 minutes
+# pour vérifier et fermer automatiquement les décisions expirées
+
+on:
+  schedule:
+    # Toutes les 15 minutes
+    - cron: '*/15 * * * *'
+
+  # Permet de déclencher manuellement le workflow
+  workflow_dispatch:
+
+jobs:
+  check-deadlines:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check decision deadlines
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/cron/check-deadlines)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Cron job failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ Cron job completed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "⚠️ Le cron job a échoué. Vérifiez les logs ci-dessus."
