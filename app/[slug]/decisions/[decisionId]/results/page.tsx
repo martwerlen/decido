@@ -226,14 +226,12 @@ export default async function ResultsPage({
         status: 'CLOSED',
         result: finalResult,
         decidedAt: now,
-        metadata: closureMetadata,
         consentCurrentStage: decision.decisionType === 'CONSENT' ? 'TERMINEE' : decision.consentCurrentStage,
       },
     });
     decision.status = 'CLOSED';
     decision.result = finalResult;
     decision.decidedAt = now;
-    (decision as any).metadata = closureMetadata;
 
     // Logger la fermeture automatique avec la raison
     await logDecisionClosed(decision.id, session.user.id, reason);
