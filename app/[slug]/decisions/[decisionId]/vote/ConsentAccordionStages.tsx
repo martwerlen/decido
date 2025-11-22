@@ -567,7 +567,7 @@ export default function ConsentAccordionStages({
           )}
           {status3 === 'ACTIF' && !isCreator && date3 && (
             <Alert severity="warning">
-              Jusqu'au {new Date(date3).toLocaleDateString('fr-FR')} à {new Date(date3).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, le proposeur peut conserver sa proposition telle quelle, la faire évoluer ou la retirer. Vous pourrez contribuer après cette étape.
+              Jusqu&apos;au {new Date(date3).toLocaleDateString('fr-FR')} à {new Date(date3).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}, le proposeur peut conserver sa proposition telle quelle, la faire évoluer ou la retirer. Vous pourrez contribuer après cette étape.
             </Alert>
           )}
           {status3 === 'ACTIF' && isCreator && (
@@ -686,7 +686,7 @@ export default function ConsentAccordionStages({
                       color="error"
                       onClick={() => setObjectionStatus('OBJECTION')}
                     >
-                      J'ai une objection
+                      J&apos;ai une objection
                     </Button>
                     <Button
                       variant={objectionStatus === 'NO_POSITION' ? 'contained' : 'outlined'}

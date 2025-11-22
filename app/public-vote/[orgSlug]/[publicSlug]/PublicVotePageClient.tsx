@@ -24,6 +24,7 @@ import {
   getMentionLabel,
   getMentionColor,
   NuancedScaleLabels,
+  NuancedScale,
 } from '@/types/enums';
 
 interface Proposal {
@@ -279,10 +280,10 @@ export default function PublicVotePageClient({
                           label={
                             <Box>
                               <Typography variant="body1" fontWeight="500">
-                                D'accord
+                                D&apos;accord
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                J'approuve cette proposition
+                                J&apos;approuve cette proposition
                               </Typography>
                             </Box>
                           }
@@ -367,7 +368,8 @@ export default function PublicVotePageClient({
               {decision.decisionType === 'NUANCED_VOTE' && decision.nuancedScale && (
                 <Box sx={{ mb: 3 }}>
                   {decision.nuancedProposals.map((proposal) => {
-                    const mentionValues = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                    const scale = (decision.nuancedScale || '5_LEVELS') as NuancedScale;
+                    const mentionValues = getMentionsForScale(scale);
                     return (
                       <Paper
                         key={proposal.id}
@@ -389,8 +391,8 @@ export default function PublicVotePageClient({
                         )}
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                           {mentionValues.map((mentionValue) => {
-                            const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mentionValue);
-                            const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mentionValue);
+                            const label = getMentionLabel(scale, mentionValue);
+                            const color = getMentionColor(scale, mentionValue);
                             const isSelected = nuancedVotes[proposal.id] === mentionValue;
 
                             return (

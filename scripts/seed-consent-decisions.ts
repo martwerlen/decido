@@ -72,8 +72,8 @@ async function main() {
         status: config.stage === 'TERMINEE' ? 'CLOSED' : 'OPEN',
         result: config.stage === 'TERMINEE' ? 'APPROVED' : null,
         votingMode: 'INVITED',
-        organizationId: org.id,
-        creatorId: creator.id,
+        organizationId: org!.id,
+        creatorId: creator!.id,
         initialProposal: `Proposition initiale pour ${config.title}. Ceci est un texte de test pour simuler une proposition de décision par consentement.`,
         proposal: config.stage === 'AMENDEMENTS' || config.stage === 'OBJECTIONS' || config.stage === 'TERMINEE'
           ? `Proposition amendée pour ${config.title}. Le créateur a modifié la proposition suite aux retours.`
@@ -109,7 +109,7 @@ async function main() {
           questionerId: participantIds[0],
           questionText: 'Pouvez-vous préciser le budget alloué à cette proposition ?',
           answerText: 'Le budget prévu est de 5000€, financé par la ligne budgétaire "Projets innovants".',
-          answererId: creator.id,
+          answererId: creator!.id,
           answeredAt: new Date(startDate.getTime() + 12 * 60 * 60 * 1000), // 12h après le début
         },
       });

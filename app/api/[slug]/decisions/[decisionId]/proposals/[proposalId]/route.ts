@@ -99,6 +99,15 @@ export async function DELETE(
 
     const { slug, decisionId, proposalId } = await params;
 
+    // Récupérer l'organisation par son slug
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return Response.json({ error: "Organisation non trouvée" }, { status: 404 });
+    }
+
     // Récupérer la décision
     const decision = await prisma.decision.findFirst({
       where: {

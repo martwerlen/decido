@@ -82,9 +82,9 @@ export async function GET(
     // Récupérer le vote existant si présent
     let existingVote = null;
     let existingProposalVote = null;
-    let existingComments = [];
+    let existingComments: any[] = [];
     let existingOpinion = null;
-    let allOpinions = [];
+    let allOpinions: any[] = [];
 
     if (participant.decision.decisionType === 'MAJORITY') {
       existingProposalVote = await prisma.proposalVote.findFirst({

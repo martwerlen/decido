@@ -586,7 +586,7 @@ export default function OrganizationMembersPage() {
           {/* Sélection des équipes */}
           <FormControl fullWidth margin="normal">
             <InputLabel id="teams-select-label">Équipes (optionnel)</InputLabel>
-            <Select
+            <Select<string[]>
               labelId="teams-select-label"
               multiple
               value={formData.teams}

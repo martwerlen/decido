@@ -91,7 +91,7 @@ export default function FeedbackModal({
           Bugs & Feedback
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Aidez-nous à améliorer l'application
+          Aidez-nous à améliorer l&apos;application
         </Typography>
       </DialogTitle>
 

@@ -11,6 +11,7 @@ import {
   getMentionColor,
   getMentionsForScale,
   NuancedScaleLabels,
+  NuancedScale,
 } from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
@@ -46,7 +47,7 @@ interface Comment {
     id: string;
     name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 interface OpinionResponse {
@@ -471,8 +472,9 @@ export default function ResultsPageClient({
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {nuancedResults.slice(0, decision.nuancedWinnerCount).map((result) => {
-                  const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
-                  const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+                  const scale = (decision.nuancedScale || '5_LEVELS') as NuancedScale;
+                  const mentionColor = getMentionColor(scale, result.majorityMention);
+                  const mentionLabel = getMentionLabel(scale, result.majorityMention);
                   const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
 
                   return (
@@ -510,12 +512,12 @@ export default function ResultsPageClient({
                             {Object.entries(result.mentionProfile)
                               .sort((a, b) => {
                                 // Trier par ordre des mentions (meilleure en premier)
-                                const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                                const mentions = getMentionsForScale(scale);
                                 return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
                               })
                               .map(([mention, count]) => {
                                 const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
-                                const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                                const color = getMentionColor(scale, mention);
 
                                 if (count === 0) return null;
 
@@ -527,7 +529,7 @@ export default function ResultsPageClient({
                                       width: `${percentage}%`,
                                       backgroundColor: color,
                                     }}
-                                    title={`${getMentionLabel(decision.nuancedScale || '5_LEVELS', mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
+                                    title={`${getMentionLabel(scale, mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
                                   >
                                     {percentage >= 8 && <span>{count}</span>}
                                   </div>
@@ -568,17 +570,17 @@ export default function ResultsPageClient({
                           {Object.entries(result.mentionProfile)
                             .filter(([mention]) => {
                               // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
-                              const validMentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                              const validMentions = getMentionsForScale(scale);
                               return validMentions.includes(mention);
                             })
                             .sort((a, b) => {
-                              const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                              const mentions = getMentionsForScale(scale);
                               return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
                             })
                             .map(([mention, count]) => {
                               const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
-                              const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
-                              const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+                              const color = getMentionColor(scale, mention);
+                              const label = getMentionLabel(scale, mention);
 
                               return (
                                 <div key={mention} className="flex items-center gap-2">
@@ -611,8 +613,9 @@ export default function ResultsPageClient({
             </Typography>
 
             {nuancedResults.map((result) => {
-              const mentionColor = getMentionColor(decision.nuancedScale || '5_LEVELS', result.majorityMention);
-              const mentionLabel = getMentionLabel(decision.nuancedScale || '5_LEVELS', result.majorityMention);
+              const scale = (decision.nuancedScale || '5_LEVELS') as NuancedScale;
+              const mentionColor = getMentionColor(scale, result.majorityMention);
+              const mentionLabel = getMentionLabel(scale, result.majorityMention);
               const totalMentions = Object.values(result.mentionProfile).reduce((sum, count) => sum + count, 0);
               const isWinner = decision.nuancedWinnerCount && result.rank <= decision.nuancedWinnerCount;
 
@@ -657,12 +660,12 @@ export default function ResultsPageClient({
                         {Object.entries(result.mentionProfile)
                           .sort((a, b) => {
                             // Trier par ordre des mentions (meilleure en premier)
-                            const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                            const mentions = getMentionsForScale(scale);
                             return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
                           })
                           .map(([mention, count]) => {
                             const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
-                            const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                            const color = getMentionColor(scale, mention);
 
                             if (count === 0) return null;
 
@@ -674,7 +677,7 @@ export default function ResultsPageClient({
                                   width: `${percentage}%`,
                                   backgroundColor: color,
                                 }}
-                                title={`${getMentionLabel(decision.nuancedScale || '5_LEVELS', mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
+                                title={`${getMentionLabel(scale, mention)}: ${count} vote${count > 1 ? 's' : ''} (${percentage.toFixed(1)}%)`}
                               >
                                 {percentage >= 8 && <span>{count}</span>}
                               </div>
@@ -715,17 +718,17 @@ export default function ResultsPageClient({
                       {Object.entries(result.mentionProfile)
                         .filter(([mention]) => {
                           // Filtrer les mentions obsolètes (ex: FAIRLY_GOOD)
-                          const validMentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                          const validMentions = getMentionsForScale(scale);
                           return validMentions.includes(mention);
                         })
                         .sort((a, b) => {
-                          const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+                          const mentions = getMentionsForScale(scale);
                           return mentions.indexOf(a[0]) - mentions.indexOf(b[0]);
                         })
                         .map(([mention, count]) => {
                           const percentage = totalMentions > 0 ? (count / totalMentions) * 100 : 0;
-                          const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
-                          const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
+                          const color = getMentionColor(scale, mention);
+                          const label = getMentionLabel(scale, mention);
 
                           return (
                             <div key={mention} className="flex items-center gap-2">
@@ -843,7 +846,7 @@ export default function ResultsPageClient({
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
                 <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'success.light', border: 1, borderColor: 'success.main' }}>
                   <Typography variant="h3" fontWeight="bold" color="success.dark">{agreeCount}</Typography>
-                  <Typography variant="body2" color="success.dark">D'accord</Typography>
+                  <Typography variant="body2" color="success.dark">D&apos;accord</Typography>
                 </Box>
                 <Box sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: 'error.light', border: 1, borderColor: 'error.main' }}>
                   <Typography variant="h3" fontWeight="bold" color="error.dark">{disagreeCount}</Typography>
@@ -867,7 +870,7 @@ export default function ResultsPageClient({
                       Consensus non atteint
                     </Typography>
                     <Typography variant="body2" color="warning.dark">
-                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n\'est'} pas d&apos;accord
+                      {disagreeCount} participant{disagreeCount > 1 ? 's ne sont' : ' n&apos;est'} pas d&apos;accord
                     </Typography>
                   </Box>
                 )}
@@ -883,7 +886,7 @@ export default function ResultsPageClient({
 
               {decision.status === 'OPEN' && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent "d'accord".
+                  Le vote est toujours en cours. Le consensus pourra être atteint si tous les participants votent &quot;d&apos;accord&quot;.
                 </Alert>
               )}
             </Box>

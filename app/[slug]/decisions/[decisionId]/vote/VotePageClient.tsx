@@ -11,6 +11,7 @@ import {
   getMentionLabel,
   getMentionColor,
   NuancedScaleLabels,
+  NuancedScale,
 } from '@/types/enums';
 import HistoryButton from '@/components/decisions/HistoryButton';
 import HistoryPanel from '@/components/decisions/HistoryPanel';
@@ -48,7 +49,7 @@ interface Comment {
     id: string;
     name: string | null;
     email: string;
-  };
+  } | null;
   replies: Array<{
     id: string;
     content: string;
@@ -58,7 +59,7 @@ interface Comment {
       id: string;
       name: string | null;
       email: string;
-    };
+    } | null;
   }>;
 }
 
@@ -98,9 +99,14 @@ interface Decision {
   description: string;
   decisionType: string;
   status: string;
+  result: string | null;
   initialProposal: string | null;
   proposal: string | null;
+  startDate: Date | null;
   endDate: Date | null;
+  consentStepMode: string | null;
+  consentCurrentStage: string | null;
+  consentAmendmentAction: string | null;
   nuancedScale?: string | null;
   nuancedWinnerCount?: number | null;
   proposals: Proposal[];
@@ -612,7 +618,8 @@ export default function VotePageClient({
 
           <div className="space-y-4 mb-6">
             {decision.nuancedProposals?.map((proposal) => {
-              const mentions = getMentionsForScale(decision.nuancedScale || '5_LEVELS');
+              const scale = (decision.nuancedScale || '5_LEVELS') as NuancedScale;
+              const mentions = getMentionsForScale(scale);
               const selectedMention = nuancedVotes[proposal.id];
 
               return (
@@ -624,8 +631,8 @@ export default function VotePageClient({
 
                   <div className="flex flex-wrap gap-2">
                     {mentions.map((mention) => {
-                      const label = getMentionLabel(decision.nuancedScale || '5_LEVELS', mention);
-                      const color = getMentionColor(decision.nuancedScale || '5_LEVELS', mention);
+                      const label = getMentionLabel(scale, mention);
+                      const color = getMentionColor(scale, mention);
                       const isSelected = selectedMention === mention;
 
                       return (
@@ -826,7 +833,7 @@ export default function VotePageClient({
                   fullWidth
                   sx={{ py: 2, fontWeight: 'medium' }}
                 >
-                  ✓ D'accord
+                  ✓ D&apos;accord
                 </Button>
                 <Button
                   onClick={() => handleVoteConsensus('DISAGREE')}
@@ -848,7 +855,7 @@ export default function VotePageClient({
             {hasVoted && (
               <Typography variant="body2" sx={{ textAlign: 'center', mt: 1.5 }}>
                 Votre vote actuel : {consensusVote === 'AGREE' ? (
-                  <Typography component="span" color="success.main" fontWeight="medium">✓ D'accord</Typography>
+                  <Typography component="span" color="success.main" fontWeight="medium">✓ D&apos;accord</Typography>
                 ) : (
                   <Typography component="span" color="error.main" fontWeight="medium">✗ Pas d&apos;accord</Typography>
                 )}

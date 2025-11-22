@@ -1,6 +1,7 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm"
-import { Box, Container, Typography, Card, CardContent, Link as MuiLink } from "@mui/material"
+import { Box, Container, Typography, Card, CardContent, Link as MuiLink, CircularProgress } from "@mui/material"
 
 export default function ResetPasswordPage() {
   return (
@@ -27,7 +28,9 @@ export default function ResetPasswordPage() {
 
         <Card>
           <CardContent sx={{ p: 4 }}>
-            <ResetPasswordForm />
+            <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+              <ResetPasswordForm />
+            </Suspense>
           </CardContent>
         </Card>
 

@@ -164,7 +164,6 @@ export async function GET(request: NextRequest) {
         const updateData: any = {
           status: 'CLOSED',
           result,
-          metadata: closureMetadata,
         };
 
         // Pour CONSENT, mettre à jour le stage

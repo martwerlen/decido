@@ -139,7 +139,7 @@ export default function NewDecisionPage({
 
     setCheckingSlug(true);
     try {
-      // Construire l'URL avec le paramètre excludeDecisionId si on édite un brouillon
+      // Construire l&apos;URL avec le paramètre excludeDecisionId si on édite un brouillon
       const params = new URLSearchParams({ slug: publicSlugToCheck });
       if (draftId) {
         params.append('excludeDecisionId', draftId);
@@ -424,6 +424,7 @@ export default function NewDecisionPage({
               publicSlug: decision.publicSlug || '',
               nuancedScale: decision.nuancedScale || '5_LEVELS',
               nuancedWinnerCount: decision.nuancedWinnerCount || 1,
+              consentStepMode: decision.consentStepMode || 'DISTINCT',
             });
 
             // Charger les propositions si MAJORITY
