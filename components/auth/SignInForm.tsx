@@ -39,11 +39,11 @@ export default function SignInForm() {
         const response = await fetch("/api/auth/session")
         const session = await response.json()
 
-        // Rediriger vers la dernière organisation ou le dashboard
+        // Rediriger vers la dernière organisation ou la création d'organisation
         if (session?.user?.lastOrganizationSlug) {
           router.push(`/${session.user.lastOrganizationSlug}`)
         } else {
-          router.push("/")
+          router.push("/create-organization")
         }
         router.refresh()
       }
