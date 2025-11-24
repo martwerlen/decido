@@ -7,6 +7,9 @@ on:
     # Toutes les 15 minutes - Vérifier les deadlines
     - cron: '*/15 * * * *'
 
+    # Toutes les 4 heures - Vérifier les stages CONSENT
+    - cron: '0 */4 * * *'
+
     # Quotidien à 9h UTC - Envoyer des rappels
     - cron: '0 9 * * *'
 
@@ -62,7 +65,7 @@ jobs:
     name: Vérifier les stages CONSENT
     runs-on: ubuntu-latest
     if: |
-      github.event.schedule == '*/15 * * * *' ||
+      github.event.schedule == '0 */4 * * *' ||
       github.event_name == 'workflow_dispatch' &&
       (github.event.inputs.job == 'all' || github.event.inputs.job == 'check-consent-stages')
 

@@ -1,30 +1,12 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 
 /**
- * Health check endpoint for Render
- * Tests database connectivity
+ * Health check endpoint for Railway
+ * Simple check that returns 200 OK if the app is running
  */
 export async function GET() {
-  try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`
-
-    return NextResponse.json({
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      database: "connected"
-    })
-  } catch (error) {
-    console.error("Health check failed:", error)
-    return NextResponse.json(
-      {
-        status: "error",
-        timestamp: new Date().toISOString(),
-        database: "disconnected",
-        error: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 503 }
-    )
-  }
+  return NextResponse.json({
+    status: "ok",
+    timestamp: new Date().toISOString()
+  })
 }

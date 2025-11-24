@@ -47,21 +47,16 @@ CRON_SECRET=VotreSecretCronAleatoire
 
 > ⚠️ **Important** : `DATABASE_URL` est automatiquement générée par Railway lorsque vous ajoutez PostgreSQL, ne la modifiez pas !
 
-### 4. Configurer le build sur Railway
+### 4. Vérifier la configuration du build
 
-Railway détecte automatiquement Next.js, mais nous devons ajouter une étape de migration Prisma.
+Railway détecte automatiquement la configuration depuis `nixpacks.toml`.
 
-Dans l'onglet **"Settings"** de votre service :
+**Aucune action requise** - Le fichier `nixpacks.toml` est déjà configuré :
 
-1. **Build Command** :
-   ```bash
-   npm install && npx prisma generate && npx prisma migrate deploy && npm run build
-   ```
+- **Build** : Génère Prisma Client et build Next.js
+- **Start** : Exécute les migrations puis lance l'application
 
-2. **Start Command** (déjà détecté) :
-   ```bash
-   npm run start
-   ```
+> 💡 **Note** : Les migrations Prisma sont exécutées **au démarrage** (pas pendant le build) car `DATABASE_URL` n'est disponible qu'à l'exécution.
 
 ### 5. Déployer
 
