@@ -170,11 +170,11 @@ export default function ResultsPageClient({
     <Box sx={{
       maxWidth: { xs: '100%', sm: '100%', md: 896 },
       mx: 'auto',
-      px: { xs: 2, sm: 3, md: 4 },
+      px: { xs: 1.5, sm: 2, md: 3 },
       py: { xs: 3, md: 6 }
     }}>
-      {/* Bouton d&apos;historique en haut à droite */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Bouton d&apos;historique en haut à gauche */}
+      <div className="fixed top-4 left-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 

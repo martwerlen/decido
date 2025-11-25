@@ -466,11 +466,11 @@ export default function VotePageClient({
     <Box sx={{
       maxWidth: { xs: '100%', sm: '100%', md: 896 },
       mx: 'auto',
-      px: { xs: 2, sm: 3, md: 4 },
+      px: { xs: 1.5, sm: 2, md: 3 },
       py: { xs: 3, md: 6 }
     }}>
-      {/* Bouton d&apos;historique en haut à droite */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Bouton d&apos;historique en haut à gauche */}
+      <div className="fixed top-4 left-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 
@@ -1039,33 +1039,40 @@ export default function VotePageClient({
       )}
 
       {/* Navigation */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 2,
+        mt: 3
+      }}>
         <Button
           component={Link}
           href={`/${slug}/decisions`}
           variant="outlined"
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           Retour
         </Button>
         {isCreator && (
-          <Link
+          <Button
+            component={Link}
             href={`/${slug}/decisions/${decision.id}/admin`}
-            className="px-6 py-2 text-white rounded-lg"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+            variant="contained"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Administrer
-          </Link>
+          </Button>
         )}
         {/* Masquer les résultats pour ADVICE_SOLICITATION en cours */}
         {(decision.decisionType !== 'ADVICE_SOLICITATION' || !isOpen) && (
-          <Link
+          <Button
+            component={Link}
             href={`/${slug}/decisions/${decision.id}/results`}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            variant="outlined"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Voir les résultats
-          </Link>
+          </Button>
         )}
       </Box>
     </Box>

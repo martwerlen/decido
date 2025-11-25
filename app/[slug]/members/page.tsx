@@ -307,7 +307,7 @@ export default function OrganizationMembersPage() {
       <Box component="main" sx={{
         flexGrow: 1,
         bgcolor: 'background.default',
-        px: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1.5, sm: 2, md: 3 },
         py: { xs: 3, md: 6 },
         maxWidth: '1200px',
         mx: 'auto'

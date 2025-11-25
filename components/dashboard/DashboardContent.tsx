@@ -144,13 +144,24 @@ export default function DashboardContent({
     <Box sx={{
       maxWidth: '1200px',
       mx: 'auto',
-      px: { xs: 2, sm: 3, md: 4 },
+      px: { xs: 1.5, sm: 2, md: 3 },
       py: { xs: 3, md: 6 }
     }}>
       {/* En-tête avec titre, recherche et bouton */}
       <Box sx={{ mb: 4 }}>
         {/* Titre */}
-        <h1 className="text-3xl font-bold mb-4">Décisions - {organization.name}</h1>
+        <Typography
+          variant="h4"
+          fontWeight="bold"
+          sx={{
+            mb: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: { xs: 'nowrap', sm: 'normal' }
+          }}
+        >
+          Décisions - {organization.name}
+        </Typography>
 
         {/* Barre de recherche + Bouton Nouvelle décision */}
         <Box
@@ -377,7 +388,7 @@ export default function DashboardContent({
                   {/* Boutons d'action en bas */}
                   <Box sx={{
                     display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
+                    flexDirection: 'row',
                     gap: 1,
                     mt: 0.5
                   }}>
@@ -387,12 +398,11 @@ export default function DashboardContent({
                       variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
                       color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
                       size="small"
-                      fullWidth
                       sx={{
                         whiteSpace: 'nowrap',
                         fontSize: '0.75rem',
                         textDecoration: 'none',
-                        width: { sm: 'auto' }
+                        flex: 1
                       }}
                     >
                       {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
@@ -406,12 +416,11 @@ export default function DashboardContent({
                         variant="outlined"
                         color="primary"
                         size="small"
-                        fullWidth
                         sx={{
                           whiteSpace: 'nowrap',
                           fontSize: '0.75rem',
                           textDecoration: 'none',
-                          width: { sm: 'auto' }
+                          flex: 1
                         }}
                       >
                         Admin

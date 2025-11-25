@@ -729,7 +729,7 @@ export default function NewDecisionPage({
       <Box sx={{
         maxWidth: { xs: '100%', sm: '100%', md: 672 },
         mx: 'auto',
-        px: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1.5, sm: 2, md: 3 },
         py: { xs: 3, md: 6 },
         display: 'flex',
         justifyContent: 'center',
@@ -748,7 +748,7 @@ export default function NewDecisionPage({
     <Box sx={{
       maxWidth: { xs: '100%', sm: '100%', md: 672 },
       mx: 'auto',
-      px: { xs: 2, sm: 3, md: 4 },
+      px: { xs: 1.5, sm: 2, md: 3 },
       py: { xs: 3, md: 6 }
     }}>
       <div className="mb-6">
