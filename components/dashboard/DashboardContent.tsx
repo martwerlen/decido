@@ -278,12 +278,12 @@ export default function DashboardContent({
                       boxShadow: 1,
                     },
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: { xs: 'column', md: 'row' },
                     gap: 1.5
                   }}
                 >
                   {/* Contenu principal */}
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                       {decision.votingMode === 'PUBLIC_LINK' && (
                         <QrCode2 sx={{ fontSize: '1.25rem', color: 'action.active' }} />
@@ -385,12 +385,12 @@ export default function DashboardContent({
                     </Box>
                   </Box>
 
-                  {/* Boutons d'action en bas */}
+                  {/* Boutons d'action - À droite sur desktop, en bas sur mobile */}
                   <Box sx={{
                     display: 'flex',
-                    flexDirection: 'row',
+                    flexDirection: { xs: 'row', md: 'column' },
                     gap: 1,
-                    mt: 0.5
+                    minWidth: { xs: '100%', md: 'auto' }
                   }}>
                     <Button
                       component={Link}
@@ -402,7 +402,7 @@ export default function DashboardContent({
                         whiteSpace: 'nowrap',
                         fontSize: '0.75rem',
                         textDecoration: 'none',
-                        flex: 1
+                        flex: { xs: 1, md: 'initial' }
                       }}
                     >
                       {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
@@ -420,7 +420,7 @@ export default function DashboardContent({
                           whiteSpace: 'nowrap',
                           fontSize: '0.75rem',
                           textDecoration: 'none',
-                          flex: 1
+                          flex: { xs: 1, md: 'initial' }
                         }}
                       >
                         Admin
