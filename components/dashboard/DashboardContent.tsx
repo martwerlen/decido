@@ -388,7 +388,7 @@ export default function DashboardContent({
                   {/* Boutons d'action - À droite sur desktop, en bas sur mobile */}
                   <Box sx={{
                     display: 'flex',
-                    flexDirection: { xs: 'row', md: 'column' },
+                    flexDirection: 'row',
                     gap: 1,
                     minWidth: { xs: '100%', md: 'auto' }
                   }}>
@@ -402,7 +402,7 @@ export default function DashboardContent({
                         whiteSpace: 'nowrap',
                         fontSize: '0.75rem',
                         textDecoration: 'none',
-                        flex: { xs: 1, md: 'initial' }
+                        flex: 1
                       }}
                     >
                       {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
@@ -420,7 +420,7 @@ export default function DashboardContent({
                           whiteSpace: 'nowrap',
                           fontSize: '0.75rem',
                           textDecoration: 'none',
-                          flex: { xs: 1, md: 'initial' }
+                          flex: 1
                         }}
                       >
                         Admin
