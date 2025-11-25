@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Box } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 
