@@ -436,9 +436,6 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
           </Toolbar>
         </AppBar>
 
-        {/* Spacer pour le contenu */}
-        <Toolbar />
-
         {/* Drawer vertical qui descend depuis le top */}
         <Drawer
           variant="temporary"
