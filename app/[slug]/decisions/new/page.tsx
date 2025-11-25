@@ -726,17 +726,31 @@ export default function NewDecisionPage({
   // Afficher un spinner pendant le chargement du brouillon ou des données
   if (loadingDraft || loadingData) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl flex justify-center items-center min-h-screen">
+      <Box sx={{
+        maxWidth: { xs: '100%', sm: '100%', md: 672 },
+        mx: 'auto',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: { xs: 3, md: 6 },
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
+      }}>
         <div className="flex flex-col items-center gap-4">
           <CircularProgress />
           <Typography color="text.secondary">Chargement...</Typography>
         </div>
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 672 },
+      mx: 'auto',
+      px: { xs: 2, sm: 3, md: 4 },
+      py: { xs: 3, md: 6 }
+    }}>
       <div className="mb-6">
         <h1 className="text-3xl font-bold">
           {draftId ? 'Continuer le brouillon' : 'Nouvelle décision'}
@@ -1734,6 +1748,6 @@ export default function NewDecisionPage({
           </button>
         </div>
       </form>
-    </div>
+    </Box>
   );
 }

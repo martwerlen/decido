@@ -125,7 +125,12 @@ export default function SharePageClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 2, sm: 3, md: 4 },
+      py: { xs: 3, md: 6 }
+    }}>
       {/* En-tête */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{decision.title}</h1>
@@ -242,6 +247,6 @@ export default function SharePageClient({
           ← Retour à l&apos;organisation
         </button>
       </div>
-    </div>
+    </Box>
   );
 }

@@ -210,7 +210,12 @@ export default function DecisionAdminClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 2, sm: 3, md: 4 },
+      py: { xs: 3, md: 6 }
+    }}>
       <Box sx={{ mb: 3 }}>
         <h1 className="text-2xl font-bold">{decision.title}</h1>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{decision.description}</Typography>
@@ -591,6 +596,6 @@ export default function DecisionAdminClient({
           </ul>
         </Alert>
       )}
-    </div>
+    </Box>
   );
 }
