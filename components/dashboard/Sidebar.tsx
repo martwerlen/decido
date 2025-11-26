@@ -239,21 +239,21 @@ export default function Sidebar({ currentOrgSlug }: SidebarProps) {
   // Charger les organisations au mount uniquement
   useEffect(() => {
     fetchOrganizations()
-  }, [])
+  }, [fetchOrganizations])
 
   // Charger les décisions quand l'organisation change
   useEffect(() => {
     if (organization) {
       fetchDecisions()
     }
-  }, [organization])
+  }, [organization, fetchDecisions])
 
   // Rafraîchir quand le trigger change (après un vote ou changement de statut)
   useEffect(() => {
     if (refreshTrigger > 0 && organization) {
       fetchDecisions()
     }
-  }, [refreshTrigger])
+  }, [refreshTrigger, organization, fetchDecisions])
 
   // Cleanup: annuler le timeout en cours lors du unmount
   useEffect(() => {
