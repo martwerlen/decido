@@ -39,9 +39,14 @@ export async function GET(
     }
 
     // 1. Décisions en cours (OPEN) - Limiter à 5 plus récentes
+    // Les décisions PUBLIC_LINK ne sont visibles que par leur créateur
     const ongoingWhere = {
       organizationId: organization.id,
       status: 'OPEN',
+      OR: [
+        { votingMode: 'INVITED' },
+        { votingMode: 'PUBLIC_LINK', creatorId: session.user.id },
+      ],
     };
 
     const [ongoingDecisions, ongoingTotal] = await Promise.all([
@@ -138,11 +143,16 @@ export async function GET(
     });
 
     // 2. Décisions terminées (CLOSED, IMPLEMENTED, ARCHIVED, WITHDRAWN) - Limiter à 5 plus récentes
+    // Les décisions PUBLIC_LINK ne sont visibles que par leur créateur
     const completedWhere = {
       organizationId: organization.id,
       status: {
         in: ['CLOSED', 'IMPLEMENTED', 'ARCHIVED', 'WITHDRAWN'],
       },
+      OR: [
+        { votingMode: 'INVITED' },
+        { votingMode: 'PUBLIC_LINK', creatorId: session.user.id },
+      ],
     };
 
     const [completedDecisions, completedTotal] = await Promise.all([
