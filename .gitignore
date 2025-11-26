@@ -40,3 +40,6 @@ prisma/dev.db-journal
 # Database SQLite locale
 dev.db
 dev.db-journal
+
+# Railway environment file (contains sensitive credentials)
+.env.railway
