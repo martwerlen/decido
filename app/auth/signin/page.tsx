@@ -1,6 +1,7 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import SignInForm from "@/components/auth/SignInForm"
-import { Box, Container, Typography, Card, CardContent, Link as MuiLink } from "@mui/material"
+import { Box, Container, Typography, Card, CardContent, Link as MuiLink, CircularProgress } from "@mui/material"
 
 export default function SignInPage() {
   return (
@@ -30,7 +31,9 @@ export default function SignInPage() {
 
         <Card>
           <CardContent sx={{ p: 4 }}>
-            <SignInForm />
+            <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box>}>
+              <SignInForm />
+            </Suspense>
           </CardContent>
         </Card>
       </Container>
