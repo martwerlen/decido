@@ -1432,6 +1432,102 @@ If you encounter 403 errors from `binaries.prisma.sh`, the Prisma client may nee
 ### Email in Development
 If `RESEND_API_KEY` is not configured, invitation emails will fail silently. For local development, manually construct invitation URLs or use a test Resend account.
 
+### Common Railway/Next.js Build Errors
+
+**CRITICAL**: Railway builds fail on ESLint errors and warnings during `npm run build`. Always fix these issues before pushing.
+
+#### 1. Unescaped Apostrophes in JSX
+
+**Error**: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+
+**Cause**: Next.js ESLint enforces proper HTML entity encoding for apostrophes in JSX text.
+
+**Fix**: Replace `'` with `&apos;` in JSX content:
+```tsx
+// ❌ WRONG
+<Button>Annuler l'invitation</Button>
+
+// ✅ CORRECT
+<Button>Annuler l&apos;invitation</Button>
+```
+
+**Common locations**: Button labels, Typography content, Dialog titles, Alert messages.
+
+#### 2. React Hook useEffect Missing Dependencies
+
+**Warning**: React Hook useEffect has a missing dependency: 'X'. Either include it or remove the dependency array.
+
+**Cause**: React Hooks exhaustive-deps rule enforces that all values used inside useEffect are listed in the dependency array.
+
+**Fix Options**:
+
+1. **For primitive values or state**: Add them to the dependency array:
+```tsx
+// ❌ WRONG
+useEffect(() => {
+  if (selectedUserIds.includes(userId)) { ... }
+}, [userId]); // Missing: selectedUserIds
+
+// ✅ CORRECT
+useEffect(() => {
+  if (selectedUserIds.includes(userId)) { ... }
+}, [userId, selectedUserIds]);
+```
+
+2. **For functions**: Wrap them in `useCallback` first, then add to dependency array:
+```tsx
+// ❌ WRONG
+const fetchData = async () => { ... };
+useEffect(() => {
+  fetchData();
+}, []); // Missing: fetchData
+
+// ✅ CORRECT
+const fetchData = useCallback(async () => {
+  // ... implementation
+}, [dep1, dep2]); // Dependencies of fetchData
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // Now fetchData is stable
+```
+
+**Pattern for async functions in useEffect**:
+```tsx
+// Define with useCallback
+const fetchSomething = useCallback(async () => {
+  const response = await fetch(`/api/${orgId}/data`);
+  setData(await response.json());
+}, [orgId]); // Include all external values used
+
+// Use in useEffect
+useEffect(() => {
+  if (shouldFetch) {
+    fetchSomething();
+  }
+}, [shouldFetch, fetchSomething]); // Include both condition and function
+```
+
+**Common mistakes**:
+- Forgetting to add `useCallback` import: `import { useEffect, useState, useCallback } from 'react'`
+- Not wrapping async functions in `useCallback` before using in useEffect
+- Omitting values used in conditions (e.g., `if (organization)` requires `organization` in dependencies)
+
+#### 3. Build Checklist Before Railway Deploy
+
+Before pushing code that will trigger a Railway deployment:
+
+1. **Run local build**: `npm run build` (catches ESLint errors)
+2. **Check for apostrophes**: Search for `'` in JSX text (Button, Typography, etc.)
+3. **Check useEffect hooks**: Ensure all dependencies are listed
+4. **Review ESLint warnings**: Fix warnings in components (Railway treats them as errors in production build)
+
+**Quick fix command**:
+```bash
+npm run lint -- --fix  # Auto-fix some ESLint issues
+npm run build         # Verify build succeeds
+```
+
 ## Testing Decision Logic
 
 A test file exists at `test-decision-logic.js` for validating decision calculations:

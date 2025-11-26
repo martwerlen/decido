@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Drawer,
   Box,
@@ -155,13 +155,7 @@ export default function HistoryPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open) {
-      fetchHistory();
-    }
-  }, [open, organizationSlug, decisionId]);
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -181,7 +175,13 @@ export default function HistoryPanel({
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationSlug, decisionId]);
+
+  useEffect(() => {
+    if (open) {
+      fetchHistory();
+    }
+  }, [open, fetchHistory]);
 
   return (
     <Drawer
