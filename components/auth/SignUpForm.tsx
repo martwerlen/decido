@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Box,
   TextField,
@@ -32,6 +32,8 @@ const passwordRequirements: PasswordRequirement[] = [
 
 export default function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get("inviteToken")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -77,7 +79,11 @@ export default function SignUpForm() {
         return
       }
 
-      router.push("/auth/signin?registered=true")
+      // Rediriger vers signin avec le token d'invitation si présent
+      const redirectUrl = inviteToken
+        ? `/auth/signin?registered=true&inviteToken=${inviteToken}`
+        : "/auth/signin?registered=true"
+      router.push(redirectUrl)
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.")
     } finally {
