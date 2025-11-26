@@ -600,7 +600,7 @@ export default function OrganizationMembersPage() {
                     }
                     fullWidth
                   >
-                    Annuler l'invitation
+                    Annuler l&apos;invitation
                   </Button>
                 </Box>
               ))}
