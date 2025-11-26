@@ -167,9 +167,14 @@ export default function ResultsPageClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Bouton d&apos;historique en haut à droite */}
-      <div className="fixed top-4 right-4 z-50">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 1.5, sm: 2, md: 3 },
+      py: { xs: 3, md: 6 }
+    }}>
+      {/* Bouton d&apos;historique en haut à gauche */}
+      <div className="fixed top-4 left-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 
@@ -1272,6 +1277,6 @@ export default function ResultsPageClient({
           </Button>
         )}
       </Box>
-    </div>
+    </Box>
   );
 }

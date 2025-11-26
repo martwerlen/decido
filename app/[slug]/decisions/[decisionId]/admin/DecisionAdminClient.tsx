@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Chip, Typography, Button, Alert } from '@mui/material';
+import { Box, Chip, Typography, Button, Alert, TextField } from '@mui/material';
 import { DecisionStatusLabels, DecisionTypeLabels } from '@/types/enums';
 
 interface Participant {
@@ -210,7 +210,12 @@ export default function DecisionAdminClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 1.5, sm: 2, md: 3 },
+      py: { xs: 3, md: 6 }
+    }}>
       <Box sx={{ mb: 3 }}>
         <h1 className="text-2xl font-bold">{decision.title}</h1>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{decision.description}</Typography>
@@ -254,15 +259,16 @@ export default function DecisionAdminClient({
           </Box>
 
           {(isOpen || decision.proposal) && (
-            <div>
+            <Box>
               <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>Proposition amendée</Typography>
               {isOpen ? (
-                <div className="space-y-3">
-                  <textarea
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <TextField
                     value={proposal}
                     onChange={(e) => setAmendedProposal(e.target.value)}
+                    multiline
                     rows={4}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    fullWidth
                     placeholder="Vous pouvez amender la proposition pendant que le vote est ouvert..."
                   />
                   <Button
@@ -270,18 +276,19 @@ export default function DecisionAdminClient({
                     disabled={loading}
                     variant="contained"
                     color="primary"
+                    sx={{ width: 'fit-content' }}
                   >
                     Mettre à jour la proposition amendée
                   </Button>
-                </div>
+                </Box>
               ) : decision.proposal ? (
-                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1, border: 1, borderColor: 'primary.main' }}>
+                <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   {decision.proposal}
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">Aucune proposition amendée</Typography>
               )}
-            </div>
+            </Box>
           )}
         </Box>
       )}
@@ -298,12 +305,13 @@ export default function DecisionAdminClient({
           )}
 
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={proposal}
               onChange={(e) => setAmendedProposal(e.target.value)}
+              multiline
               rows={6}
+              fullWidth
               disabled={opinionsReceived > 0}
-              className="w-full px-3 py-2 border rounded-lg disabled:cursor-not-allowed"
               placeholder="Intention de décision..."
             />
 
@@ -495,11 +503,12 @@ export default function DecisionAdminClient({
             Tous les avis ont été reçus. Rédigez maintenant votre décision finale en tenant compte des avis sollicités.
           </Typography>
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={conclusion}
               onChange={(e) => setConclusion(e.target.value)}
+              multiline
               rows={6}
-              className="w-full px-3 py-2 border rounded-lg"
+              fullWidth
               placeholder="Rédigez votre décision finale ici..."
             />
           </div>
@@ -511,11 +520,12 @@ export default function DecisionAdminClient({
             Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
           </Typography>
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={conclusion}
               onChange={(e) => setConclusion(e.target.value)}
+              multiline
               rows={6}
-              className="w-full px-3 py-2 border rounded-lg"
+              fullWidth
               placeholder="Entrez votre conclusion ici..."
             />
             <Button
@@ -591,6 +601,6 @@ export default function DecisionAdminClient({
           </ul>
         </Alert>
       )}
-    </div>
+    </Box>
   );
 }

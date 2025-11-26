@@ -337,17 +337,37 @@ export default function OrganizationTeamsPage() {
   }
 
   return (
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box component="main" sx={{
+        flexGrow: 1,
+        bgcolor: 'background.default',
+        px: { xs: 1.5, sm: 2, md: 3 },
+        py: { xs: 3, md: 6 },
+        maxWidth: '1200px',
+        mx: 'auto'
+      }}>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: 2,
+          mb: 4
+        }}>
           <Typography variant="h4" component="h1">
             Organigramme - Équipes
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2
+          }}>
             <Button
               variant="outlined"
               color="primary"
               startIcon={<PeopleIcon />}
               onClick={() => router.push(`/${organizationSlug}/members`)}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
             >
               Gérer les membres
             </Button>
@@ -356,6 +376,8 @@ export default function OrganizationTeamsPage() {
               color="primary"
               startIcon={<AddIcon />}
               onClick={handleCreateTeam}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
             >
               Créer une équipe
             </Button>
