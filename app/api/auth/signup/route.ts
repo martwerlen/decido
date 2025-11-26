@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     try {
       await sendSignupWelcomeEmail({
         to: user.email,
-        name: user.name,
+        name: user.name || name, // Fallback sur la variable name si user.name est null
       })
     } catch (emailError) {
       console.error("Erreur lors de l'envoi de l'email de bienvenue:", emailError)

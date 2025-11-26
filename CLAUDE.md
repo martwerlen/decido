@@ -1513,7 +1513,48 @@ useEffect(() => {
 - Not wrapping async functions in `useCallback` before using in useEffect
 - Omitting values used in conditions (e.g., `if (organization)` requires `organization` in dependencies)
 
-#### 3. Build Checklist Before Railway Deploy
+#### 3. TypeScript Nullable Types (Prisma)
+
+**Error**: `Type 'string | null' is not assignable to type 'string'`
+
+**Cause**: Prisma schema allows nullable fields, but TypeScript functions may expect non-nullable values.
+
+**Example Error**:
+```typescript
+// ❌ WRONG - user.name peut être null selon Prisma
+await sendEmail({
+  name: user.name,  // Type error: string | null not assignable to string
+})
+```
+
+**Fix**: Use fallback operator or guaranteed non-null variable:
+```typescript
+// ✅ CORRECT - Option 1: Fallback avec ||
+await sendEmail({
+  name: user.name || 'Default Name',
+})
+
+// ✅ CORRECT - Option 2: Utiliser la variable d'origine (si disponible)
+const { name } = await req.json();
+// ... create user with name ...
+await sendEmail({
+  name: user.name || name,  // name est garanti non-null à ce stade
+})
+
+// ✅ CORRECT - Option 3: Non-null assertion (si sûr à 100%)
+await sendEmail({
+  name: user.name!,  // ! signifie "je garantis que ce n'est pas null"
+})
+```
+
+**Common locations**:
+- Email functions with user names
+- API responses with potentially null fields
+- Function calls requiring non-nullable parameters
+
+**Best practice**: Always use fallback (`||` or `??`) rather than non-null assertion (`!`) unless absolutely certain the value cannot be null.
+
+#### 4. Build Checklist Before Railway Deploy
 
 Before pushing code that will trigger a Railway deployment:
 
