@@ -328,7 +328,7 @@ export default function NewDecisionPage({
         setSelectedUserIds([session.user.id]);
       }
     }
-  }, [session, members, formData.decisionType, formData.votingMode, draftId]);
+  }, [session, members, formData.decisionType, formData.votingMode, draftId, selectedUserIds]);
 
   // Sauvegarder manuellement le brouillon
   const handleManualSave = async () => {
