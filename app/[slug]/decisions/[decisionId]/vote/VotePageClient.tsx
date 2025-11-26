@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Box, Chip, Typography, Button, Alert } from '@mui/material';
+import { Box, Chip, Typography, Button, Alert, TextField } from '@mui/material';
 import {
   DecisionStatusLabels,
   DecisionTypeLabels,
@@ -730,99 +730,119 @@ export default function VotePageClient({
           </Box>
 
           {/* Commentaires */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Discussion</h2>
+          <Box sx={{
+            backgroundColor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 2,
+            p: 3,
+            mb: 3
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'semibold' }}>Discussion</Typography>
 
             {decision.comments.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Aucun commentaire pour le moment</p>
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                Aucun commentaire pour le moment
+              </Typography>
             ) : (
-              <div className="space-y-4 mb-6">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
                 {decision.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
-                          <span className="text-xs text-gray-500">
+                  <Box
+                    key={comment.id}
+                    sx={{
+                      borderLeft: 4,
+                      borderColor: 'divider',
+                      pl: 2
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            {comment.user?.name || 'Anonyme'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
                             {new Date(comment.createdAt).toLocaleString('fr-FR')}
                             {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
-                          </span>
-                        </div>
+                          </Typography>
+                        </Box>
 
                         {editingCommentId === comment.id ? (
-                          <div className="space-y-2">
-                            <textarea
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <TextField
                               value={editingCommentContent}
                               onChange={(e) => setEditingCommentContent(e.target.value)}
+                              multiline
                               rows={3}
-                              className="w-full px-3 py-2 border rounded-lg"
+                              fullWidth
+                              size="small"
                             />
-                            <div className="flex gap-2">
-                              <button
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
                                 onClick={() => handleUpdateComment(comment.id)}
                                 disabled={loading}
-                                className="text-sm text-white px-3 py-1 rounded"
-                                style={{ backgroundColor: 'var(--color-primary)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                                variant="contained"
+                                size="small"
                               >
                                 Enregistrer
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 onClick={() => {
                                   setEditingCommentId(null);
                                   setEditingCommentContent('');
                                 }}
-                                className="text-sm border px-3 py-1 rounded hover:bg-gray-50"
+                                variant="outlined"
+                                size="small"
                               >
                                 Annuler
-                              </button>
-                            </div>
-                          </div>
+                              </Button>
+                            </Box>
+                          </Box>
                         ) : (
-                          <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {comment.content}
+                          </Typography>
                         )}
-                      </div>
+                      </Box>
 
                       {comment.user?.id === userId && isOpen && !editingCommentId && (
-                        <button
+                        <Button
                           onClick={() => {
                             setEditingCommentId(comment.id);
                             setEditingCommentContent(comment.content);
                           }}
-                          className="text-sm text-blue-600 hover:underline ml-2"
+                          size="small"
+                          sx={{ ml: 1 }}
                         >
                           Modifier
-                        </button>
+                        </Button>
                       )}
-                    </div>
-                  </div>
+                    </Box>
+                  </Box>
                 ))}
-              </div>
+              </Box>
             )}
 
             {isOpen && (
-              <div className="space-y-3">
-                <textarea
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <TextField
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
+                  multiline
                   rows={3}
                   placeholder="Ajoutez votre commentaire..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  fullWidth
                 />
-                <button
+                <Button
                   onClick={handleAddComment}
                   disabled={loading}
-                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                  variant="contained"
                 >
                   {loading ? 'Envoi...' : 'Ajouter un commentaire'}
-                </button>
-              </div>
+                </Button>
+              </Box>
             )}
-          </div>
+          </Box>
 
           {/* Vote d&apos;accord/pas d&apos;accord */}
           <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3 }}>

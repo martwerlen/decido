@@ -259,15 +259,16 @@ export default function DecisionAdminClient({
           </Box>
 
           {(isOpen || decision.proposal) && (
-            <div>
+            <Box>
               <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>Proposition amendée</Typography>
               {isOpen ? (
-                <div className="space-y-3">
-                  <textarea
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <TextField
                     value={proposal}
                     onChange={(e) => setAmendedProposal(e.target.value)}
+                    multiline
                     rows={4}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    fullWidth
                     placeholder="Vous pouvez amender la proposition pendant que le vote est ouvert..."
                   />
                   <Button
@@ -275,18 +276,19 @@ export default function DecisionAdminClient({
                     disabled={loading}
                     variant="contained"
                     color="primary"
+                    sx={{ width: 'fit-content' }}
                   >
                     Mettre à jour la proposition amendée
                   </Button>
-                </div>
+                </Box>
               ) : decision.proposal ? (
-                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1, border: 1, borderColor: 'primary.main' }}>
+                <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider' }}>
                   {decision.proposal}
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">Aucune proposition amendée</Typography>
               )}
-            </div>
+            </Box>
           )}
         </Box>
       )}
