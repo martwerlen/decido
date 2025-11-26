@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import {
   Box,
   TextField,
@@ -13,9 +14,13 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  IconButton,
+  InputAdornment,
 } from "@mui/material"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import CancelIcon from "@mui/icons-material/Cancel"
+import Visibility from "@mui/icons-material/Visibility"
+import VisibilityOff from "@mui/icons-material/VisibilityOff"
 
 interface PasswordRequirement {
   label: string
@@ -38,6 +43,8 @@ export default function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,7 +84,21 @@ export default function SignUpForm() {
         return
       }
 
-      router.push("/auth/signin?registered=true")
+      // Connecter automatiquement l'utilisateur après inscription
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        setError("Inscription réussie, mais erreur de connexion automatique. Veuillez vous connecter manuellement.")
+        router.push("/auth/signin?registered=true")
+        return
+      }
+
+      // Rediriger vers la page d'accueil ou l'organisation
+      router.push("/")
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.")
     } finally {
@@ -118,12 +139,26 @@ export default function SignUpForm() {
       <TextField
         id="password"
         label="Mot de passe"
-        type="password"
+        type={showPassword ? "text" : "password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
         fullWidth
         disabled={isLoading}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle password visibility"
+                onClick={() => setShowPassword(!showPassword)}
+                onMouseDown={(e) => e.preventDefault()}
+                edge="end"
+              >
+                {showPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
       />
 
       {password && (
@@ -160,12 +195,26 @@ export default function SignUpForm() {
       <TextField
         id="confirmPassword"
         label="Confirmer le mot de passe"
-        type="password"
+        type={showConfirmPassword ? "text" : "password"}
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         required
         fullWidth
         disabled={isLoading}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle confirm password visibility"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onMouseDown={(e) => e.preventDefault()}
+                edge="end"
+              >
+                {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
       />
 
       <Button

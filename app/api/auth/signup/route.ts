@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { validatePassword } from "@/lib/password-validation"
+import { sendSignupWelcomeEmail } from "@/lib/email"
 
 export async function POST(req: Request) {
   try {
@@ -47,6 +48,17 @@ export async function POST(req: Request) {
         password: hashedPassword,
       },
     })
+
+    // Envoyer l'email de bienvenue
+    try {
+      await sendSignupWelcomeEmail({
+        to: user.email,
+        name: user.name,
+      })
+    } catch (emailError) {
+      console.error("Erreur lors de l'envoi de l'email de bienvenue:", emailError)
+      // Ne pas bloquer l'inscription si l'email échoue
+    }
 
     return NextResponse.json(
       {

@@ -1362,6 +1362,68 @@ When onboarding to this codebase or debugging complex issues, read these files i
 18. `ORGANIZATIONS_FEATURES.md` - Organization management details
 19. `MIGRATE_HISTORY.md` - Recent feature additions
 
+## Recent Improvements & Features (January 2025)
+
+### User Authentication & Onboarding
+
+**Password Visibility Toggle** (`components/auth/SignUpForm.tsx`):
+- Added eye icon buttons on password fields in signup form
+- Users can toggle between masked and visible password input
+- Improves UX by reducing password entry errors
+- Implemented with Material-UI `InputAdornment`, `IconButton`, and `Visibility`/`VisibilityOff` icons
+
+**Welcome Email After Signup** (`lib/email.ts`, `app/api/auth/signup/route.ts`):
+- New `sendSignupWelcomeEmail()` function sends welcome email immediately after account creation
+- Generic welcome message (no organization required)
+- Uses same Resend integration with console fallback pattern
+- Non-blocking: signup succeeds even if email fails
+
+**Auto-Login After Signup** (`components/auth/SignUpForm.tsx`):
+- Users are automatically authenticated after successful signup
+- Eliminates redundant password entry (previously required 3 times: signup → confirm → login)
+- Now only 1 password entry required (during signup)
+- Uses NextAuth's `signIn()` client-side function after account creation
+- Fallback to manual signin if auto-login fails
+
+### Decision Visibility & Privacy
+
+**PUBLIC_LINK Decision Visibility** (Creator-Only):
+- PUBLIC_LINK decisions are now visible ONLY to their creator in sidebar, dashboard, and lists
+- INVITED decisions remain visible to all organization members (existing behavior)
+- **Implementation**:
+  - Sidebar API (`/api/[slug]/decisions/sidebar/route.ts`): Filters with `OR: [{ votingMode: 'INVITED' }, { votingMode: 'PUBLIC_LINK', creatorId: userId }]`
+  - Dashboard page (`/[slug]/page.tsx`): Same filter applied to initial query
+  - Decisions API (`/api/[slug]/decisions/route.ts`): Filter added to paginated results
+- **Rationale**: PUBLIC_LINK decisions are for external audiences; internal members don't need to see them unless they created them
+
+### Team Management Enhancements
+
+**Expandable Team Member Lists** (`app/[slug]/teams/page.tsx`):
+- Team cards now show first 3 members by default
+- "+ X autres" text is now clickable (previously static)
+- Click to expand and see all team members
+- Click "Voir moins" to collapse back to 3 members
+- Each expanded member has a remove button (same as first 3)
+- **Implementation**:
+  - New state: `expandedTeams` (Set of team IDs)
+  - `handleToggleTeamExpansion()` function toggles expansion per team
+  - Conditional rendering: `expandedTeams.has(teamId) ? allMembers : first3Members`
+
+### Test Data & Migration
+
+**SQL Migration Script for Test Data** (`test-data-migration.sql`):
+- Creates 5 completed (APPROVED) decisions of different types:
+  1. MAJORITY - Logo selection (3 proposals, 15 external voters)
+  2. NUANCED_VOTE - Training evaluation (4 proposals, 5-level scale, 15 external voters)
+  3. CONSENSUS - Remote work policy (15 external voters, all AGREE)
+  4. CONSENT - Team reorganization (15 external voters, all NO_OBJECTION)
+  5. ADVICE_SOLICITATION - Tool investment (15 external opinions + conclusion)
+- Each decision has 15 unique external participants (same emails reused across decisions)
+- Realistic content with French business context
+- Instructions for Railway PostgreSQL deployment
+- User must replace `{ORG_ID}` and `{CREATOR_ID}` placeholders
+- Usage: `psql <connection-string> -f test-data-migration.sql`
+
 ## Known Issues & Workarounds
 
 ### Prisma Client Generation
