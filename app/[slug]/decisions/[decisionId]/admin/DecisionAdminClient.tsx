@@ -305,12 +305,13 @@ export default function DecisionAdminClient({
           )}
 
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={proposal}
               onChange={(e) => setAmendedProposal(e.target.value)}
+              multiline
               rows={6}
+              fullWidth
               disabled={opinionsReceived > 0}
-              className="w-full px-3 py-2 border rounded-lg disabled:cursor-not-allowed"
               placeholder="Intention de décision..."
             />
 
@@ -502,11 +503,12 @@ export default function DecisionAdminClient({
             Tous les avis ont été reçus. Rédigez maintenant votre décision finale en tenant compte des avis sollicités.
           </Typography>
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={conclusion}
               onChange={(e) => setConclusion(e.target.value)}
+              multiline
               rows={6}
-              className="w-full px-3 py-2 border rounded-lg"
+              fullWidth
               placeholder="Rédigez votre décision finale ici..."
             />
           </div>
@@ -518,11 +520,12 @@ export default function DecisionAdminClient({
             Rédigez une conclusion pour cette décision. Elle apparaîtra à la fin de la page de résultats.
           </Typography>
           <div className="space-y-3">
-            <textarea
+            <TextField
               value={conclusion}
               onChange={(e) => setConclusion(e.target.value)}
+              multiline
               rows={6}
-              className="w-full px-3 py-2 border rounded-lg"
+              fullWidth
               placeholder="Entrez votre conclusion ici..."
             />
             <Button
