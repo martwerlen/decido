@@ -1362,6 +1362,68 @@ When onboarding to this codebase or debugging complex issues, read these files i
 18. `ORGANIZATIONS_FEATURES.md` - Organization management details
 19. `MIGRATE_HISTORY.md` - Recent feature additions
 
+## Recent Improvements & Features (January 2025)
+
+### User Authentication & Onboarding
+
+**Password Visibility Toggle** (`components/auth/SignUpForm.tsx`):
+- Added eye icon buttons on password fields in signup form
+- Users can toggle between masked and visible password input
+- Improves UX by reducing password entry errors
+- Implemented with Material-UI `InputAdornment`, `IconButton`, and `Visibility`/`VisibilityOff` icons
+
+**Welcome Email After Signup** (`lib/email.ts`, `app/api/auth/signup/route.ts`):
+- New `sendSignupWelcomeEmail()` function sends welcome email immediately after account creation
+- Generic welcome message (no organization required)
+- Uses same Resend integration with console fallback pattern
+- Non-blocking: signup succeeds even if email fails
+
+**Auto-Login After Signup** (`components/auth/SignUpForm.tsx`):
+- Users are automatically authenticated after successful signup
+- Eliminates redundant password entry (previously required 3 times: signup → confirm → login)
+- Now only 1 password entry required (during signup)
+- Uses NextAuth's `signIn()` client-side function after account creation
+- Fallback to manual signin if auto-login fails
+
+### Decision Visibility & Privacy
+
+**PUBLIC_LINK Decision Visibility** (Creator-Only):
+- PUBLIC_LINK decisions are now visible ONLY to their creator in sidebar, dashboard, and lists
+- INVITED decisions remain visible to all organization members (existing behavior)
+- **Implementation**:
+  - Sidebar API (`/api/[slug]/decisions/sidebar/route.ts`): Filters with `OR: [{ votingMode: 'INVITED' }, { votingMode: 'PUBLIC_LINK', creatorId: userId }]`
+  - Dashboard page (`/[slug]/page.tsx`): Same filter applied to initial query
+  - Decisions API (`/api/[slug]/decisions/route.ts`): Filter added to paginated results
+- **Rationale**: PUBLIC_LINK decisions are for external audiences; internal members don't need to see them unless they created them
+
+### Team Management Enhancements
+
+**Expandable Team Member Lists** (`app/[slug]/teams/page.tsx`):
+- Team cards now show first 3 members by default
+- "+ X autres" text is now clickable (previously static)
+- Click to expand and see all team members
+- Click "Voir moins" to collapse back to 3 members
+- Each expanded member has a remove button (same as first 3)
+- **Implementation**:
+  - New state: `expandedTeams` (Set of team IDs)
+  - `handleToggleTeamExpansion()` function toggles expansion per team
+  - Conditional rendering: `expandedTeams.has(teamId) ? allMembers : first3Members`
+
+### Test Data & Migration
+
+**SQL Migration Script for Test Data** (`test-data-migration.sql`):
+- Creates 5 completed (APPROVED) decisions of different types:
+  1. MAJORITY - Logo selection (3 proposals, 15 external voters)
+  2. NUANCED_VOTE - Training evaluation (4 proposals, 5-level scale, 15 external voters)
+  3. CONSENSUS - Remote work policy (15 external voters, all AGREE)
+  4. CONSENT - Team reorganization (15 external voters, all NO_OBJECTION)
+  5. ADVICE_SOLICITATION - Tool investment (15 external opinions + conclusion)
+- Each decision has 15 unique external participants (same emails reused across decisions)
+- Realistic content with French business context
+- Instructions for Railway PostgreSQL deployment
+- User must replace `{ORG_ID}` and `{CREATOR_ID}` placeholders
+- Usage: `psql <connection-string> -f test-data-migration.sql`
+
 ## Known Issues & Workarounds
 
 ### Prisma Client Generation
@@ -1369,6 +1431,143 @@ If you encounter 403 errors from `binaries.prisma.sh`, the Prisma client may nee
 
 ### Email in Development
 If `RESEND_API_KEY` is not configured, invitation emails will fail silently. For local development, manually construct invitation URLs or use a test Resend account.
+
+### Common Railway/Next.js Build Errors
+
+**CRITICAL**: Railway builds fail on ESLint errors and warnings during `npm run build`. Always fix these issues before pushing.
+
+#### 1. Unescaped Apostrophes in JSX
+
+**Error**: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+
+**Cause**: Next.js ESLint enforces proper HTML entity encoding for apostrophes in JSX text.
+
+**Fix**: Replace `'` with `&apos;` in JSX content:
+```tsx
+// ❌ WRONG
+<Button>Annuler l'invitation</Button>
+
+// ✅ CORRECT
+<Button>Annuler l&apos;invitation</Button>
+```
+
+**Common locations**: Button labels, Typography content, Dialog titles, Alert messages.
+
+#### 2. React Hook useEffect Missing Dependencies
+
+**Warning**: React Hook useEffect has a missing dependency: 'X'. Either include it or remove the dependency array.
+
+**Cause**: React Hooks exhaustive-deps rule enforces that all values used inside useEffect are listed in the dependency array.
+
+**Fix Options**:
+
+1. **For primitive values or state**: Add them to the dependency array:
+```tsx
+// ❌ WRONG
+useEffect(() => {
+  if (selectedUserIds.includes(userId)) { ... }
+}, [userId]); // Missing: selectedUserIds
+
+// ✅ CORRECT
+useEffect(() => {
+  if (selectedUserIds.includes(userId)) { ... }
+}, [userId, selectedUserIds]);
+```
+
+2. **For functions**: Wrap them in `useCallback` first, then add to dependency array:
+```tsx
+// ❌ WRONG
+const fetchData = async () => { ... };
+useEffect(() => {
+  fetchData();
+}, []); // Missing: fetchData
+
+// ✅ CORRECT
+const fetchData = useCallback(async () => {
+  // ... implementation
+}, [dep1, dep2]); // Dependencies of fetchData
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // Now fetchData is stable
+```
+
+**Pattern for async functions in useEffect**:
+```tsx
+// Define with useCallback
+const fetchSomething = useCallback(async () => {
+  const response = await fetch(`/api/${orgId}/data`);
+  setData(await response.json());
+}, [orgId]); // Include all external values used
+
+// Use in useEffect
+useEffect(() => {
+  if (shouldFetch) {
+    fetchSomething();
+  }
+}, [shouldFetch, fetchSomething]); // Include both condition and function
+```
+
+**Common mistakes**:
+- Forgetting to add `useCallback` import: `import { useEffect, useState, useCallback } from 'react'`
+- Not wrapping async functions in `useCallback` before using in useEffect
+- Omitting values used in conditions (e.g., `if (organization)` requires `organization` in dependencies)
+
+#### 3. TypeScript Nullable Types (Prisma)
+
+**Error**: `Type 'string | null' is not assignable to type 'string'`
+
+**Cause**: Prisma schema allows nullable fields, but TypeScript functions may expect non-nullable values.
+
+**Example Error**:
+```typescript
+// ❌ WRONG - user.name peut être null selon Prisma
+await sendEmail({
+  name: user.name,  // Type error: string | null not assignable to string
+})
+```
+
+**Fix**: Use fallback operator or guaranteed non-null variable:
+```typescript
+// ✅ CORRECT - Option 1: Fallback avec ||
+await sendEmail({
+  name: user.name || 'Default Name',
+})
+
+// ✅ CORRECT - Option 2: Utiliser la variable d'origine (si disponible)
+const { name } = await req.json();
+// ... create user with name ...
+await sendEmail({
+  name: user.name || name,  // name est garanti non-null à ce stade
+})
+
+// ✅ CORRECT - Option 3: Non-null assertion (si sûr à 100%)
+await sendEmail({
+  name: user.name!,  // ! signifie "je garantis que ce n'est pas null"
+})
+```
+
+**Common locations**:
+- Email functions with user names
+- API responses with potentially null fields
+- Function calls requiring non-nullable parameters
+
+**Best practice**: Always use fallback (`||` or `??`) rather than non-null assertion (`!`) unless absolutely certain the value cannot be null.
+
+#### 4. Build Checklist Before Railway Deploy
+
+Before pushing code that will trigger a Railway deployment:
+
+1. **Run local build**: `npm run build` (catches ESLint errors)
+2. **Check for apostrophes**: Search for `'` in JSX text (Button, Typography, etc.)
+3. **Check useEffect hooks**: Ensure all dependencies are listed
+4. **Review ESLint warnings**: Fix warnings in components (Railway treats them as errors in production build)
+
+**Quick fix command**:
+```bash
+npm run lint -- --fix  # Auto-fix some ESLint issues
+npm run build         # Verify build succeeds
+```
 
 ## Testing Decision Logic
 

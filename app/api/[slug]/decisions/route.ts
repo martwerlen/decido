@@ -125,6 +125,15 @@ export async function GET(
       });
     }
 
+    // Filtre PUBLIC_LINK : seul le créateur voit ses décisions PUBLIC_LINK
+    if (!where.AND) where.AND = [];
+    where.AND.push({
+      OR: [
+        { votingMode: 'INVITED' },
+        { votingMode: 'PUBLIC_LINK', creatorId: session.user.id },
+      ],
+    });
+
     // Compter le nombre total de décisions filtrées
     const totalCount = await prisma.decision.count({ where });
 

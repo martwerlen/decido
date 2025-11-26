@@ -112,6 +112,9 @@ export default function OrganizationTeamsPage() {
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState('');
 
+  // État pour gérer l'expansion de la liste des membres par équipe
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+
   const fetchTeams = useCallback(async () => {
     try {
       const response = await fetch(`/api/${organizationSlug}/teams`);
@@ -320,6 +323,18 @@ export default function OrganizationTeamsPage() {
     );
   };
 
+  const handleToggleTeamExpansion = (teamId: string) => {
+    setExpandedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
@@ -472,7 +487,7 @@ export default function OrganizationTeamsPage() {
                       </Typography>
                     ) : (
                       <List dense disablePadding>
-                        {team.members.slice(0, 3).map((member) => (
+                        {(expandedTeams.has(team.id) ? team.members : team.members.slice(0, 3)).map((member) => (
                           <ListItem key={member.id} disablePadding>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
                               <UserAvatar user={member.organizationMember.user} size="small" />
@@ -494,10 +509,17 @@ export default function OrganizationTeamsPage() {
                         ))}
                         {team.members.length > 3 && (
                           <ListItem disablePadding>
-                            <ListItemText
-                              primary={`+${team.members.length - 3} autre${team.members.length - 3 > 1 ? 's' : ''}`}
-                              primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                            />
+                            <ListItemButton
+                              onClick={() => handleToggleTeamExpansion(team.id)}
+                              sx={{ py: 0.5 }}
+                            >
+                              <ListItemText
+                                primary={expandedTeams.has(team.id)
+                                  ? 'Voir moins'
+                                  : `+${team.members.length - 3} autre${team.members.length - 3 > 1 ? 's' : ''}`}
+                                primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                              />
+                            </ListItemButton>
                           </ListItem>
                         )}
                       </List>

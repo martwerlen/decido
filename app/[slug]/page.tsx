@@ -58,9 +58,14 @@ export default async function OrganizationDashboard({
   const defaultTypeFilter = ['ADVICE_SOLICITATION', 'CONSENSUS', 'MAJORITY', 'NUANCED_VOTE'];
 
   // Construire le filtre where (même logique que l'API)
+  // Les décisions PUBLIC_LINK ne sont visibles que par leur créateur
   const where: any = {
     organizationId: organization.id,
     decisionType: { in: defaultTypeFilter },
+    OR: [
+      { votingMode: 'INVITED' },
+      { votingMode: 'PUBLIC_LINK', creatorId: session.user.id },
+    ],
   };
 
   // Filtre par statut (les brouillons sont privés à l'utilisateur)

@@ -262,6 +262,95 @@ Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
   return { success: true, mode: 'console' };
 }
 
+interface SendSignupWelcomeEmailParams {
+  to: string;
+  name: string;
+}
+
+export async function sendSignupWelcomeEmail({
+  to,
+  name,
+}: SendSignupWelcomeEmailParams) {
+  const loginUrl = `${process.env.NEXTAUTH_URL}/auth/signin`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bienvenue sur Decidoo</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h1 style="color: #2563eb; margin: 0 0 20px 0; font-size: 24px;">
+            Bienvenue sur Decidoo !
+          </h1>
+          <p style="margin: 0 0 15px 0; font-size: 16px;">
+            Bonjour ${name},
+          </p>
+          <p style="margin: 0 0 15px 0; font-size: 16px;">
+            Votre compte Decidoo a été créé avec succès ! Nous sommes ravis de vous accueillir sur notre plateforme de prise de décision collaborative.
+          </p>
+          <p style="margin: 0 0 25px 0; font-size: 16px;">
+            Vous pouvez maintenant créer votre première organisation ou accepter une invitation pour rejoindre une équipe existante.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}"
+               style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; display: inline-block;">
+              Commencer maintenant
+            </a>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: #999; padding: 20px 0;">
+          <p style="margin: 0;">
+            Si vous avez des questions, n'hésitez pas à nous contacter.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textContent = `
+Bonjour ${name},
+
+Votre compte Decidoo a été créé avec succès ! Nous sommes ravis de vous accueillir sur notre plateforme de prise de décision collaborative.
+
+Vous pouvez maintenant créer votre première organisation ou accepter une invitation pour rejoindre une équipe existante.
+
+Pour commencer, visitez :
+${loginUrl}
+
+Si vous avez des questions, n'hésitez pas à nous contacter.
+  `.trim();
+
+  const emailData = {
+    from: fromEmail,
+    to: [to],
+    subject: `Bienvenue sur Decidoo !`,
+    html: htmlContent,
+    text: textContent,
+  };
+
+  // Si RESEND_API_KEY est défini, utiliser Resend
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    try {
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const data = await resend.emails.send(emailData);
+      console.log(`✅ Email de bienvenue envoyé à ${to}`);
+      return { success: true, data };
+    } catch (error) {
+      console.error(`❌ Erreur email de bienvenue pour ${to}:`, error);
+    }
+  }
+
+  // Mode console
+  console.log(`📧 [CONSOLE] Bienvenue à ${to}`);
+  console.log(`   Connexion: ${loginUrl}\n`);
+  return { success: true, mode: 'console' };
+}
+
 interface SendPasswordResetEmailParams {
   to: string;
   userName: string;
