@@ -304,8 +304,22 @@ export default function OrganizationMembersPage() {
   }
 
   return (
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box component="main" sx={{
+        flexGrow: 1,
+        bgcolor: 'background.default',
+        px: { xs: 1.5, sm: 2, md: 3 },
+        py: { xs: 3, md: 6 },
+        maxWidth: '1200px',
+        mx: 'auto'
+      }}>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: 2,
+          mb: 4
+        }}>
           <Typography variant="h4" component="h1">
             Gérer les membres
           </Typography>
@@ -314,17 +328,21 @@ export default function OrganizationMembersPage() {
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleOpenDialog}
+          fullWidth
+          sx={{ width: { sm: 'auto' } }}
         >
           Ajouter un membre
         </Button>
       </Box>
 
       {/* Membres avec compte utilisateur */}
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <EmailIcon /> Membres avec compte ({data?.members.length || 0})
         </Typography>
-        <TableContainer>
+
+        {/* Vue tableau (desktop) */}
+        <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -393,15 +411,94 @@ export default function OrganizationMembersPage() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Vue cartes (mobile) */}
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          {(!data?.members || data.members.length === 0) ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
+              Aucun membre avec compte
+            </Typography>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {data.members.map((member) => (
+                <Box
+                  key={member.id}
+                  sx={{
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    p: 2,
+                    backgroundColor: 'background.paper',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <UserAvatar user={member.user} size="small" />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body1" fontWeight="semibold">
+                        {member.user.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                        {member.user.email}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Chip
+                      label={member.role}
+                      color={
+                        member.role === 'OWNER'
+                          ? 'error'
+                          : member.role === 'ADMIN'
+                          ? 'warning'
+                          : 'default'
+                      }
+                      size="small"
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Membre depuis {new Date(member.joinedAt).toLocaleDateString('fr-FR')}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<EditIcon />}
+                      onClick={() => handleEditRole(member)}
+                      fullWidth
+                    >
+                      Modifier le rôle
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() =>
+                        handleDeleteClick('member', member.id, member.user.name)
+                      }
+                      fullWidth
+                    >
+                      Supprimer
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
       </Paper>
 
       {/* Invitations en attente */}
       {data?.pendingInvitations && data.pendingInvitations.length > 0 && (
-        <Paper elevation={3} sx={{ p: 3 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
           <Typography variant="h6" gutterBottom>
             Invitations en attente ({data.pendingInvitations.length})
           </Typography>
-          <TableContainer>
+
+          {/* Vue tableau (desktop) */}
+          <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -450,6 +547,65 @@ export default function OrganizationMembersPage() {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* Vue cartes (mobile) */}
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {data.pendingInvitations.map((invitation) => (
+                <Box
+                  key={invitation.id}
+                  sx={{
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    p: 2,
+                    backgroundColor: 'background.paper',
+                  }}
+                >
+                  <Typography variant="body1" fontWeight="semibold" sx={{ mb: 0.5 }}>
+                    {invitation.firstName} {invitation.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', mb: 1.5 }}>
+                    {invitation.email}
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
+                    {invitation.position && (
+                      <Typography variant="caption" color="text.secondary">
+                        Fonction : {invitation.position}
+                      </Typography>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Chip label={invitation.role} size="small" />
+                      <Typography variant="caption" color="text.secondary">
+                        Invité par {invitation.invitedBy.name}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Le {new Date(invitation.createdAt).toLocaleDateString('fr-FR')}
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() =>
+                      handleDeleteClick(
+                        'invitation',
+                        invitation.id,
+                        `${invitation.firstName} ${invitation.lastName}`
+                      )
+                    }
+                    fullWidth
+                  >
+                    Annuler l'invitation
+                  </Button>
+                </Box>
+              ))}
+            </Box>
+          </Box>
         </Paper>
       )}
 

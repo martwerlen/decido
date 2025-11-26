@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Box, Typography, Button, TextField, Chip, Card, CardContent } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSidebarRefresh } from '@/components/providers/SidebarRefreshProvider';
 
@@ -125,53 +126,56 @@ export default function SharePageClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 1.5, sm: 2, md: 3 },
+      py: { xs: 3, md: 6 }
+    }}>
       {/* En-tête */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{decision.title}</h1>
-        <p className="text-gray-600">{decision.description}</p>
-        <div className="mt-4">
-          <span
-            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-              decision.status === 'OPEN'
-                ? 'bg-green-100 text-green-800'
-                : decision.status === 'DRAFT'
-                ? 'bg-gray-100 text-gray-800'
-                : 'bg-blue-100 text-blue-800'
-            }`}
-          >
-            {decision.status === 'OPEN' ? 'En cours' : decision.status === 'DRAFT' ? 'Brouillon' : 'Terminé'}
-          </span>
-        </div>
-      </div>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>{decision.title}</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>{decision.description}</Typography>
+        <Box sx={{ mt: 2 }}>
+          <Chip
+            label={decision.status === 'OPEN' ? 'En cours' : decision.status === 'DRAFT' ? 'Brouillon' : 'Terminé'}
+            color={decision.status === 'OPEN' ? 'success' : decision.status === 'DRAFT' ? 'default' : 'info'}
+            size="medium"
+          />
+        </Box>
+      </Box>
 
       {/* Section lien public */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Lien de vote public</h2>
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            readOnly
+      <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>Lien de vote public</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <TextField
             value={publicUrl}
-            className="flex-1 px-3 py-2 border rounded-lg bg-gray-50"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+            }}
+            size="small"
           />
-          <button
+          <Button
             onClick={copyLink}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            variant="contained"
+            color="primary"
+            sx={{ minWidth: 100 }}
           >
             {copied ? '✓ Copié' : 'Copier'}
-          </button>
-        </div>
-        <p className="text-sm text-gray-600">
+          </Button>
+        </Box>
+        <Typography variant="body2" color="text.secondary">
           Partagez ce lien pour permettre à tous de voter de manière anonyme.
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
       {/* Section QR Code */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">QR Code</h2>
-        <div className="flex flex-col items-center">
-          <div className="bg-white p-4 border rounded-lg">
+      <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>QR Code</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ backgroundColor: 'background.paper', p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
             <QRCodeSVG
               id="qr-code"
               value={publicUrl}
@@ -179,30 +183,32 @@ export default function SharePageClient({
               level="H"
               includeMargin={true}
             />
-          </div>
-          <button
+          </Box>
+          <Button
             onClick={downloadQRCode}
-            className="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+            variant="outlined"
+            color="primary"
+            sx={{ mt: 2 }}
           >
             Télécharger le QR Code
-          </button>
-          <p className="mt-2 text-sm text-gray-600 text-center">
+          </Button>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
             Scannez ce code pour accéder directement au vote
-          </p>
-        </div>
-      </div>
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Statistiques en temps réel */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Statistiques</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="text-3xl font-bold text-blue-600">{voteCount}</div>
-            <div className="text-sm text-gray-600">Votes reçus</div>
-          </div>
+      <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>Statistiques</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+          <Box sx={{ backgroundColor: 'primary.light', p: 2, borderRadius: 1 }}>
+            <Typography variant="h3" fontWeight="bold" color="primary.main">{voteCount}</Typography>
+            <Typography variant="body2" color="text.secondary">Votes reçus</Typography>
+          </Box>
           {decision.endDate && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-lg font-semibold text-gray-800">
+            <Box sx={{ backgroundColor: 'background.secondary', p: 2, borderRadius: 1 }}>
+              <Typography variant="body1" fontWeight="semibold">
                 {new Date(decision.endDate).toLocaleDateString('fr-FR', {
                   day: 'numeric',
                   month: 'long',
@@ -210,38 +216,45 @@ export default function SharePageClient({
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
-              </div>
-              <div className="text-sm text-gray-600">Date de fin</div>
-            </div>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">Date de fin</Typography>
+            </Box>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {/* Actions */}
-      <div className="flex gap-4">
-        <button
+      <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <Button
           onClick={viewResults}
-          className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          variant="contained"
+          color="inherit"
+          fullWidth
+          sx={{ py: 1.5 }}
         >
           Voir les résultats
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={closeDecision}
           disabled={closing || decision.status === 'CLOSED'}
-          className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="contained"
+          color="error"
+          fullWidth
+          sx={{ py: 1.5 }}
         >
           {closing ? 'Fermeture...' : 'Fermer la décision'}
-        </button>
-      </div>
+        </Button>
+      </Box>
 
-      <div className="mt-6 text-center">
-        <button
+      <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Button
           onClick={() => router.push(`/${organizationSlug}`)}
-          className="text-blue-600 hover:underline"
+          variant="text"
+          color="primary"
         >
           ← Retour à l&apos;organisation
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Box>
+    </Box>
   );
 }

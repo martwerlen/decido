@@ -141,11 +141,27 @@ export default function DashboardContent({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <Box sx={{
+      maxWidth: '1200px',
+      mx: 'auto',
+      px: { xs: 1.5, sm: 2, md: 3 },
+      py: { xs: 3, md: 6 }
+    }}>
       {/* En-tête avec titre, recherche et bouton */}
       <Box sx={{ mb: 4 }}>
         {/* Titre */}
-        <h1 className="text-3xl font-bold mb-4">Décisions - {organization.name}</h1>
+        <Typography
+          variant="h4"
+          fontWeight="bold"
+          sx={{
+            mb: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: { xs: 'nowrap', sm: 'normal' }
+          }}
+        >
+          Décisions - {organization.name}
+        </Typography>
 
         {/* Barre de recherche + Bouton Nouvelle décision */}
         <Box
@@ -261,138 +277,156 @@ export default function DashboardContent({
                     '&:hover': {
                       boxShadow: 1,
                     },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: 1.5
                   }}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                        {decision.votingMode === 'PUBLIC_LINK' && (
-                          <QrCode2 sx={{ fontSize: '1.25rem', color: 'action.active' }} />
-                        )}
-                        <Link
-                          href={targetUrl}
-                          className="text-sm font-semibold truncate"
-                          style={{ color: 'inherit', textDecoration: 'none' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
-                        >
-                          {decision.title}
-                        </Link>
-                        {!hasVoted && !isClosed && !isPublicLink && (
-                          <Chip
-                            label="Action requise"
-                            size="small"
-                            color="warning"
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                        {hasVoted && !isClosed && (
-                          <Chip
-                            label="✓ Participé"
-                            size="small"
-                            color="success"
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                        {isPublicLink && !isClosed && (
-                          <Chip
-                            label="Vote anonyme"
-                            size="small"
-                            color="secondary"
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                      </Box>
-
-                      <Box sx={{ display: 'flex', gap: 1, fontSize: '0.75rem', flexWrap: 'wrap', color: 'text.secondary' }}>
+                  {/* Contenu principal */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                      {decision.votingMode === 'PUBLIC_LINK' && (
+                        <QrCode2 sx={{ fontSize: '1.25rem', color: 'action.active' }} />
+                      )}
+                      <Link
+                        href={targetUrl}
+                        className="text-sm font-semibold truncate"
+                        style={{ color: 'inherit', textDecoration: 'none' }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                      >
+                        {decision.title}
+                      </Link>
+                      {!hasVoted && !isClosed && !isPublicLink && (
                         <Chip
-                          label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+                          label="Action requise"
                           size="small"
-                          color="primary"
+                          color="warning"
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
+                      )}
+                      {hasVoted && !isClosed && (
+                        <Chip
+                          label="✓ Participé"
+                          size="small"
+                          color="success"
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
+                      )}
+                      {isPublicLink && !isClosed && (
+                        <Chip
+                          label="Vote anonyme"
+                          size="small"
+                          color="secondary"
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 1, fontSize: '0.75rem', flexWrap: 'wrap', color: 'text.secondary' }}>
+                      <Chip
+                        label={DecisionTypeLabels[decision.decisionType as keyof typeof DecisionTypeLabels]}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                      />
+                      {decision.team && (
+                        <Chip
+                          label={decision.team.name}
+                          size="small"
+                          color="secondary"
                           variant="outlined"
                           sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
                         />
-                        {decision.team && (
-                          <Chip
-                            label={decision.team.name}
-                            size="small"
-                            color="secondary"
-                            variant="outlined"
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                        {!isClosed && decision.decisionType === 'CONSENT' && decision.consentCurrentStage && (
-                          <Chip
-                            label={
-                              decision.consentCurrentStage === 'CLARIFICATIONS' ? 'Questions' :
-                              decision.consentCurrentStage === 'CLARIFAVIS' ? 'Questions & Avis' :
-                              decision.consentCurrentStage === 'AVIS' ? 'Avis' :
-                              decision.consentCurrentStage === 'AMENDEMENTS' ? 'Amendements' :
-                              decision.consentCurrentStage === 'OBJECTIONS' ? 'Objections' :
-                              decision.consentCurrentStage
-                            }
-                            size="small"
-                            color="info"
-                            variant="outlined"
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                        {isClosed && decision.result && (
-                          <Chip
-                            label={
-                              decision.result === 'APPROVED'
-                                ? decision.decisionType === 'MAJORITY' || decision.decisionType === 'NUANCED_VOTE'
-                                  ? 'Décision prise'
-                                  : 'Approuvée'
-                                : decision.result === 'WITHDRAWN'
-                                ? 'Retirée'
-                                : 'Rejetée'
-                            }
-                            size="small"
-                            color={decision.result === 'APPROVED' ? 'success' : 'error'}
-                            sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
-                          />
-                        )}
-                        {decision.endDate && !isClosed && (
-                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
-                            Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
-                          </Typography>
-                        )}
-                        {isClosed && decision.decidedAt && (
-                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
-                            {new Date(decision.decidedAt).toLocaleDateString('fr-FR')}
-                          </Typography>
-                        )}
-                      </Box>
-                    </div>
-
-                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1 }}>
-                      <Button
-                        component={Link}
-                        href={targetUrl}
-                        variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
-                        color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
-                        size="small"
-                        sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
-                      >
-                        {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
-                      </Button>
-
-                      {/* Bouton Admin pour le créateur sur les décisions en cours */}
-                      {decision.creatorId === userId && !isClosed && (
-                        <Button
-                          component={Link}
-                          href={`/${slug}/decisions/${decision.id}/admin`}
-                          variant="outlined"
-                          color="primary"
+                      )}
+                      {!isClosed && decision.decisionType === 'CONSENT' && decision.consentCurrentStage && (
+                        <Chip
+                          label={
+                            decision.consentCurrentStage === 'CLARIFICATIONS' ? 'Questions' :
+                            decision.consentCurrentStage === 'CLARIFAVIS' ? 'Questions & Avis' :
+                            decision.consentCurrentStage === 'AVIS' ? 'Avis' :
+                            decision.consentCurrentStage === 'AMENDEMENTS' ? 'Amendements' :
+                            decision.consentCurrentStage === 'OBJECTIONS' ? 'Objections' :
+                            decision.consentCurrentStage
+                          }
                           size="small"
-                          sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', textDecoration: 'none' }}
-                        >
-                          Admin
-                        </Button>
+                          color="info"
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
+                      )}
+                      {isClosed && decision.result && (
+                        <Chip
+                          label={
+                            decision.result === 'APPROVED'
+                              ? decision.decisionType === 'MAJORITY' || decision.decisionType === 'NUANCED_VOTE'
+                                ? 'Décision prise'
+                                : 'Approuvée'
+                              : decision.result === 'WITHDRAWN'
+                              ? 'Retirée'
+                              : 'Rejetée'
+                          }
+                          size="small"
+                          color={decision.result === 'APPROVED' ? 'success' : 'error'}
+                          sx={{ fontSize: '0.75rem', height: 'auto', py: 0.25 }}
+                        />
+                      )}
+                      {decision.endDate && !isClosed && (
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
+                          Fin : {new Date(decision.endDate).toLocaleDateString('fr-FR')}
+                        </Typography>
+                      )}
+                      {isClosed && decision.decidedAt && (
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}>
+                          {new Date(decision.decidedAt).toLocaleDateString('fr-FR')}
+                        </Typography>
                       )}
                     </Box>
-                  </div>
+                  </Box>
+
+                  {/* Boutons d'action - À droite sur desktop, en bas sur mobile */}
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: 1,
+                    minWidth: { xs: '100%', md: 'auto' }
+                  }}>
+                    <Button
+                      component={Link}
+                      href={targetUrl}
+                      variant={!hasVoted && !isClosed && !isPublicLink ? 'contained' : 'outlined'}
+                      color={!hasVoted && !isClosed && !isPublicLink ? 'warning' : isPublicLink ? 'secondary' : 'inherit'}
+                      size="small"
+                      sx={{
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.75rem',
+                        textDecoration: 'none',
+                        flex: 1
+                      }}
+                    >
+                      {!hasVoted && !isClosed && !isPublicLink ? 'Participer' : isPublicLink ? 'Gérer' : 'Voir'}
+                    </Button>
+
+                    {/* Bouton Admin pour le créateur sur les décisions en cours */}
+                    {decision.creatorId === userId && !isClosed && (
+                      <Button
+                        component={Link}
+                        href={`/${slug}/decisions/${decision.id}/admin`}
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        sx={{
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.75rem',
+                          textDecoration: 'none',
+                          flex: 1
+                        }}
+                      >
+                        Admin
+                      </Button>
+                    )}
+                  </Box>
                 </Box>
               );
             })}
@@ -414,6 +448,6 @@ export default function DashboardContent({
           </Box>
         )}
       </section>
-    </div>
+    </Box>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Box, Chip, Typography, Button, Alert } from '@mui/material';
+import { Box, Chip, Typography, Button, Alert, TextField } from '@mui/material';
 import {
   DecisionStatusLabels,
   DecisionTypeLabels,
@@ -463,9 +463,14 @@ export default function VotePageClient({
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Bouton d&apos;historique en haut à droite */}
-      <div className="fixed top-4 right-4 z-50">
+    <Box sx={{
+      maxWidth: { xs: '100%', sm: '100%', md: 896 },
+      mx: 'auto',
+      px: { xs: 1.5, sm: 2, md: 3 },
+      py: { xs: 3, md: 6 }
+    }}>
+      {/* Bouton d&apos;historique en haut à gauche */}
+      <div className="fixed top-4 left-4 z-50">
         <HistoryButton onClick={() => setHistoryOpen(true)} />
       </div>
 
@@ -654,7 +659,7 @@ export default function VotePageClient({
                           } ${!isOpen ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                           style={{
                             backgroundColor: isSelected ? color : `${color}33`,
-                            color: isSelected ? '#fff' : '#333',
+                            color: '#fff',
                           }}
                         >
                           {label}
@@ -725,99 +730,119 @@ export default function VotePageClient({
           </Box>
 
           {/* Commentaires */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Discussion</h2>
+          <Box sx={{
+            backgroundColor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 2,
+            p: 3,
+            mb: 3
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'semibold' }}>Discussion</Typography>
 
             {decision.comments.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Aucun commentaire pour le moment</p>
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                Aucun commentaire pour le moment
+              </Typography>
             ) : (
-              <div className="space-y-4 mb-6">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
                 {decision.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
-                          <span className="text-xs text-gray-500">
+                  <Box
+                    key={comment.id}
+                    sx={{
+                      borderLeft: 4,
+                      borderColor: 'divider',
+                      pl: 2
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            {comment.user?.name || 'Anonyme'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
                             {new Date(comment.createdAt).toLocaleString('fr-FR')}
                             {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
-                          </span>
-                        </div>
+                          </Typography>
+                        </Box>
 
                         {editingCommentId === comment.id ? (
-                          <div className="space-y-2">
-                            <textarea
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <TextField
                               value={editingCommentContent}
                               onChange={(e) => setEditingCommentContent(e.target.value)}
+                              multiline
                               rows={3}
-                              className="w-full px-3 py-2 border rounded-lg"
+                              fullWidth
+                              size="small"
                             />
-                            <div className="flex gap-2">
-                              <button
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
                                 onClick={() => handleUpdateComment(comment.id)}
                                 disabled={loading}
-                                className="text-sm text-white px-3 py-1 rounded"
-                                style={{ backgroundColor: 'var(--color-primary)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                                variant="contained"
+                                size="small"
                               >
                                 Enregistrer
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 onClick={() => {
                                   setEditingCommentId(null);
                                   setEditingCommentContent('');
                                 }}
-                                className="text-sm border px-3 py-1 rounded hover:bg-gray-50"
+                                variant="outlined"
+                                size="small"
                               >
                                 Annuler
-                              </button>
-                            </div>
-                          </div>
+                              </Button>
+                            </Box>
+                          </Box>
                         ) : (
-                          <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {comment.content}
+                          </Typography>
                         )}
-                      </div>
+                      </Box>
 
                       {comment.user?.id === userId && isOpen && !editingCommentId && (
-                        <button
+                        <Button
                           onClick={() => {
                             setEditingCommentId(comment.id);
                             setEditingCommentContent(comment.content);
                           }}
-                          className="text-sm text-blue-600 hover:underline ml-2"
+                          size="small"
+                          sx={{ ml: 1 }}
                         >
                           Modifier
-                        </button>
+                        </Button>
                       )}
-                    </div>
-                  </div>
+                    </Box>
+                  </Box>
                 ))}
-              </div>
+              </Box>
             )}
 
             {isOpen && (
-              <div className="space-y-3">
-                <textarea
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <TextField
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
+                  multiline
                   rows={3}
                   placeholder="Ajoutez votre commentaire..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  fullWidth
                 />
-                <button
+                <Button
                   onClick={handleAddComment}
                   disabled={loading}
-                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                  variant="contained"
                 >
                   {loading ? 'Envoi...' : 'Ajouter un commentaire'}
-                </button>
-              </div>
+                </Button>
+              </Box>
             )}
-          </div>
+          </Box>
 
           {/* Vote d&apos;accord/pas d&apos;accord */}
           <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 3 }}>
@@ -869,200 +894,204 @@ export default function VotePageClient({
       {decision.decisionType === 'ADVICE_SOLICITATION' && (
         <>
           {/* Proposition de décision */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Proposition de décision</h2>
-            <div className="p-4 bg-gray-50 rounded border whitespace-pre-wrap">
+          <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Proposition de décision</Typography>
+            <Box sx={{ p: 2, backgroundColor: 'background.secondary', borderRadius: 1, border: 1, borderColor: 'divider', whiteSpace: 'pre-wrap' }}>
               {decision.proposal || decision.initialProposal}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
           {/* Avis déjà donnés */}
           {allOpinions.length > 0 && (
-            <div className="bg-white border rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Avis reçus ({allOpinions.length})</h2>
-              <div className="space-y-4">
+            <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>Avis reçus ({allOpinions.length})</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {allOpinions.map((opinion) => {
                   const authorName = opinion.user?.name || opinion.externalParticipant?.externalName || 'Anonyme';
                   const isCurrentUser = opinion.userId === userId;
 
                   return (
-                    <div key={opinion.id} className={`border-l-4 pl-4 ${isCurrentUser ? 'border-blue-500' : 'border-gray-300'}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium">{authorName}</span>
+                    <Box key={opinion.id} sx={{ borderLeft: 4, borderColor: isCurrentUser ? 'primary.main' : 'divider', pl: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Typography variant="body2" fontWeight="medium">{authorName}</Typography>
                         {isCurrentUser && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Votre avis</span>
+                          <Chip label="Votre avis" size="small" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
                         )}
-                        <span className="text-xs text-gray-500">
+                        <Typography variant="caption" color="text.secondary">
                           {new Date(opinion.createdAt).toLocaleString('fr-FR')}
                           {new Date(opinion.updatedAt) > new Date(opinion.createdAt) && ' (modifié)'}
-                        </span>
-                      </div>
-                      <div className="text-gray-700 whitespace-pre-wrap">{opinion.content}</div>
-                    </div>
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{opinion.content}</Typography>
+                    </Box>
                   );
                 })}
-              </div>
-            </div>
+              </Box>
+            </Box>
           )}
 
           {/* Avis en attente */}
           {allOpinions.length < decision.participants.length && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
                 {decision.participants.length - allOpinions.length} avis en attente sur {decision.participants.length} sollicité{decision.participants.length > 1 ? 's' : ''}
-              </p>
-              <div className="mt-2 text-sm text-blue-700">
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
                 {decision.participants
                   .filter(p => !allOpinions.some(o => o.userId === p.userId))
                   .map(p => p.user?.name || p.externalName || 'Utilisateur')
-                  .map((name, idx, arr) => (
-                    <span key={idx}>
-                      {name}{idx < arr.length - 1 && ', '}
-                    </span>
-                  ))}
-                {decision.participants.filter(p => !allOpinions.some(o => o.userId === p.userId)).length > 0 && ' n\'ont pas encore donné leur avis'}
-              </div>
-            </div>
+                  .join(', ')}
+                {' n\'ont pas encore donné leur avis'}
+              </Typography>
+            </Alert>
           )}
 
           {/* Formulaire d&apos;avis (uniquement pour les participants sollicités) */}
           {isSolicited && isOpen && (
-            <div className="bg-white border rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">
+            <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
                 {hasVoted ? 'Modifier votre avis' : 'Donner votre avis'}
-              </h2>
-              <div className="space-y-3">
-                <textarea
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <TextField
                   value={opinionContent}
                   onChange={(e) => setOpinionContent(e.target.value)}
+                  multiline
                   rows={6}
+                  fullWidth
                   placeholder="Partagez votre avis sur cette proposition de décision..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button
+                <Button
                   onClick={handleSubmitOpinion}
                   disabled={loading || !opinionContent.trim()}
-                  className="w-full text-white py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  sx={{ py: 1.5, fontWeight: 'medium' }}
                 >
                   {loading ? 'Enregistrement...' : hasVoted ? 'Mettre à jour mon avis' : 'Enregistrer mon avis'}
-                </button>
-              </div>
-            </div>
+                </Button>
+              </Box>
+            </Box>
           )}
 
           {/* Message pour les non-sollicités */}
           {!isSolicited && isOpen && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-700">
-                ℹ️ Vous n&apos;êtes pas sollicité pour donner votre avis sur cette décision, mais vous pouvez la consulter et ajouter des commentaires ci-dessous.
-              </p>
-            </div>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                Vous n&apos;êtes pas sollicité pour donner votre avis sur cette décision, mais vous pouvez la consulter et ajouter des commentaires ci-dessous.
+              </Typography>
+            </Alert>
           )}
 
           {/* Commentaires (accessible à tous les membres) */}
-          <div className="bg-white border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Commentaires</h2>
+          <Box sx={{ backgroundColor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 2, p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Commentaires</Typography>
 
             {decision.comments.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Aucun commentaire pour le moment</p>
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>Aucun commentaire pour le moment</Typography>
             ) : (
-              <div className="space-y-4 mb-6">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
                 {decision.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-gray-200 pl-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{comment.user?.name || 'Anonyme'}</span>
-                          <span className="text-xs text-gray-500">
+                  <Box key={comment.id} sx={{ borderLeft: 4, borderColor: 'divider', pl: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="body2" fontWeight="medium">{comment.user?.name || 'Anonyme'}</Typography>
+                          <Typography variant="caption" color="text.secondary">
                             {new Date(comment.createdAt).toLocaleString('fr-FR')}
                             {new Date(comment.updatedAt) > new Date(comment.createdAt) && ' (modifié)'}
-                          </span>
-                        </div>
+                          </Typography>
+                        </Box>
 
-                        <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
 
                         {/* Réponses */}
                         {comment.replies && comment.replies.length > 0 && (
-                          <div className="mt-3 space-y-3 pl-4 border-l-2 border-gray-100">
+                          <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, pl: 2, borderLeft: 2, borderColor: 'divider' }}>
                             {comment.replies.map((reply) => (
-                              <div key={reply.id}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm">{reply.user?.name || 'Anonyme'}</span>
-                                  <span className="text-xs text-gray-500">
+                              <Box key={reply.id}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                  <Typography variant="body2" fontWeight="medium">{reply.user?.name || 'Anonyme'}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
                                     {new Date(reply.createdAt).toLocaleString('fr-FR')}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{reply.content}</p>
-                              </div>
+                                  </Typography>
+                                </Box>
+                                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{reply.content}</Typography>
+                              </Box>
                             ))}
-                          </div>
+                          </Box>
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </Box>
+                    </Box>
+                  </Box>
                 ))}
-              </div>
+              </Box>
             )}
 
             {/* Ajouter un commentaire */}
             {isOpen && (
-              <div className="space-y-3">
-                <textarea
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <TextField
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
+                  multiline
                   rows={3}
+                  fullWidth
                   placeholder="Ajouter un commentaire..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button
+                <Button
                   onClick={handleAddComment}
                   disabled={loading || !newComment.trim()}
-                  className="text-white px-4 py-2 rounded-lg disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)')}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+                  variant="contained"
+                  color="primary"
+                  sx={{ alignSelf: 'flex-start', px: 2, py: 1 }}
                 >
                   {loading ? 'Envoi...' : 'Ajouter un commentaire'}
-                </button>
-              </div>
+                </Button>
+              </Box>
             )}
-          </div>
+          </Box>
         </>
       )}
 
       {/* Navigation */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 2,
+        mt: 3
+      }}>
         <Button
           component={Link}
           href={`/${slug}/decisions`}
           variant="outlined"
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           Retour
         </Button>
         {isCreator && (
-          <Link
+          <Button
+            component={Link}
             href={`/${slug}/decisions/${decision.id}/admin`}
-            className="px-6 py-2 text-white rounded-lg"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-dark)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary)'}
+            variant="contained"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Administrer
-          </Link>
+          </Button>
         )}
         {/* Masquer les résultats pour ADVICE_SOLICITATION en cours */}
         {(decision.decisionType !== 'ADVICE_SOLICITATION' || !isOpen) && (
-          <Link
+          <Button
+            component={Link}
             href={`/${slug}/decisions/${decision.id}/results`}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            variant="outlined"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Voir les résultats
-          </Link>
+          </Button>
         )}
       </Box>
-    </div>
+    </Box>
   );
 }
