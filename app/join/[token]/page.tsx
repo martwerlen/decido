@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -64,14 +64,7 @@ export default function JoinOrganizationPage() {
     fetchInvitation();
   }, [token]);
 
-  // Si l'utilisateur est connecté, accepter automatiquement
-  useEffect(() => {
-    if (status === 'authenticated' && invitation && !accepting && !error) {
-      acceptInvitation();
-    }
-  }, [status, invitation]);
-
-  const acceptInvitation = async () => {
+  const acceptInvitation = useCallback(async () => {
     setAccepting(true);
     setError('');
 
@@ -97,7 +90,14 @@ export default function JoinOrganizationPage() {
       setError(err.message);
       setAccepting(false);
     }
-  };
+  }, [token, router]);
+
+  // Si l'utilisateur est connecté, accepter automatiquement
+  useEffect(() => {
+    if (status === 'authenticated' && invitation && !accepting && !error) {
+      acceptInvitation();
+    }
+  }, [status, invitation, accepting, error, acceptInvitation]);
 
   if (loading || status === 'loading') {
     return (
@@ -144,7 +144,7 @@ export default function JoinOrganizationPage() {
             onClick={() => router.push('/')}
             fullWidth
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Button>
         </Paper>
       </Box>
@@ -231,7 +231,7 @@ export default function JoinOrganizationPage() {
         </Card>
 
         <Alert severity="info" sx={{ mb: 3 }}>
-          Pour rejoindre cette organisation, vous devez d'abord créer un compte
+          Pour rejoindre cette organisation, vous devez d&apos;abord créer un compte
           ou vous connecter.
         </Alert>
 

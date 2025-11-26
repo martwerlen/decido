@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -54,14 +54,7 @@ export default function InviteLinkModal({
   const [error, setError] = useState('');
   const [copiedRole, setCopiedRole] = useState<string | null>(null);
 
-  // Charger les liens existants au montage
-  useEffect(() => {
-    if (open) {
-      fetchLinks();
-    }
-  }, [open]);
-
-  const fetchLinks = async () => {
+  const fetchLinks = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -88,7 +81,14 @@ export default function InviteLinkModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationSlug]);
+
+  // Charger les liens existants au montage
+  useEffect(() => {
+    if (open) {
+      fetchLinks();
+    }
+  }, [open, fetchLinks]);
 
   const generateLink = async (role: 'MEMBER' | 'ADMIN') => {
     setLoading(true);
@@ -186,8 +186,8 @@ export default function InviteLinkModal({
       <DialogContent>
         <Box sx={{ mb: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Créez un lien d'invitation réutilisable pour ajouter des membres à
-            votre organisation. Chaque lien peut être utilisé jusqu'à 10 fois.
+            Créez un lien d&apos;invitation réutilisable pour ajouter des membres à
+            votre organisation. Chaque lien peut être utilisé jusqu&apos;à 10 fois.
           </Typography>
         </Box>
 
