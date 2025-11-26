@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import {
   Box,
@@ -37,6 +37,8 @@ const passwordRequirements: PasswordRequirement[] = [
 
 export default function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get("inviteToken")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -84,7 +86,13 @@ export default function SignUpForm() {
         return
       }
 
-      // Connecter automatiquement l'utilisateur après inscription
+      // Si un token d'invitation est présent, rediriger vers signin pour le traiter
+      if (inviteToken) {
+        router.push(`/auth/signin?registered=true&inviteToken=${inviteToken}`)
+        return
+      }
+
+      // Sinon, connecter automatiquement l'utilisateur après inscription
       const signInResult = await signIn("credentials", {
         email,
         password,

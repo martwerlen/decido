@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { signIn, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   Box,
@@ -15,6 +15,8 @@ import {
 
 export default function SignInForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get("inviteToken")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -35,7 +37,13 @@ export default function SignInForm() {
       if (result?.error) {
         setError("Email ou mot de passe incorrect")
       } else {
-        // Récupérer la session pour obtenir lastOrganizationSlug
+        // Si un token d'invitation est présent, rediriger vers la page d'acceptation
+        if (inviteToken) {
+          router.push(`/join/${inviteToken}`)
+          return
+        }
+
+        // Sinon, récupérer la session pour obtenir lastOrganizationSlug
         const response = await fetch("/api/auth/session")
         const session = await response.json()
 
