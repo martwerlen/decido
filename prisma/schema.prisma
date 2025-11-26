@@ -27,6 +27,7 @@ model User {
   // Relations
   memberships              OrganizationMember[]
   invitationsSent          Invitation[]
+  inviteLinksCreated       OrganizationInviteLink[]
   decisions                Decision[]              @relation("DecisionCreator")
   votes                    Vote[]
   proposalVotes            ProposalVote[]
@@ -106,6 +107,7 @@ model Organization {
   members        OrganizationMember[]
   nonUserMembers NonUserMember[]
   invitations    Invitation[]
+  inviteLinks    OrganizationInviteLink[]
   teams          Team[]
   decisions      Decision[]
 
@@ -165,6 +167,27 @@ model Invitation {
   invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@map("invitations")
+}
+
+// Liens d'invitation réutilisables pour rejoindre une organisation
+model OrganizationInviteLink {
+  id             String   @id @default(cuid())
+  organizationId String
+  role           String   // MEMBER ou ADMIN
+  token          String   @unique // Token aléatoire pour l'URL
+  isActive       Boolean  @default(true)
+  usageCount     Int      @default(0)
+  maxUsage       Int      @default(10)
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, role]) // Un seul lien actif par rôle par organisation
+  @@map("organization_invite_links")
 }
 
 // ============================================

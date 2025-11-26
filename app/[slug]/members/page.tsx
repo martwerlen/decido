@@ -36,8 +36,10 @@ import {
   Person as PersonIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import UserAvatar from '@/components/common/UserAvatar';
+import InviteLinkModal from './InviteLinkModal';
 
 interface Member {
   id: string;
@@ -116,6 +118,9 @@ export default function OrganizationMembersPage() {
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // État pour le modal de lien d'invitation
+  const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -323,16 +328,28 @@ export default function OrganizationMembersPage() {
           <Typography variant="h4" component="h1">
             Gérer les membres
           </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleOpenDialog}
-          fullWidth
-          sx={{ width: { sm: 'auto' } }}
-        >
-          Ajouter un membre
-        </Button>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<LinkIcon />}
+              onClick={() => setInviteLinkModalOpen(true)}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
+            >
+              Inviter via un lien
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenDialog}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
+            >
+              Ajouter un membre
+            </Button>
+          </Box>
       </Box>
 
       {/* Membres avec compte utilisateur */}
@@ -818,6 +835,13 @@ export default function OrganizationMembersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de lien d'invitation */}
+      <InviteLinkModal
+        open={inviteLinkModalOpen}
+        onClose={() => setInviteLinkModalOpen(false)}
+        organizationSlug={organizationSlug}
+      />
       </Box>
   );
 }
